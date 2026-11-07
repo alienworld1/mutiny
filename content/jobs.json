@@ -1,0 +1,708 @@
+{
+  "rules_version": 2,
+  "content_version": 2,
+  "setups": [
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "dock-fire-intro",
+      "name": "Dock Fire",
+      "route": [37, 30, 23, 16],
+      "walls": [0, 1, 6, 7, 13, 35, 42, 48],
+      "fire": [8],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 44,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 10,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Dot",
+          "role": "courier",
+          "side": "enemy",
+          "cell": 18,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 20,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "First Shift",
+      "description": "Two ways around the cargo. Dot has a fire clause.",
+      "cover": [],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "dock",
+      "blast": []
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "dock-fire-crosswind",
+      "name": "Dock Fire",
+      "route": [38, 31, 24, 17],
+      "walls": [0, 6, 7, 13, 35, 42, 48],
+      "fire": [29, 40],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 33,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 45,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 43,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 10,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Dot",
+          "role": "courier",
+          "side": "enemy",
+          "cell": 20,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 12,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Crosswind",
+      "description": "Fire splits the quay. Choose your approach.",
+      "cover": [15, 19],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "dock",
+      "blast": []
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "dock-fire-embers",
+      "name": "Dock Fire",
+      "route": [36, 29, 22, 15],
+      "walls": [0, 1, 6, 13, 41, 48],
+      "fire": [37, 9],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 43,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 11,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Dot",
+          "role": "courier",
+          "side": "enemy",
+          "cell": 18,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 20,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Ember Lane",
+      "description": "The short lane burns. Make room along the water.",
+      "cover": [17, 26],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "dock",
+      "blast": []
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "bridge-audit-toll",
+      "name": "Bridge Audit",
+      "route": [38, 31, 24, 17],
+      "walls": [0, 6, 7, 13, 21, 27, 35, 41, 42, 48],
+      "fire": [8],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 45,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 10,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Wisp",
+          "role": "mage",
+          "side": "enemy",
+          "cell": 19,
+          "hp": 2,
+          "movement": 2,
+          "package": "friendly"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 12,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Toll Gate",
+      "description": "Cover closes the bridge. Clear the choke point.",
+      "cover": [22, 26],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "bridge",
+      "blast": [3, 5]
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "bridge-audit-paper",
+      "name": "Bridge Audit",
+      "route": [37, 30, 23, 16],
+      "walls": [0, 6, 7, 13, 21, 27, 35, 41, 42, 48],
+      "fire": [],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 44,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 10,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Wisp",
+          "role": "mage",
+          "side": "enemy",
+          "cell": 19,
+          "hp": 2,
+          "movement": 2,
+          "package": "friendly"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 20,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Paper Walls",
+      "description": "A low barrier hides the far approach.",
+      "cover": [24, 18],
+      "walkable_cover": [24],
+      "smoke": [],
+      "policy": "bridge",
+      "blast": [3, 5]
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "bridge-audit-queue",
+      "name": "Bridge Audit",
+      "route": [38, 31, 30, 23],
+      "walls": [0, 6, 7, 13, 21, 27, 35, 41, 42, 48],
+      "fire": [15],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 45,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 10,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Wisp",
+          "role": "mage",
+          "side": "enemy",
+          "cell": 18,
+          "hp": 2,
+          "movement": 2,
+          "package": "friendly"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 31,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Long Queue",
+      "description": "The bent route rewards a patient crossing.",
+      "cover": [22, 26],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "bridge",
+      "blast": [3, 5]
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "friday-again-overtime",
+      "name": "Friday, Again",
+      "route": [37, 30, 23, 16],
+      "walls": [0, 6, 7, 13, 42, 48],
+      "fire": [],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 44,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 11,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Dot",
+          "role": "courier",
+          "side": "enemy",
+          "cell": 18,
+          "hp": 2,
+          "movement": 3,
+          "package": "shouting"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 20,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Overtime",
+      "description": "The supervisor wants a word with your captain.",
+      "cover": [15, 19],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "friday",
+      "blast": [3, 5]
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "friday-again-crossed",
+      "name": "Friday, Again",
+      "route": [38, 31, 24, 17],
+      "walls": [0, 6, 7, 13, 35, 42, 48],
+      "fire": [9],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 33,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 45,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 43,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 10,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Dot",
+          "role": "courier",
+          "side": "enemy",
+          "cell": 18,
+          "hp": 2,
+          "movement": 3,
+          "package": "shouting"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 20,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Crossed Wires",
+      "description": "Crossing routes put allies inside the blast.",
+      "cover": [16, 22],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "friday",
+      "blast": [3, 5]
+    },
+    {
+      "rules_version": 2,
+      "content_version": 2,
+      "id": "friday-again-last",
+      "name": "Friday, Again",
+      "route": [36, 29, 30, 23],
+      "walls": [0, 1, 6, 13, 41, 48],
+      "fire": [9],
+      "units": [
+        {
+          "id": 0,
+          "name": "Captain",
+          "role": "captain",
+          "side": "player",
+          "cell": 32,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 1,
+          "name": "Rook",
+          "role": "courier",
+          "side": "player",
+          "cell": 43,
+          "hp": 2,
+          "movement": 3,
+          "package": "fire"
+        },
+        {
+          "id": 2,
+          "name": "Mallow",
+          "role": "shieldbearer",
+          "side": "player",
+          "cell": 40,
+          "hp": 3,
+          "movement": 2,
+          "package": "shouting"
+        },
+        {
+          "id": 3,
+          "name": "Supervisor",
+          "role": "supervisor",
+          "side": "enemy",
+          "cell": 11,
+          "hp": 3,
+          "movement": 2,
+          "package": "none"
+        },
+        {
+          "id": 4,
+          "name": "Dot",
+          "role": "courier",
+          "side": "enemy",
+          "cell": 18,
+          "hp": 2,
+          "movement": 3,
+          "package": "shouting"
+        },
+        {
+          "id": 5,
+          "name": "Brisk",
+          "role": "shieldbearer",
+          "side": "enemy",
+          "cell": 29,
+          "hp": 3,
+          "movement": 2,
+          "package": "friendly"
+        }
+      ],
+      "variant": "Last Bell",
+      "description": "A bent exit and one final inspection.",
+      "cover": [17, 26],
+      "walkable_cover": [],
+      "smoke": [],
+      "policy": "friday",
+      "blast": [3, 5]
+    }
+  ]
+}

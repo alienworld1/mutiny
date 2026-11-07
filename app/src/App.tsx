@@ -1,31 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import * as engine from "./game/engine";
-import { readDraft, saveDraft } from "./game/storage";
+import {
+  readProgress,
+  saveProgress,
+  emptyProgress,
+  goals,
+  summarize,
+  goalNames,
+} from "./game/storage";
+import JobBoard, { ResultLine } from "./game/JobBoard";
+import ActionControls from "./game/ActionControls";
+import BattleFeedback from "./game/BattleFeedback";
+import type { Mode } from "./game/ActionControls";
 import type {
   Action,
-  ActionLog,
+  Configuration,
+  Setup,
   Choices,
   Command,
   State,
   Transition,
+  Event,
 } from "./game/types";
-import { coordinate, eventText, outcomeText } from "./game/types";
+import { coordinate, outcomeText, actionText, packages } from "./game/types";
 import PixiStage from "./stage/PixiStage";
 
 const primary =
   "!border-primary !bg-primary !text-white hover:!bg-primary-hover";
 const emptyChoices: Choices = {
   moves: [],
-  attacks: [],
-  burns: [],
-  push: false,
+  actions: [],
 };
 type Screen =
   | { kind: "home" }
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "battle"; state: State };
-type Preview = { command: Command; result: Transition; forecast: string[] };
+type Preview = { command: Command; result: Transition; forecast: Event[] };
 function message(error: unknown) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -34,15 +45,49 @@ function App() {
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
   const [selected, setSelected] = useState<number | null>(null);
   const [path, setPath] = useState<number[]>([]);
-  const [mode, setMode] = useState<"move" | "attack" | "burn">("move");
+  const [mode, updateMode] = useState<Mode>("move");
+  const [shoveTarget, setShoveTarget] = useState<number | null>(null);
+  const [setups, setSetups] = useState<Setup[]>([]);
+  const [progress, setProgress] = useState(emptyProgress);
+  const attemptId = useRef<string>(crypto.randomUUID());
+  const commitLock = useRef(false);
+  function setMode(next: Mode) {
+    updateMode(next);
+    setShoveTarget(null);
+    setNotice("");
+  }
   const [preview, setPreview] = useState<Preview | null>(null);
   const [notice, setNotice] = useState(
     "Select a crew member. Read the posted orders before you move.",
   );
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<{ label: string; events: Event[] }[]>(
+    [],
+  );
+  const [feedback, setFeedback] = useState<Event[]>([]);
   const [storageWarning, setStorageWarning] = useState("");
   const [focusedOrder, setFocusedOrder] = useState<number | null>(null);
   const [restart, setRestart] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void engine
+      .loadEngine()
+      .then(async () => {
+        if (!cancelled) setSetups(engine.content());
+        try {
+          const saved = await readProgress();
+          if (!cancelled) setProgress(saved);
+        } catch {
+          if (!cancelled)
+            setStorageWarning(
+              "Local progress could not be read. You can keep playing.",
+            );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const saveQueue = useRef(Promise.resolve());
   const requestId = useRef(0);
   useEffect(
@@ -51,10 +96,14 @@ function App() {
     },
     [],
   );
-  function persist(log: ActionLog) {
+  function persist(state: State) {
+    const id = attemptId.current;
     saveQueue.current = saveQueue.current
       .catch(() => {})
-      .then(() => saveDraft(log))
+      .then(async () => {
+        const saved = await saveProgress(id, state);
+        setProgress(saved);
+      })
       .catch(() =>
         setStorageWarning(
           "This browser could not save your progress. You can keep playing.",
@@ -64,20 +113,31 @@ function App() {
   function clearSelection() {
     setSelected(null);
     setPath([]);
-    setMode("move");
+    updateMode("move");
+    setShoveTarget(null);
     setPreview(null);
     setFocusedOrder(null);
   }
-  async function play(fresh = false) {
+  async function play(fresh = false, config?: Configuration) {
     const id = ++requestId.current;
     setScreen({ kind: "loading" });
     try {
       await engine.loadEngine();
-      let state = engine.start();
+      let nextId: string = crypto.randomUUID();
+      let state = engine.configure(
+        config ??
+          (screen.kind === "battle"
+            ? screen.state.log.config
+            : engine.start().log.config),
+      );
       if (!fresh) {
         try {
-          const draft = await readDraft();
-          if (draft) state = engine.replay(draft as ActionLog).state;
+          const saved = await readProgress();
+          if (saved.draft) {
+            state = engine.replay(saved.draft.log).state;
+            nextId = saved.draft.id;
+          }
+          setProgress(saved);
         } catch {
           setStorageWarning(
             "Your previous job could not be opened. A new job is ready.",
@@ -85,16 +145,19 @@ function App() {
         }
       }
       if (requestId.current !== id) return;
+      attemptId.current = nextId;
       clearSelection();
+      if (state.borrow_pending !== null) setSelected(state.borrow_pending);
       setRestart(false);
       setHistory([]);
+      setFeedback([]);
       setNotice(
-        state.log.commands.length
-          ? "Your job is ready to continue."
-          : "Three pushes. Five rounds. Try Burn Notice on Dot's posted path.",
+        state.borrow_pending !== null
+          ? "Finish or skip the borrowed action."
+          : "Select a crew member.",
       );
       setScreen({ kind: "battle", state });
-      persist(state.log);
+      persist(state);
     } catch (error) {
       if (requestId.current === id)
         setScreen({
@@ -113,21 +176,42 @@ function App() {
       /* A spent or knocked-out unit has no commands. */
     }
   }
+  function canBorrow(id: number) {
+    if (!state) return false;
+    try {
+      return engine
+        .choices(state.log, 0, [])
+        .actions.some(
+          (o) => o.action.kind === "borrow" && o.action.target === id,
+        );
+    } catch {
+      return false;
+    }
+  }
   function propose(action: Action) {
     if (!state || selected === null) return;
-    proposeCommand({ kind: "activate", unit: selected, path, action });
+    proposeCommand({
+      kind:
+        state.borrow_pending === selected ? "borrowed_activate" : "activate",
+      unit: selected,
+      path,
+      action,
+    });
   }
   function proposeCommand(command: Command) {
     if (!state) return;
     try {
       const result = engine.apply(state.log, command);
       const forecast =
-        command.kind === "end_phase" || result.state.outcome
+        command.kind === "end_phase" ||
+        result.state.outcome ||
+        result.state.borrow_pending !== null
           ? []
           : engine
               .apply(result.state.log, { kind: "end_phase" })
-              .events.filter((e) => e.kind === "strike" || e.kind === "blocked")
-              .map((e) => `If you end now: ${eventText(e, result.state)}`);
+              .events.filter(
+                (e) => e.kind === "strike" || e.kind === "blocked",
+              );
       setPreview({ command, result, forecast });
       setNotice("");
     } catch (error) {
@@ -136,45 +220,87 @@ function App() {
     }
   }
   function commit() {
-    if (!preview || !state) return;
+    if (!preview || !state || commitLock.current) return;
+    commitLock.current = true;
     // Re-apply against current log, so a stale preview can never commit old state.
     try {
       const next = engine.apply(state.log, preview.command);
-      const lines = next.events.map((e) => eventText(e, next.state));
       setScreen({ kind: "battle", state: next.state });
-      setHistory((h) => [...lines, ...h].slice(0, 24));
-      setNotice(lines.join(" ") || "Phase complete.");
+      const actor =
+        "unit" in preview.command
+          ? state.setup.units[preview.command.unit]!.name
+          : "Enemy phase";
+      setHistory((h) =>
+        [
+          { label: `Round ${state.round} · ${actor}`, events: next.events },
+          ...h,
+        ].slice(0, 12),
+      );
+      setFeedback(
+        next.events.filter(
+          (e) => !["moved", "attacked", "recovering"].includes(e.kind),
+        ),
+      );
+      setNotice("");
       clearSelection();
-      persist(next.state.log);
+      if (next.state.borrow_pending !== null)
+        setSelected(next.state.borrow_pending);
+      persist(next.state);
     } catch (error) {
       setNotice(message(error));
       setPreview(null);
+    } finally {
+      queueMicrotask(() => {
+        commitLock.current = false;
+      });
     }
   }
   function select(id: number) {
     if (!state || state.outcome) return;
+    if (state.borrow_pending !== null && id !== state.borrow_pending) {
+      setNotice("Finish or skip the borrowed action first.");
+      return;
+    }
     clearSelection();
     setSelected(id);
     const u = state.setup.units[id]!;
     setNotice(
       state.activated.includes(id)
         ? `${u.name} has acted. Choose another crew member or end the phase.`
-        : `${u.name}: choose a destination, then an action. You can also act here.`,
+        : "",
     );
   }
   function cellClick(cell: number) {
     if (!state || state.outcome || preview) return;
     const target = state.setup.units.find((u) => u.hp > 0 && u.cell === cell);
-    if (mode === "burn") {
-      propose({ kind: "burn", cell });
+    if (mode !== "move") {
+      if (mode === "shove") {
+        if (target && shoveTarget === null) {
+          setShoveTarget(target.id);
+          setNotice(`Choose where to shove ${target.name}.`);
+          return;
+        }
+        if (shoveTarget !== null)
+          propose({ kind: "shove", target: shoveTarget, cell });
+        else setNotice("Choose an adjacent unit first.");
+      } else if (mode === "burn" || mode === "smoke" || mode === "certify")
+        propose({ kind: mode, cell });
+      else if (
+        target &&
+        (mode === "attack" ||
+          mode === "clean_shot" ||
+          mode === "relocate" ||
+          mode === "swap" ||
+          mode === "borrow")
+      )
+        propose({ kind: mode, target: target.id });
+      else setNotice("Choose a unit on the board.");
       return;
     }
-    if (mode === "attack") {
-      if (target) propose({ kind: "attack", target: target.id });
-      else setNotice("Choose an opposing unit in reach.");
-      return;
-    }
-    if (target?.side === "player") {
+    if (
+      target &&
+      (target.side === "player" || state.borrow_pending === target.id)
+    ) {
       select(target.id);
       return;
     }
@@ -253,14 +379,24 @@ function App() {
           </div>
         </section>
       )}
+      {screen.kind === "home" && setups.length > 0 && (
+        <JobBoard
+          setups={setups}
+          progress={progress}
+          onPlay={(config) => void play(true, config)}
+        />
+      )}
+      {screen.kind === "home" && storageWarning && (
+        <p role="status">{storageWarning}</p>
+      )}
       {screen.kind === "loading" && (
         <p role="status" className="py-16 text-center text-lg">
-          Opening the quay…
+          Opening the job…
         </p>
       )}
       {screen.kind === "error" && (
         <section role="alert" className="rounded-2xl bg-paper p-8">
-          <h1 className="text-2xl">The quay is closed for a moment.</h1>
+          <h1 className="text-2xl">The office is closed for a moment.</h1>
           <p className="my-4">{screen.message}</p>
           <button onClick={() => void play()}>Retry</button>
         </section>
@@ -270,9 +406,9 @@ function App() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[.16em] text-secondary">
-                Free Play · Payroll quay
+                Free Play · {state.setup.variant} · {state.log.config.placement}
               </p>
-              <h1 className="text-3xl">Dock Fire</h1>
+              <h1 className="text-3xl">{state.setup.name}</h1>
             </div>
             <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm tabular-nums">
               <div>
@@ -308,7 +444,17 @@ function App() {
                 </dd>
               </div>
             </dl>
-            <button onClick={() => setRestart(true)}>Restart</button>
+            <div className="flex gap-2">
+              <button onClick={() => setRestart(true)}>Restart</button>
+              <button
+                onClick={() => {
+                  clearSelection();
+                  setScreen({ kind: "home" });
+                }}
+              >
+                Job Board
+              </button>
+            </div>
           </div>
           {restart && (
             <div
@@ -343,52 +489,70 @@ function App() {
                 state={preview?.result.state ?? state}
                 selected={selected}
                 path={path}
-                reachable={preview ? [] : options.moves.map((m) => m.cell)}
+                reachable={
+                  preview || mode !== "move"
+                    ? []
+                    : options.moves.map((m) => m.cell)
+                }
                 targets={
                   preview
                     ? []
-                    : mode === "burn"
-                      ? options.burns
-                      : mode === "attack"
-                        ? options.attacks.map(
-                            (id) => state.setup.units[id]!.cell,
-                          )
-                        : []
+                    : options.actions
+                        .filter(
+                          (o) =>
+                            o.action.kind === mode &&
+                            (mode !== "shove" ||
+                              shoveTarget === null ||
+                              ("target" in o.action &&
+                                o.action.target === shoveTarget)),
+                        )
+                        .flatMap((o) =>
+                          mode === "shove" &&
+                          shoveTarget === null &&
+                          "target" in o.action
+                            ? [state.setup.units[o.action.target]!.cell]
+                            : o.cells,
+                        )
                 }
                 focusedOrder={focusedOrder}
                 onCell={cellClick}
               />
               <p className="mt-2 text-sm text-secondary">
-                Solid rings: your crew · Banners: enemies · Dashed lines: posted
-                moves
+                ● Your crew · ⚑ Enemies · ⋯ Posted moves
               </p>
               <details className="mt-4 border-t border-border pt-3">
                 <summary className="cursor-pointer py-2 font-semibold">
                   How to play
                 </summary>
                 <p className="mt-2 text-sm text-secondary">
-                  Select a crew member, choose an optional move, then one
-                  action. Confirm the preview. Push the cart once per round
-                  along the marked route. End Phase runs the posted enemy
-                  orders. Deliver in five rounds and keep your captain and cart
-                  alive.
+                  Push the cart to the flag in five rounds. Keep the cart and
+                  captain alive. Each unit can move, then act once per round.
                 </p>
                 <p className="mt-2 text-sm text-secondary">
-                  Burn Notice lights one empty cell for the enemy phase. Dot
-                  refuses a posted path through new fire. An occupied path is an
-                  ordinary block. Arrow keys move board focus; Enter selects.
+                  Enemy orders are fixed for the round. A new breach of their
+                  fine print causes a strike. An ordinary blocked order does
+                  not.
+                </p>
+                <p className="mt-2 text-sm text-secondary">
+                  Guard blocks one hit this enemy phase. Arrow keys move board
+                  focus; Enter selects.
                 </p>
               </details>
               {history.length > 0 && (
                 <details className="mt-3 border-t border-border pt-3">
-                  <summary className="cursor-pointer py-2 font-semibold">
-                    Recent events
+                  <summary className="cursor-pointer py-2 text-sm text-secondary">
+                    Battle log
                   </summary>
-                  <ul className="space-y-2 text-sm text-secondary">
-                    {history.map((line, i) => (
-                      <li key={`${i}-${line}`}>{line}</li>
+                  <div className="max-h-80 space-y-5 overflow-y-auto py-3">
+                    {history.map((batch, i) => (
+                      <section key={i}>
+                        <h3 className="mb-2 !font-ui text-xs font-semibold uppercase tracking-wide text-secondary">
+                          {batch.label}
+                        </h3>
+                        <BattleFeedback events={batch.events} state={state} />
+                      </section>
                     ))}
-                  </ul>
+                  </div>
                 </details>
               )}
             </div>
@@ -411,8 +575,35 @@ function App() {
                   </p>
                   <p className="my-5">
                     Round {state.round} · Cart {state.cart_hp}/2 HP ·{" "}
-                    {state.strikes} {state.strikes === 1 ? "strike" : "strikes"}
+                    {state.strikes} {state.strikes === 1 ? "strike" : "strikes"}{" "}
+                    ·{" "}
+                    {state.setup.units.some((u) => u.borrowed)
+                      ? "Borrow"
+                      : "No Borrow"}
                   </p>
+                  <ul className="mb-4 flex flex-wrap gap-2 text-sm">
+                    {goals(summarize(state)).map((earned, i) => (
+                      <li
+                        key={goalNames[i]}
+                        className={
+                          earned ? "font-bold text-primary" : "text-secondary"
+                        }
+                      >
+                        {earned ? "✓ " : "○ "}
+                        {goalNames[i]}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mb-4 space-y-3">
+                    <ResultLine
+                      label="Previous"
+                      result={progress.ledger[state.setup.id]?.previous}
+                    />
+                    <ResultLine
+                      label="Fastest clear"
+                      result={progress.ledger[state.setup.id]?.best}
+                    />
+                  </div>
                   <button className={primary} onClick={() => void play(true)}>
                     Play Again
                   </button>
@@ -424,7 +615,10 @@ function App() {
                 >
                   <div className="mb-4 flex flex-wrap gap-2">
                     {state.setup.units
-                      .filter((u) => u.side === "player")
+                      .filter(
+                        (u) =>
+                          u.side === "player" || state.borrow_pending === u.id,
+                      )
                       .map((u) => (
                         <button
                           key={u.id}
@@ -442,94 +636,69 @@ function App() {
                         </button>
                       ))}
                   </div>
-                  {unit ? (
-                    <>
-                      <h2 className="text-2xl">{unit.name}</h2>
-                      <p className="mb-3 text-sm capitalize text-secondary">
-                        {unit.role} · Move {unit.movement} ·{" "}
-                        {path.length
-                          ? `To ${coordinate(path.at(-1)!)}`
-                          : `At ${coordinate(unit.cell)}`}
-                      </p>
-                      {!state.activated.includes(unit.id) && !preview && (
-                        <>
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={() => {
-                                setMode("move");
-                                setNotice(
-                                  "Choose a highlighted destination, then an action.",
-                                );
-                              }}
-                              aria-pressed={mode === "move"}
-                            >
-                              Move
-                            </button>
-                            <button onClick={() => propose({ kind: "guard" })}>
-                              Guard
-                            </button>
-                            <button onClick={() => propose({ kind: "push" })}>
-                              Push Cart
-                            </button>
-                            <button
-                              onClick={() => {
-                                setMode("attack");
-                                setNotice(
-                                  options.attacks.length
-                                    ? "Choose a marked enemy."
-                                    : "No enemy is adjacent. Choose a move first.",
-                                );
-                              }}
-                              aria-pressed={mode === "attack"}
-                            >
-                              Attack
-                            </button>
-                            {unit.id === 0 && (
-                              <button
-                                disabled={state.burn_used}
-                                className="col-span-2"
-                                aria-pressed={mode === "burn"}
-                                onClick={() => {
-                                  setMode("burn");
-                                  setNotice(
-                                    "Choose a marked empty cell. Fire lasts through this enemy phase.",
-                                  );
-                                }}
-                              >
-                                Burn Notice{state.burn_used ? " · spent" : ""}
-                              </button>
-                            )}
-                          </div>
-                          {path.length > 0 && (
-                            <button
-                              className="mt-2 w-full"
-                              onClick={() => {
-                                setPath([]);
-                                setPreview(null);
-                              }}
-                            >
-                              Clear Move
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </>
+                  {unit && !state.activated.includes(unit.id) && !preview ? (
+                    <ActionControls
+                      state={state}
+                      unit={unit}
+                      path={path}
+                      mode={mode}
+                      options={options}
+                      setMode={setMode}
+                      propose={propose}
+                      clearMove={() => setPath([])}
+                    />
                   ) : (
                     <h2 className="text-xl">Your orders</h2>
                   )}
+                  {state.borrow_pending !== null && !preview && (
+                    <button
+                      className="mt-3 w-full"
+                      onClick={() =>
+                        proposeCommand({
+                          kind: "skip_borrow",
+                          unit: state.borrow_pending!,
+                        })
+                      }
+                    >
+                      Skip Borrow
+                    </button>
+                  )}
                   {preview && (
-                    <div className="mt-4 border-t border-border pt-4">
+                    <div
+                      className="mt-4 border-t border-border pt-4"
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setPreview(null);
+                          setNotice("Preview cancelled.");
+                        }
+                      }}
+                    >
                       <h3 className="text-xl">Preview</h3>
-                      <ul className="my-3 space-y-2 text-sm">
-                        {preview.result.events.map((e, i) => (
-                          <li key={i}>{eventText(e, preview.result.state)}</li>
-                        ))}
-                        {preview.forecast.map((line) => (
-                          <li key={line} className="font-semibold text-warning">
-                            {line}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="my-3">
+                        <BattleFeedback
+                          events={preview.result.events}
+                          state={preview.result.state}
+                        />
+                      </div>
+                      {preview.forecast.length > 0 && (
+                        <div className="my-3 border-l-2 border-oxblood pl-3">
+                          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+                            If you end now
+                          </h4>
+                          <BattleFeedback
+                            events={preview.forecast}
+                            state={preview.result.state}
+                          />
+                        </div>
+                      )}
+                      {preview.result.events.some(
+                        (e) => e.kind === "refused",
+                      ) && (
+                        <p className="mb-3 font-semibold text-danger">
+                          This command will be refused. Confirm to spend the
+                          activation with no effect.
+                        </p>
+                      )}
                       {preview.command.kind === "end_phase" && (
                         <p className="mb-3 text-sm text-secondary">
                           Unused crew actions will be lost.
@@ -550,15 +719,24 @@ function App() {
                       </div>
                     </div>
                   )}
-                  <p
+                  <div
                     role="status"
                     aria-live="polite"
                     aria-atomic="true"
-                    className="mt-4 text-sm leading-relaxed"
+                    className="mt-4"
                   >
-                    {notice}
-                  </p>
-                  {!preview && (
+                    {notice ? (
+                      <p className="text-sm text-secondary">{notice}</p>
+                    ) : !preview && !unit && feedback.length > 0 ? (
+                      <div className="rounded-xl bg-muted/60 p-3">
+                        <h3 className="mb-3 !font-ui text-xs font-semibold uppercase tracking-wide text-secondary">
+                          Last action
+                        </h3>
+                        <BattleFeedback events={feedback} state={state} />
+                      </div>
+                    ) : null}
+                  </div>
+                  {!preview && state.borrow_pending === null && (
                     <button
                       className={`${primary} mt-4 w-full`}
                       onClick={() => proposeCommand({ kind: "end_phase" })}
@@ -573,11 +751,19 @@ function App() {
                 className="rounded-2xl bg-muted p-4 sm:p-5"
               >
                 <div className="mb-3 flex items-baseline justify-between gap-2">
-                  <h2 className="text-2xl">Posted orders</h2>
+                  <h2 className="text-2xl">Enemy orders</h2>
                   <span className="text-xs text-secondary">
                     Fixed this round
                   </span>
                 </div>
+                {focusedOrder !== null && (
+                  <button
+                    className="mb-3 !min-h-9 !py-1 text-sm"
+                    onClick={() => setFocusedOrder(null)}
+                  >
+                    Show all orders
+                  </button>
+                )}
                 <div className="divide-y divide-border">
                   {state.orders.map((order) => {
                     const u = state.setup.units[order.unit]!;
@@ -585,29 +771,42 @@ function App() {
                       <div key={order.unit} className="py-3 first:pt-0">
                         <button
                           aria-pressed={focusedOrder === u.id}
-                          className="mb-2 !min-h-11 !w-full !bg-transparent text-left text-sm"
+                          className="!min-h-11 !w-full !rounded-lg !border-transparent !bg-transparent !px-2 text-left hover:!bg-paper/60"
                           onClick={() =>
                             setFocusedOrder(focusedOrder === u.id ? null : u.id)
                           }
                         >
-                          {u.name} · {u.hp} HP{u.guard ? " · Guard" : ""}
+                          <span className="flex items-center justify-between gap-2 text-sm">
+                            <span>{u.name}</span>
+                            <span className="text-xs font-normal text-secondary">
+                              {u.hp} HP {focusedOrder === u.id ? "▴" : "▾"}
+                            </span>
+                          </span>
+                          <span className="mt-1 block text-xs font-normal text-secondary">
+                            {actionText(order.action, state)}
+                          </span>
                         </button>
-                        <p className="text-sm">
-                          {[order.start, ...order.path]
-                            .map(coordinate)
-                            .join(" → ")}
-                        </p>
-                        <p className="text-sm text-secondary">
-                          {order.action.kind === "attack"
-                            ? `Attack ${order.action.target === 6 ? "Cart" : state.setup.units[order.action.target]!.name} · ${order.affected.map(coordinate).join(", ")} · 1 damage`
-                            : "Guard · blocks one hit"}
-                        </p>
-                        {u.fire_clause && (
-                          <p className="mt-2 border-l-2 border-oxblood pl-2 text-sm">
-                            <strong>NOT ON THE FIRE</strong>
-                            <br />
-                            Refuses a posted path through new fire.
-                          </p>
+                        {focusedOrder === u.id && (
+                          <div className="mt-2 space-y-2 border-l-2 border-oxblood pl-3 text-sm text-secondary">
+                            <p>
+                              {[order.start, ...order.path]
+                                .map(coordinate)
+                                .join(" → ")}
+                            </p>
+                            {order.affected.length > 0 && (
+                              <p>
+                                Affects{" "}
+                                {order.affected.map(coordinate).join(", ")}
+                              </p>
+                            )}
+                            {u.package !== "none" && (
+                              <p>
+                                <strong>{packages[u.package].name}</strong>
+                                <br />
+                                {packages[u.package].clause}
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -622,11 +821,34 @@ function App() {
                         key={u.id}
                         className="py-3 text-sm font-semibold text-danger"
                       >
-                        {u.name} · ON STRIKE
+                        {u.name} ·{" "}
+                        {u.status === "striking" ? "ON STRIKE" : "Recovering"}
                         <br />
                         <span className="font-normal">
-                          Refused your fire. Skips the next enemy phase.
+                          {u.status === "striking"
+                            ? "Skips the next enemy phase."
+                            : "Returns after the enemy phase."}
                         </span>
+                        {u.status === "striking" &&
+                          !u.borrowed &&
+                          canBorrow(u.id) && (
+                            <button
+                              className="mt-2 block"
+                              disabled={!!preview}
+                              onClick={() => {
+                                clearSelection();
+                                setSelected(0);
+                                proposeCommand({
+                                  kind: "activate",
+                                  unit: 0,
+                                  path: [],
+                                  action: { kind: "borrow", target: u.id },
+                                });
+                              }}
+                            >
+                              Borrow {u.name}
+                            </button>
+                          )}
                       </p>
                     ))}
                   {state.orders.length === 0 && !state.outcome && (

@@ -1,6 +1,8 @@
 # Mutiny: The Fine Print
 
-A small tactics game about a kingdom's payroll and its workers' terms. Play the introductory **Dock Fire** job: read posted orders, protect and push the cart, or use Burn Notice to cause a real fine-print refusal. Win, lose, and try again. Free Play needs no wallet or RPC.
+A small tactics game about a kingdom's payroll and its workers' terms. Deliver the cart across nine authored setups in **Dock Fire**, **Bridge Audit**, and **Friday, Again**. Choose a house crew and fine print, read posted orders, and win through delivery, combat, or a well-earned strike and Borrow. Free Play needs no wallet or RPC.
+
+The Captain's Ledger tracks local attempts, clears, goals, and previous/fastest results. Progress stays in this browser; clearing browser data or changing devices loses it. After the production build finishes installing its offline files, Free Play also works through an offline refresh.
 
 ## Run
 
@@ -22,6 +24,7 @@ pnpm lint
 pnpm build
 pnpm exec playwright install chromium
 pnpm test:e2e
+MUTINY_PREVIEW=1 pnpm test:e2e --grep "production offline"
 ```
 
 ## NEAR compatibility probe

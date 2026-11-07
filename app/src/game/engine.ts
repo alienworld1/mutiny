@@ -1,5 +1,13 @@
 import init, * as wasm from "./wasm/game_web";
-import type { ActionLog, Choices, Command, State, Transition } from "./types";
+import type {
+  ActionLog,
+  Choices,
+  Command,
+  Configuration,
+  Setup,
+  State,
+  Transition,
+} from "./types";
 let ready: Promise<unknown> | undefined;
 export const loadEngine = () =>
   (ready ??= init().catch((error: unknown) => {
@@ -17,3 +25,7 @@ export const choices = (
   path: number[],
 ): Choices =>
   JSON.parse(wasm.choices(JSON.stringify(log), unit, JSON.stringify(path)));
+
+export const content = (): Setup[] => JSON.parse(wasm.content()).setups;
+export const configure = (config: Configuration): State =>
+  JSON.parse(wasm.configure(JSON.stringify(config)));

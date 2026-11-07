@@ -100,7 +100,7 @@ export default function PixiStage(props: Props) {
       <div
         ref={grid}
         role="grid"
-        aria-label="Dock Fire battlefield"
+        aria-label={`${state.setup.name} battlefield`}
         aria-rowcount={7}
         aria-colcount={7}
         className="absolute inset-0"
@@ -122,6 +122,18 @@ export default function PixiStage(props: Props) {
                   : "",
                 state.setup.walls.includes(cell) ? "Cargo, impassable" : "",
                 state.fire.includes(cell) ? "Fire, 1 damage on entry" : "",
+                state.smoke.includes(cell)
+                  ? "Smoke, opaque until phase end"
+                  : "",
+                state.setup.cover.includes(cell)
+                  ? `Low cover, blocks ranged shots, ${state.setup.walkable_cover.includes(cell) ? "walkable" : "impassable"}`
+                  : "",
+                state.certificates.includes(cell)
+                  ? "Safety Certificate, blocks the next enemy-phase hit"
+                  : "",
+                state.orders.some((o) => o.affected.includes(cell))
+                  ? "Posted action area"
+                  : "",
                 props.reachable.includes(cell) ? "Reachable" : "",
                 props.targets.includes(cell) ? "Legal target" : "",
               ]

@@ -11,7 +11,8 @@
   }
   button:focus-visible,
   a:focus-visible,
-  summary:focus-visible {
+  summary:focus-visible,
+  select:focus-visible {
     @apply outline-3 outline-offset-3 outline-focus;
   }
   h1,

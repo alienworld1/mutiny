@@ -51,7 +51,13 @@ export function draw(
   for (const child of root.removeChildren()) child.destroy({ children: true });
   const g = new Graphics();
   root.addChild(g);
-  g.roundRect(0, 0, 640, 560, 22).fill(C.water);
+  g.roundRect(0, 0, 640, 560, 22).fill(
+    state.setup.policy === "dock"
+      ? C.water
+      : state.setup.policy === "bridge"
+        ? C.slate
+        : C.green,
+  );
   for (let y = 12; y < 560; y += 23)
     for (let x = (y % 3) * 18; x < 640; x += 67)
       g.moveTo(x, y)
@@ -83,6 +89,24 @@ export function draw(
         .moveTo(x, y - 10)
         .lineTo(x, y + 10)
         .stroke({ color: C.enemy, width: 2 });
+    }
+    if (state.setup.route.includes(c) && c !== state.cart_cell)
+      label(root, String(state.setup.route.indexOf(c)), x, y, 13, C.dark);
+    if (state.setup.cover.includes(c)) {
+      g.roundRect(x - 29, y - 8, 58, 25, 4)
+        .fill(C.stone)
+        .stroke({ color: C.ink, width: 2 });
+      label(
+        root,
+        state.setup.walkable_cover.includes(c) ? "LOW / STEP" : "LOW",
+        x,
+        y + 4,
+        10,
+      );
+    }
+    if (state.certificates.includes(c)) {
+      g.circle(x, y, 24).stroke({ color: C.dark, width: 3 });
+      label(root, "✓", x + 22, y - 17, 15, C.dark);
     }
     if (state.setup.walls.includes(c)) {
       g.ellipse(x, y + 12, 32, 12).fill({ color: C.ink, alpha: 0.12 });
@@ -248,6 +272,16 @@ export function draw(
         .lineTo(x + 11, y + 10)
         .stroke({ color: C.brass, width: 4 });
       p.roundRect(x + 5, y + 4, 13, 12, 3).fill(0x8f7058);
+    } else if (u.role === "mage") {
+      p.poly([x - 13, y - 23, x, y - 43, x + 13, y - 23])
+        .fill(color)
+        .stroke({ color: C.ink, width: 1 });
+      p.moveTo(x + 21, y + 17)
+        .lineTo(x + 21, y - 30)
+        .stroke({ color: 0x8f7058, width: 4 });
+      p.circle(x + 21, y - 31, 6)
+        .fill(C.brass)
+        .stroke({ color: C.ink, width: 1 });
     } else {
       p.roundRect(x - 11, y - 29, 23, 12, 5).fill(0x8d9790);
       p.poly([
@@ -291,6 +325,8 @@ export function draw(
         .stroke({ color: C.enemy, width: 2 });
       label(root, "STRIKE", x + 29, y - 34, 10, C.enemy);
     }
+    if (u.status === "recovering")
+      label(root, "RECOVERING", x, y - 52, 10, C.enemy);
     label(root, u.name, x, y + 34, 12);
     for (let h = 0; h < u.hp; h++)
       p.roundRect(x - u.hp * 4 + h * 8, y - 43, 6, 5, 1).fill(C.ink);
@@ -339,9 +375,25 @@ export function draw(
       y + 12,
     ]).fill(0xe9b762);
   }
+  for (const c of state.smoke) {
+    const { x, y } = cellToScreen(c);
+    const cloud = new Graphics();
+    root.addChild(cloud);
+    cloud
+      .ellipse(x, y - 4, 31, 18)
+      .fill({ color: C.stone, alpha: 0.88 })
+      .stroke({ color: C.ink, width: 1 });
+    label(root, "SMOKE", x, y - 4, 10);
+  }
   for (let n = 0; n < 7; n++) {
     label(root, "ABCDEFG"[n]!, 80 + n * 80, 34, 13);
     label(root, `${n + 1}`, 20, 96 + n * 64, 13);
   }
-  label(root, `PAYROLL QUAY · ${coordinate(state.cart_cell)}`, 320, 540, 12);
+  label(
+    root,
+    `${state.setup.name.toUpperCase()} · ${coordinate(state.cart_cell)}`,
+    320,
+    540,
+    12,
+  );
 }

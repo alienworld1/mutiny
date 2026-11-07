@@ -19,7 +19,7 @@ fn content_and_original_orders_are_legal() {
     validate_setup(&s.setup).unwrap();
     assert_eq!(s.orders.len(), 3);
     for order in &s.orders {
-        assert!(!order.original_fire_violation);
+        assert!(!order.original_violation);
         assert_eq!(order.endpoint, *order.path.last().unwrap_or(&order.start));
     }
     assert_eq!(s.orders[1].path, vec![25]);
@@ -45,7 +45,11 @@ fn three_push_golden() {
 fn new_fire_clause_strike_is_not_an_ordinary_block() {
     let s = run(&start(), activate(0, &[], Action::Burn { cell: 25 }));
     let t = apply(&s, &Command::EndPhase).unwrap();
-    assert!(t.events.contains(&Event::Strike { unit: 4, cell: 25 }));
+    assert!(t.events.contains(&Event::Strike {
+        unit: 4,
+        cell: 25,
+        reason: "NOT ON THE FIRE: that path enters fire".into()
+    }));
     assert_eq!(t.state.setup.units[4].cell, 18);
     assert_eq!(t.state.setup.units[4].status, Status::Striking);
     assert!(!t.state.fire.contains(&25));
@@ -94,7 +98,10 @@ fn invalid_commands_are_atomic() {
 fn guard_blocks_one_hit_and_expires() {
     let s = run(&start(), activate(0, &[], Action::Guard));
     let t = apply(&s, &Command::EndPhase).unwrap();
-    assert!(t.events.contains(&Event::Protected { unit: 0 }));
+    assert!(t.events.contains(&Event::Protected {
+        unit: 0,
+        source: "Guard".into()
+    }));
     assert_eq!(t.state.setup.units[0].hp, 3);
     assert!(!t.state.setup.units[0].guard);
 }
@@ -112,14 +119,18 @@ fn defeat_retry_and_limits() {
     assert!(!fresh.burn_used);
     assert_eq!(fresh, start());
     let log = ActionLog {
-        rules_version: 1,
+        rules_version: RULES_VERSION,
+        content_version: CONTENT_VERSION,
+        config: Configuration::default(),
         commands: vec![Command::EndPhase; 33],
     };
     assert!(replay(&log).is_err());
     assert!(canonical(&log).is_err());
     assert!(
         replay(&ActionLog {
-            rules_version: 2,
+            rules_version: 99,
+            content_version: CONTENT_VERSION,
+            config: Configuration::default(),
             commands: vec![]
         })
         .is_err()
@@ -140,7 +151,7 @@ fn captain_cart_and_timeout_end_immediately() {
                 target: if expected == "cart_lost" { 6 } else { 0 },
             },
             affected: vec![],
-            original_fire_violation: false,
+            original_violation: false,
         }];
         if expected == "cart_lost" {
             s.cart_cell = 24;

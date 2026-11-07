@@ -35,7 +35,7 @@ test("wallet-free delivery, preview cancel, persistence and retry", async ({
   ).not.toContainText("✓");
   await page.getByRole("button", { name: "Burn Notice", exact: true }).click();
   await page.locator('[data-cell="25"]').click();
-  await expect(page.getByText(/If you end now: ON STRIKE/)).toBeVisible();
+  await expect(page.getByText("ON STRIKE: Dot", { exact: true })).toBeVisible();
   await confirm(page);
   await push(page);
   await end(page);
