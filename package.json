@@ -1,0 +1,21 @@
+{
+  "name": "mutiny",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24.22.1 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @mutiny/app dev",
+    "build": "pnpm --filter @mutiny/app build",
+    "lint": "pnpm --filter @mutiny/app lint",
+    "test": "pnpm --filter @mutiny/app test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.2",
+    "@playwright/test": "^1.0.0"
+  }
+}
