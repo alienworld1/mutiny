@@ -1,3 +1,10 @@
 [workspace]
 members = ["crates/game-core", "crates/game-web", "crates/registry", "crates/worker"]
 resolver = "3"
+
+[profile.release]
+codegen-units = 1
+opt-level = "s"
+lto = true
+panic = "abort"
+overflow-checks = true

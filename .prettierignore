@@ -3,3 +3,4 @@ node_modules
 dist
 target
 pnpm-lock.yaml
+app/src/game/wasm

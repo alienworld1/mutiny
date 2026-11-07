@@ -1,0 +1,71 @@
+{
+  "rules_version": 1,
+  "content_version": 1,
+  "id": "dock-fire-intro",
+  "name": "Dock Fire",
+  "route": [37, 30, 23, 16],
+  "walls": [0, 1, 6, 7, 13, 35, 42, 48],
+  "fire": [8],
+  "units": [
+    {
+      "id": 0,
+      "name": "Captain",
+      "role": "captain",
+      "side": "player",
+      "cell": 32,
+      "hp": 3,
+      "movement": 2,
+      "fire_clause": false
+    },
+    {
+      "id": 1,
+      "name": "Rook",
+      "role": "courier",
+      "side": "player",
+      "cell": 44,
+      "hp": 2,
+      "movement": 3,
+      "fire_clause": false
+    },
+    {
+      "id": 2,
+      "name": "Mallow",
+      "role": "shieldbearer",
+      "side": "player",
+      "cell": 40,
+      "hp": 3,
+      "movement": 2,
+      "fire_clause": false
+    },
+    {
+      "id": 3,
+      "name": "Supervisor",
+      "role": "supervisor",
+      "side": "enemy",
+      "cell": 10,
+      "hp": 3,
+      "movement": 2,
+      "fire_clause": false
+    },
+    {
+      "id": 4,
+      "name": "Dot",
+      "role": "courier",
+      "side": "enemy",
+      "cell": 18,
+      "hp": 2,
+      "movement": 3,
+      "fire_clause": true
+    },
+    {
+      "id": 5,
+      "name": "Brisk",
+      "role": "shieldbearer",
+      "side": "enemy",
+      "cell": 20,
+      "hp": 3,
+      "movement": 2,
+      "fire_clause": false
+    }
+  ]
+}

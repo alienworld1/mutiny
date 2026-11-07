@@ -1,12 +1,33 @@
 @import "tailwindcss";
+@import "./styles/fonts.css";
+@import "./styles/tokens.css";
 
-body {
-  margin: 0;
-  font-family: system-ui, sans-serif;
-}
-
-main {
-  max-width: 40rem;
-  margin: 4rem auto;
-  padding: 0 1.5rem;
+@layer base {
+  body {
+    @apply m-0 bg-chalk font-ui text-ink antialiased;
+  }
+  button {
+    @apply min-h-11 cursor-pointer rounded-[10px] border border-border bg-paper px-4 py-2 font-semibold transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  summary:focus-visible {
+    @apply outline-3 outline-offset-3 outline-focus;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+  button[aria-pressed="true"] {
+    @apply border-ink bg-ink text-white;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0s !important;
+      animation-duration: 0s !important;
+    }
+  }
 }

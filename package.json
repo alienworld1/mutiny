@@ -12,10 +12,17 @@
     "test": "pnpm --filter @mutiny/app test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "wasm:build": "bash scripts/build-wasm.sh",
+    "predev": "pnpm wasm:build",
+    "prebuild": "pnpm wasm:build",
+    "test:parity": "node scripts/check-parity.mjs",
+    "test:sandbox": "node scripts/sandbox-smoke.mjs",
+    "contract:build": "cargo build --locked -p registry --target wasm32-unknown-unknown --release"
   },
   "devDependencies": {
-    "prettier": "^3.8.2",
-    "@playwright/test": "^1.0.0"
+    "@playwright/test": "^1.0.0",
+    "near-workspaces": "^5.0.0",
+    "prettier": "^3.8.2"
   }
 }

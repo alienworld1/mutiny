@@ -1,2 +1,6 @@
 packages:
   - app
+allowBuilds:
+  near-sandbox: false
+  near-workspaces: false
+  secp256k1: false
