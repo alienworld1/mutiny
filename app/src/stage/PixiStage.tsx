@@ -5,6 +5,7 @@ import { actionText, coordinate } from "../game/types";
 import { draw } from "./renderer";
 import { loadStageArt, type StageArt } from "./art";
 import { playEvents, type Playback } from "./playback";
+import { startIdle } from "./idle";
 import {
   cellToScreen,
   WIDTH,
@@ -28,9 +29,9 @@ export default function PixiStage(props: Props) {
   const renderer = useRef<{ app: Application; scene: Container } | null>(null);
   const latest = useRef(props);
   const [fallback, setFallback] = useState(false);
+  const [ready, setReady] = useState(false);
   const [focus, setFocus] = useState(44);
   const [art, setArt] = useState<StageArt>({});
-  const latestArt = useRef(art);
   const [reduced, setReduced] = useState(
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
@@ -39,6 +40,9 @@ export default function PixiStage(props: Props) {
   );
   const textBoard = fallback || highContrast;
   const played = useRef<Playback | null>(null);
+  const pathKey = props.path.join(",");
+  const reachableKey = props.reachable.join(",");
+  const targetsKey = props.targets.join(",");
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const change = () => setReduced(media.matches);
@@ -74,42 +78,73 @@ export default function PixiStage(props: Props) {
   );
   useEffect(() => {
     latest.current = props;
-    latestArt.current = art;
+  }, [props, art]);
+  useEffect(() => {
+    const p = latest.current;
     const r = renderer.current;
     if (r) {
-      const entities = draw(
+      const scene = draw(
         r.scene,
-        props.state,
-        props.selected,
-        props.path,
-        props.reachable,
-        props.targets,
-        props.focusedOrder,
+        p.state,
+        p.selected,
+        p.path,
+        p.reachable,
+        p.targets,
+        p.focusedOrder,
         art,
       );
-      r.app.render();
-      const playback = props.playback;
-      if (playback && playback !== played.current) {
-        played.current = playback;
-        if (!reduced && !document.hidden) {
-          const stop = playEvents(r.scene, entities, playback, () =>
-            r.app.render(),
-          );
-          const finish = () => {
-            if (document.hidden) {
-              stop();
-              r.app.render();
-            }
-          };
-          document.addEventListener("visibilitychange", finish);
-          return () => {
-            stop();
-            document.removeEventListener("visibilitychange", finish);
-          };
-        }
-      }
+      const playback = p.playback;
+      const fresh = playback && playback !== played.current;
+      if (playback) played.current = playback;
+      let playing = false;
+      let stopIdle = () => {},
+        stopPlayback = () => {};
+      const idle = () => {
+        if (!reduced && !highContrast && !document.hidden)
+          stopIdle = startIdle(scene, () => {
+            if (!playing) r.app.render();
+          });
+      };
+      idle();
+      if (fresh && !reduced && !highContrast && !document.hidden) {
+        playing = true;
+        stopPlayback = playEvents(
+          r.scene,
+          scene.entities,
+          playback,
+          () => r.app.render(),
+          () => {
+            playing = false;
+          },
+        );
+      } else r.app.render();
+      const visibility = () => {
+        stopIdle();
+        if (document.hidden) {
+          stopPlayback();
+          r.app.render();
+        } else idle();
+      };
+      document.addEventListener("visibilitychange", visibility);
+      return () => {
+        stopPlayback();
+        stopIdle();
+        document.removeEventListener("visibilitychange", visibility);
+      };
     }
-  }, [props, art, reduced]);
+  }, [
+    props.state,
+    props.selected,
+    props.focusedOrder,
+    props.playback,
+    pathKey,
+    reachableKey,
+    targetsKey,
+    art,
+    reduced,
+    highContrast,
+    ready,
+  ]);
   useEffect(() => {
     let cancelled = false;
     const app = new Application();
@@ -135,18 +170,7 @@ export default function PixiStage(props: Props) {
         app.stage.addChild(scene);
         renderer.current = { app, scene };
         app.stop();
-        const p = latest.current;
-        draw(
-          scene,
-          p.state,
-          p.selected,
-          p.path,
-          p.reachable,
-          p.targets,
-          p.focusedOrder,
-          latestArt.current,
-        );
-        app.render();
+        setReady(true);
       })
       .catch(() => {
         if (!cancelled) setFallback(true);

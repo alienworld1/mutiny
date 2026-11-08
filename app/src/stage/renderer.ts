@@ -1,7 +1,7 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { characterSlots } from "./assets";
 import type { StageArt } from "./art";
-import type { Entity, EntityView } from "./playback";
+import type { Entity, EntityView, HazardView } from "./playback";
 import type { State } from "../game/types";
 import {
   cellToScreen,
@@ -44,6 +44,7 @@ export function draw(
   art: StageArt = {},
 ) {
   const entities = new Map<Entity, EntityView>();
+  const hazards: HazardView[] = [];
   const labelsLayer = new Container();
   for (const child of root.removeChildren()) child.destroy({ children: true });
   if (art.environment) {
@@ -265,7 +266,8 @@ export function draw(
     const hud = new Container();
     labelsLayer.addChild(hud);
     root.addChild(entity);
-    entities.set(u ? u.id : "cart", { body: entity, labels: hud });
+    const view: EntityView = { body: entity, labels: hud };
+    entities.set(u ? u.id : "cart", view);
     if (u && u.hp <= 0) {
       const fallen = new Graphics()
         .ellipse(x, y + 15, 22, 8)
@@ -277,6 +279,19 @@ export function draw(
         .lineTo(x - 7, y + 20)
         .stroke({ color: C.ink, width: 2, alpha: 0.5 });
       entity.addChild(fallen);
+      const texture = art.characters?.[characterSlots[u.name] ?? 0];
+      if (texture) {
+        const figure = new Sprite(texture);
+        figure.anchor.set(0.5, 0.96);
+        figure.height = 70;
+        figure.scale.x = figure.scale.y;
+        figure.position.set(x, y + 15);
+        figure.rotation = -1.1;
+        figure.alpha = 0.35;
+        entity.addChild(figure);
+        view.figure = figure;
+        view.defeated = true;
+      }
       continue;
     }
     const p = new Graphics();
@@ -294,6 +309,7 @@ export function draw(
           cart.alpha = 0.65;
         }
         entity.addChild(cart);
+        view.figure = cart;
         if (state.cart_hp < 2)
           label(
             hud,
@@ -320,11 +336,13 @@ export function draw(
           .stroke({ color: C.ink, width: 1 });
         label(hud, "¤", x, y - 23, 17);
       }
-      const plate = new Graphics()
-        .roundRect(x - 31, y + 23, 62, 17, 4)
-        .fill({ color: C.chalk, alpha: 0.95 });
-      hud.addChild(plate);
-      label(hud, `Cart ${state.cart_hp}/2`, x, y + 29, 12);
+      const health = new Graphics();
+      hud.addChild(health);
+      for (let h = 0; h < 2; h++)
+        health
+          .roundRect(x + 23 + h * 8, y - 9, 6, 6, 1)
+          .fill(h < state.cart_hp ? C.ink : C.chalk)
+          .stroke({ color: C.chalk, width: 1 });
       continue;
     }
     const color = u.side === "player" ? C.slate : C.enemy;
@@ -335,8 +353,14 @@ export function draw(
         color,
         width: 3,
       });
-    if (u.id === selected)
-      p.ellipse(x, y + 16, 34, 15).stroke({ color: C.ink, width: 3 });
+    if (u.id === selected) {
+      const selection = new Graphics()
+        .ellipse(0, 0, 34, 15)
+        .stroke({ color: C.ink, width: 3 });
+      selection.position.set(x, y + 16);
+      entity.addChild(selection);
+      view.selection = selection;
+    }
     const texture =
       art.characters?.[
         characterSlots[u.name] ??
@@ -349,6 +373,7 @@ export function draw(
       sprite.scale.x = sprite.scale.y;
       sprite.position.set(x, y + 19);
       entity.addChild(sprite);
+      view.figure = sprite;
     } else {
       p.roundRect(x - 10, y - 8, 20, 24, 6)
         .fill(color)
@@ -465,24 +490,51 @@ export function draw(
         .stroke({ color: C.ink, width: 2 });
     }
     if (u.status === "striking") {
-      status
-        .moveTo(x + 23, y + 15)
-        .lineTo(x + 23, y - 35)
+      const picket = new Container(),
+        board = new Graphics();
+      hud.addChild(picket);
+      picket.addChild(board);
+      view.picket = picket;
+      const side = state.setup.units.some(
+        (other) => other.hp > 0 && other.cell === u.cell + 1 && u.cell % 7 < 6,
+      )
+        ? -1
+        : 1;
+      const signX = x + side * 34;
+      picket.pivot.set(signX, y + 15);
+      picket.position.set(signX, y + 15);
+      board
+        .moveTo(signX, y + 15)
+        .lineTo(signX, y - 16)
         .stroke({ color: 0x8f7058, width: 3 });
-      status
-        .roundRect(x - 5, y - 47, 68, 22, 2)
+      board
+        .roundRect(signX - 26, y - 22, 52, 17, 2)
         .fill(C.chalk)
         .stroke({ color: C.enemy, width: 2 });
-      label(hud, "ON STRIKE", x + 29, y - 36, 10, C.enemy);
+      label(picket, "ON STRIKE", signX, y - 13, 9, C.enemy);
     }
-    if (u.status === "recovering")
-      label(hud, "RECOVERING", x, y - 62, 10, C.enemy);
+    if (u.status === "recovering") {
+      status
+        .circle(x + 31, y + 12, 7)
+        .fill(C.chalk)
+        .stroke({ color: C.ink, width: 1 });
+      status
+        .moveTo(x + 31, y + 7)
+        .lineTo(x + 31, y + 12)
+        .lineTo(x + 35, y + 14)
+        .stroke({ color: C.ink, width: 1.5 });
+    }
     if (state.borrow_pending === u.id)
-      label(hud, "BORROWED", x, y - 62, 11, C.dark);
+      status
+        .circle(x + 28, y + 12, 5)
+        .circle(x + 34, y + 12, 5)
+        .stroke({ color: C.dark, width: 2 });
+    // Keep the center clear: a full name here covers the next row's figure.
     status
-      .roundRect(x - 30, y + 24, 60, 18, 4)
-      .fill({ color: C.chalk, alpha: 0.95 });
-    label(hud, u.name, x, y + 34, 12);
+      .roundRect(x - 39, y + 8, 16, 18, 4)
+      .fill(C.chalk)
+      .stroke({ color: C.ink, width: 1 });
+    label(hud, String(u.id + 1), x - 31, y + 17, 12);
     for (let h = 0; h < u.hp; h++)
       status
         .roundRect(x - u.hp * 4 + h * 8, y - 58, 6, 5, 1)
@@ -495,6 +547,9 @@ export function draw(
     const { x, y } = cellToScreen(c);
     const f = new Graphics();
     root.addChild(f);
+    f.pivot.set(x, y + 12);
+    f.position.set(x, y + 12);
+    hazards.push({ view: f, kind: "fire", phase: c });
     f.ellipse(x, y + 8, 23, 9).fill({ color: 0x8d3a45, alpha: 0.25 });
     f.poly([
       x - 16,
@@ -532,11 +587,20 @@ export function draw(
       x + 3,
       y + 12,
     ]).fill(0xe9b762);
+    for (let i = 0; i < 3; i++) {
+      const ember = new Graphics().circle(0, 0, 1.4).fill(0xe9b762);
+      ember.position.set(x + (i - 1) * 9, y - 10);
+      root.addChild(ember);
+      hazards.push({ view: ember, kind: "ember", phase: c * 3 + i });
+    }
   }
   for (const c of state.smoke) {
     const { x, y } = cellToScreen(c);
     const cloud = new Graphics();
     root.addChild(cloud);
+    cloud.pivot.set(x, y);
+    cloud.position.set(x, y);
+    hazards.push({ view: cloud, kind: "smoke", phase: c });
     cloud
       .ellipse(x, y - 4, 31, 18)
       .fill({ color: C.stone, alpha: 0.88 })
@@ -550,5 +614,5 @@ export function draw(
     label(root, `${n + 1}`, 20, ORIGIN_Y + 32 + n * 64, 13);
   }
   root.addChild(labelsLayer);
-  return entities;
+  return { entities, hazards };
 }

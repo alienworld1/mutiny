@@ -147,3 +147,45 @@ test("a job opened from the lower board starts at its heading", async ({
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await expect(page.locator('[data-art="ready"]')).toBeVisible();
 });
+
+test("saving local progress keeps the action animation running", async ({
+  page,
+}) => {
+  // Instrument the public animation boundary only in this browser test.
+  await page.route(/\/src\/stage\/playback\.ts(?:\?.*)?$/, async (route) => {
+    if (route.request().url().includes("motion-original"))
+      return route.continue();
+    await route.fulfill({
+      contentType: "text/javascript",
+      body: `
+      export * from '/src/stage/playback.ts?motion-original';
+      import {playEvents as original} from '/src/stage/playback.ts?motion-original';
+      export function playEvents(...args) {
+        const record={startedAt:performance.now(),stoppedAt:null};
+        window.mutinyMotionCheck=record;
+        const stop=original(...args);
+        return ()=>{record.stoppedAt=performance.now();stop();};
+      }
+    `,
+    });
+  });
+  await open(page);
+  await push(page);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const value = (
+          window as Window & { mutinyMotionCheck?: { startedAt: number } }
+        ).mutinyMotionCheck;
+        return value ? performance.now() - value.startedAt : 0;
+      }),
+    )
+    .toBeGreaterThan(200);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { mutinyMotionCheck: { stoppedAt: number | null } })
+          .mutinyMotionCheck.stoppedAt,
+    ),
+  ).toBeNull();
+});

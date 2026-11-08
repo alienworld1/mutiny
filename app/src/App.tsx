@@ -741,6 +741,12 @@ function App() {
                           onClick={() => select(u.id)}
                           className="!px-3 text-sm"
                         >
+                          <span
+                            aria-hidden="true"
+                            className="mr-1 font-mono text-xs"
+                          >
+                            {u.id + 1}
+                          </span>
                           {u.name}{" "}
                           {u.hp === 0
                             ? "×"

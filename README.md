@@ -16,7 +16,7 @@ pnpm dev
 
 `pnpm dev` and `pnpm build` compile the shared Rust engine to browser Wasm. Progress is saved on this browser when IndexedDB is available.
 
-`pnpm build` produces the complete static site in `app/dist`, including offline Free Play. Preview with `pnpm --filter @mutiny/app preview`. Deploy that directory to a static host after building with the prerequisites above. A hosted release and five unfamiliar-player release sessions are still pending.
+`pnpm build` produces the complete static site in `app/dist`, including offline Free Play. Preview with `pnpm --filter @mutiny/app preview`. Deploy that directory to a static host after building with the prerequisites above. Deployment and further playtest-driven polish are deferred.
 
 ```sh
 pnpm contract:build

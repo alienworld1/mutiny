@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { Container } from "pixi.js";
+import { Container, Sprite, Texture } from "pixi.js";
 import * as engine from "../game/engine";
-import { motionTracks, playEvents } from "./playback";
+import { planPlayback, playEvents } from "./playback";
 
 const { default: init } = await import("../game/wasm/game_web");
 await init({
@@ -23,15 +23,19 @@ describe("committed event playback", () => {
       path: [31, 38],
       action: { kind: "push" },
     });
-    const tracks = motionTracks({ before, events: next.events });
-    expect(tracks.get(0)).toEqual([32, 31, 38]);
-    expect(tracks.get("cart")).toEqual([37, 30]);
+    const plan = planPlayback({ before, events: next.events });
+    expect(plan.moves.find((move) => move.id === 0)?.cells).toEqual([
+      32, 31, 38,
+    ]);
+    expect(plan.moves.find((move) => move.id === "cart")?.cells).toEqual([
+      37, 30,
+    ]);
     expect(JSON.stringify(before)).toBe(frozen);
     expect(next.state.pushes).toBe(1);
   });
   it("resolves swap positions after movement and displacement in event order", () => {
     const before = engine.start();
-    const tracks = motionTracks({
+    const plan = planPlayback({
       before,
       events: [
         { kind: "moved", unit: 0, path: [31] },
@@ -44,20 +48,30 @@ describe("committed event playback", () => {
         { kind: "swapped", unit: 0, target: 1 },
       ],
     });
-    expect(tracks.get(0)).toEqual([32, 31, 38]);
-    expect(tracks.get(1)).toEqual([before.setup.units[1]!.cell, 38, 31]);
+    expect(
+      plan.moves.filter((move) => move.id === 0).map((move) => move.cells),
+    ).toEqual([
+      [32, 31],
+      [31, 38],
+    ]);
+    expect(
+      plan.moves.filter((move) => move.id === 1).map((move) => move.cells),
+    ).toEqual([
+      [before.setup.units[1]!.cell, 38],
+      [38, 31],
+    ]);
   });
   it("never turns a blocked order or refusal into motion or a strike", () => {
     const before = engine.start();
     expect(
-      motionTracks({
+      planPlayback({
         before,
         events: [
           { kind: "blocked", unit: 4, reason: "Occupied" },
           { kind: "refused", unit: 1, reason: "Fire" },
           { kind: "strike", unit: 4, cell: 25, reason: "Fire" },
         ],
-      }).size,
+      }).moves.length,
     ).toBe(0);
   });
   it("cancels an interrupted frame and restores sprites and labels without another game action", () => {
@@ -95,6 +109,65 @@ describe("committed event playback", () => {
       vi.unstubAllGlobals();
       vi.restoreAllMocks();
       root.destroy({ children: true });
+    }
+  });
+  it("shows movement before a push and an attack before its real damage", () => {
+    const plan = planPlayback({
+      before: engine.start(),
+      events: [
+        { kind: "moved", unit: 0, path: [31, 38] },
+        { kind: "pushed", from: 37, to: 30 },
+        { kind: "attacked", unit: 0, affected: [24] },
+        { kind: "damaged", target: 3, hp: 2 },
+        { kind: "strike", unit: 4, cell: 25, reason: "Fire" },
+      ],
+    });
+    expect(plan.moves.map((move) => move.at)).toEqual([0, 300]);
+    expect(plan.beats.find((beat) => beat.event.kind === "attacked")?.at).toBe(
+      600,
+    );
+    const hit = plan.beats.find((beat) => beat.event.kind === "damaged")!;
+    expect(hit.at).toBe(720);
+    expect(hit.damage).toBe(1);
+    expect(
+      plan.beats.find((beat) => beat.event.kind === "strike")!.at,
+    ).toBeGreaterThanOrEqual(hit.at + hit.duration);
+  });
+  it("keeps an earlier knockout down during another unit's animation", () => {
+    const before = engine.start();
+    before.setup.units[3]!.hp = 0;
+    const root = new Container(),
+      body = new Container(),
+      labels = new Container(),
+      figure = new Sprite(Texture.EMPTY);
+    figure.alpha = 0.35;
+    figure.rotation = -1.1;
+    let frame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      frame = callback;
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    vi.stubGlobal("document", { hidden: false });
+    vi.spyOn(performance, "now").mockReturnValue(0);
+    try {
+      const stop = playEvents(
+        root,
+        new Map([[3, { body, labels, figure, defeated: true }]]),
+        { before, events: [{ kind: "moved", unit: 0, path: [31, 38] }] },
+        vi.fn(),
+      );
+      frame!(150);
+      expect(figure.alpha).toBe(0.35);
+      expect(figure.rotation).toBe(-1.1);
+      stop();
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      root.destroy({ children: true });
+      body.destroy();
+      labels.destroy();
+      figure.destroy();
     }
   });
 });

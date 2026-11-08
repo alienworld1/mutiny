@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 import type { Event, State } from "../game/types";
 import { palette as C } from "./palette";
 import { cellToScreen } from "./projection";
@@ -7,43 +7,259 @@ export type Entity = number | "cart";
 export interface EntityView {
   body: Container;
   labels: Container;
+  figure?: Sprite;
+  picket?: Container;
+  selection?: Container;
+  busy?: boolean;
+  defeated?: boolean;
+}
+export interface HazardView {
+  view: Container;
+  kind: "fire" | "smoke" | "ember";
+  phase: number;
+}
+export interface StageView {
+  entities: Map<Entity, EntityView>;
+  hazards: HazardView[];
 }
 export interface Playback {
   before: State;
   events: Event[];
 }
+interface Move {
+  id: Entity;
+  cells: number[];
+  at: number;
+  duration: number;
+}
+interface Beat {
+  event: Event;
+  id: Entity | null;
+  cell: number;
+  origin: number;
+  at: number;
+  duration: number;
+  damage: number;
+}
 
-// Only presentation data: every waypoint and reaction comes from a committed event.
-export function motionTracks({ before, events }: Playback) {
-  const tracks = new Map<Entity, number[]>();
-  const append = (id: Entity, cells: number[]) => {
-    const start =
-      id === "cart" ? before.cart_cell : before.setup.units[id]!.cell;
-    const track = tracks.get(id) ?? [start];
-    track.push(...cells);
-    tracks.set(id, track);
-  };
-  const positions = new Map(before.setup.units.map((u) => [u.id, u.cell]));
+// Schedule the engine's events in their actual order; this never resolves a rule.
+export function planPlayback({ before, events }: Playback) {
+  const positions = new Map<Entity, number>(
+    before.setup.units.map((u) => [u.id, u.cell]),
+  );
+  positions.set("cart", before.cart_cell);
+  const hp = new Map<Entity, number>(
+    before.setup.units.map((u) => [u.id, u.hp]),
+  );
+  hp.set("cart", before.cart_hp);
+  const moves: Move[] = [],
+    beats: Beat[] = [];
+  let cursor = 0,
+    impact: number | null = null;
+  function move(id: Entity, cells: number[], duration: number, at = cursor) {
+    moves.push({ id, cells: [positions.get(id)!, ...cells], duration, at });
+    positions.set(id, cells.at(-1) ?? positions.get(id)!);
+  }
   for (const event of events) {
     if (event.kind === "moved") {
-      append(event.unit, event.path);
-      positions.set(
-        event.unit,
-        event.path.at(-1) ?? positions.get(event.unit)!,
-      );
-    } else if (event.kind === "displaced") {
-      append(event.unit, [event.to]);
-      positions.set(event.unit, event.to);
-    } else if (event.kind === "swapped") {
+      const duration = Math.min(600, event.path.length * 150);
+      move(event.unit, event.path, duration);
+      cursor += duration;
+      impact = null;
+      continue;
+    }
+    if (event.kind === "displaced") {
+      move(event.unit, [event.to], 240);
+      cursor += 240;
+      impact = null;
+      continue;
+    }
+    if (event.kind === "swapped") {
       const a = positions.get(event.unit)!,
         b = positions.get(event.target)!;
-      append(event.unit, [b]);
-      append(event.target, [a]);
-      positions.set(event.unit, b);
-      positions.set(event.target, a);
-    } else if (event.kind === "pushed") append("cart", [event.to]);
+      move(event.unit, [b], 260);
+      move(event.target, [a], 260);
+      cursor += 260;
+      impact = null;
+      continue;
+    }
+    if (event.kind === "recovering" || event.kind === "recovered") continue;
+    const id: Entity | null =
+      "unit" in event
+        ? event.unit
+        : event.kind === "damaged"
+          ? event.target < 0
+            ? "cart"
+            : event.target
+          : event.kind === "pushed" || event.kind === "ended"
+            ? "cart"
+            : null;
+    const origin = id === null ? before.cart_cell : positions.get(id)!;
+    const cell =
+      "cell" in event
+        ? event.cell
+        : event.kind === "attacked"
+          ? (event.affected[0] ?? origin)
+          : origin;
+    let at = cursor,
+      duration = 280,
+      damage = 0;
+    if (event.kind === "pushed") {
+      duration = 300;
+      move("cart", [event.to], duration);
+    } else if (event.kind === "attacked") {
+      duration = 260;
+      impact = cursor + 120;
+    } else if (event.kind === "damaged") {
+      at = impact ?? Math.max(0, cursor - 80);
+      duration = 320;
+      damage = Math.max(0, hp.get(id!)! - event.hp);
+      hp.set(id!, event.hp);
+    } else if (event.kind === "protected") {
+      at = impact ?? cursor;
+      duration = 300;
+    } else if (event.kind === "strike") duration = 540;
+    else if (event.kind === "borrowed") duration = 420;
+    else if (event.kind === "ended") duration = 350;
+    beats.push({ event, id, cell, origin, at, duration, damage });
+    cursor = Math.max(cursor, at + duration);
   }
-  return tracks;
+  return { moves, beats, positions, duration: cursor };
+}
+
+function caption(root: Container, text: string, fill: number, size = 16) {
+  const word = new Text({
+    text,
+    style: {
+      fontFamily: "Atkinson Hyperlegible Next",
+      fontSize: size,
+      fontWeight: "bold",
+      fill,
+      stroke: { color: C.chalk, width: 3 },
+    },
+  });
+  word.anchor.set(0.5);
+  root.addChild(word);
+  return word;
+}
+function shield(g: Graphics) {
+  g.poly([-13, -17, 13, -17, 12, 4, 0, 17, -12, 4])
+    .fill({ color: C.chalk, alpha: 0.9 })
+    .stroke({ color: C.slate, width: 3 });
+}
+function beatEffect(root: Container, beat: Beat, before: State) {
+  const view = new Container(),
+    g = new Graphics();
+  const p = cellToScreen(beat.cell),
+    from = cellToScreen(beat.origin);
+  view.position.set(p.x, p.y);
+  view.addChild(g);
+  root.addChild(view);
+  view.visible = false;
+  const event = beat.event;
+  let projectile: Graphics | undefined;
+  if (event.kind === "attacked") {
+    const color =
+      before.setup.units[event.unit]!.side === "player" ? C.slate : C.enemy;
+    for (const cell of event.affected) {
+      const q = cellToScreen(cell);
+      g.moveTo(q.x - p.x - 14, q.y - p.y - 12)
+        .lineTo(q.x - p.x + 14, q.y - p.y + 12)
+        .moveTo(q.x - p.x + 14, q.y - p.y - 12)
+        .lineTo(q.x - p.x - 14, q.y - p.y + 12)
+        .stroke({ color, width: 4 });
+      g.circle(q.x - p.x, q.y - p.y, 22).stroke({ color, width: 2 });
+    }
+    if (
+      before.setup.units[event.unit]!.role === "mage" ||
+      event.affected.length > 1 ||
+      Math.hypot(from.x - p.x, from.y - p.y) > 90
+    ) {
+      projectile = new Graphics()
+        .circle(0, 0, 5)
+        .fill(C.brass)
+        .stroke({ color, width: 2 });
+      view.addChild(projectile);
+    }
+  } else if (event.kind === "damaged") {
+    if (beat.damage) caption(view, `−${beat.damage}`, C.enemy, 22);
+    view.y -= 32;
+  } else if (
+    event.kind === "guarded" ||
+    event.kind === "protected" ||
+    event.kind === "certified"
+  ) {
+    shield(g);
+    view.y -= 15;
+  } else if (event.kind === "strike") {
+    caption(view, "!", C.enemy, 26).position.set(-22, -40);
+    for (let i = 0; i < 5; i++)
+      g.rect(Math.cos(i * 1.7) * 24, Math.sin(i * 1.7) * 20, 5, 7).fill(
+        i % 2 ? C.chalk : C.enemy,
+      );
+  } else if (event.kind === "borrowed") {
+    g.circle(0, 0, 30).stroke({ color: C.slate, width: 3 });
+    caption(view, "↔", C.dark, 24).y = -36;
+  } else if (event.kind === "pushed") {
+    for (let i = 0; i < 6; i++)
+      g.circle((i - 2.5) * 7, 15 + (i % 2) * 5, 3 + (i % 3)).fill({
+        color: C.clay,
+        alpha: 0.7,
+      });
+  } else if (event.kind === "blocked" || event.kind === "refused") {
+    caption(
+      view,
+      event.kind === "blocked" ? "BLOCKED" : "REFUSED",
+      C.ink,
+      12,
+    ).y = -36;
+    g.moveTo(-9, -9)
+      .lineTo(9, 9)
+      .moveTo(9, -9)
+      .lineTo(-9, 9)
+      .stroke({ color: C.ink, width: 3 });
+  } else if (event.kind === "ignited") {
+    for (let i = 0; i < 7; i++)
+      g.moveTo(0, 0)
+        .lineTo(Math.cos(i) * 28, Math.sin(i) * 28)
+        .stroke({ color: C.brass, width: 3 });
+  } else if (event.kind === "smoked") {
+    g.circle(-12, 0, 17)
+      .circle(10, -5, 20)
+      .fill({ color: C.chalk, alpha: 0.8 });
+  } else if (event.kind === "ended") {
+    for (let i = 0; i < 8; i++)
+      g.moveTo(
+        Math.cos((i * Math.PI) / 4) * 22,
+        Math.sin((i * Math.PI) / 4) * 22,
+      )
+        .lineTo(
+          Math.cos((i * Math.PI) / 4) * 37,
+          Math.sin((i * Math.PI) / 4) * 37,
+        )
+        .stroke({
+          color: event.outcome === "delivered" ? C.brass : C.enemy,
+          width: 3,
+        });
+  }
+  return (t: number) => {
+    view.visible = t >= 0 && t < 1;
+    if (!view.visible) return;
+    view.alpha = 1 - t * t;
+    if (event.kind === "attacked") {
+      const travel = Math.min(1, t / 0.6);
+      projectile?.position.set(
+        (from.x - p.x) * (1 - travel),
+        (from.y - p.y) * (1 - travel) - Math.sin(travel * Math.PI) * 20,
+      );
+      if (projectile) projectile.visible = t < 0.65;
+      g.alpha = t < 0.45 ? 0 : Math.sin(((t - 0.45) / 0.55) * Math.PI);
+    } else if (event.kind === "damaged") view.y = p.y - 32 - t * 23;
+    else {
+      const scale = 0.75 + t * 0.65;
+      view.scale.set(scale);
+    }
+  };
 }
 
 export function playEvents(
@@ -51,130 +267,153 @@ export function playEvents(
   entities: Map<Entity, EntityView>,
   playback: Playback,
   render: () => void,
+  onFinish?: () => void,
 ) {
-  const tracks = motionTracks(playback);
-  const reactions = new Map<Entity, "hit" | "strike" | "action" | "borrow">();
-  const effects = new Container();
+  const plan = planPlayback(playback),
+    effects = new Container();
   root.addChild(effects);
-  for (const event of playback.events) {
-    const cell = "cell" in event ? event.cell : null;
-    if (
-      cell !== null &&
-      ["strike", "ignited", "smoked", "certified"].includes(event.kind)
-    ) {
-      const point = cellToScreen(cell);
-      effects.addChild(
-        new Graphics().circle(point.x, point.y, 27).stroke({
-          color: event.kind === "strike" ? C.enemy : C.dark,
-          width: 3,
-        }),
-      );
-    }
-    if (event.kind === "attacked")
-      for (const cell of event.affected) {
-        const point = cellToScreen(cell);
-        effects.addChild(
-          new Graphics()
-            .moveTo(point.x - 10, point.y - 10)
-            .lineTo(point.x + 10, point.y + 10)
-            .moveTo(point.x + 10, point.y - 10)
-            .lineTo(point.x - 10, point.y + 10)
-            .stroke({ color: C.enemy, width: 3 }),
-        );
-      }
-    if (event.kind === "blocked" || event.kind === "refused") {
-      const point = cellToScreen(playback.before.setup.units[event.unit]!.cell);
-      const text = new Text({
-        text: event.kind === "blocked" ? "BLOCKED" : "REFUSED",
-        style: {
-          fontFamily: "Atkinson Hyperlegible Next",
-          fontSize: 11,
-          fontWeight: "bold",
-          fill: C.ink,
-        },
-      });
-      text.anchor.set(0.5);
-      text.position.set(point.x, point.y - 60);
-      effects.addChild(text);
-    }
-  }
-  for (const event of playback.events) {
-    if (event.kind === "damaged")
-      reactions.set(event.target < 0 ? "cart" : event.target, "hit");
-    else if (event.kind === "strike") reactions.set(event.unit, "strike");
-    else if (event.kind === "borrowed") reactions.set(event.unit, "borrow");
-    else if (event.kind === "attacked" && !reactions.has(event.unit))
-      reactions.set(event.unit, "action");
-  }
-  let frame = 0;
-  let disposed = false;
-  const movementDuration = Math.max(
-    0,
-    ...Array.from(tracks, ([id, cells]) =>
-      id === "cart" ? 270 : Math.min(650, (cells.length - 1) * 150),
-    ),
+  const visuals = plan.beats.map((beat) =>
+    beatEffect(effects, beat, playback.before),
   );
-  const reactionDuration = reactions.size || effects.children.length ? 540 : 0;
-  const start = performance.now();
+  const poses = new Map(
+    Array.from(entities, ([id, view]) => [
+      id,
+      view.figure
+        ? {
+            x: view.figure.x,
+            y: view.figure.y,
+            rotation: view.figure.rotation,
+            alpha: view.figure.alpha,
+          }
+        : null,
+    ]),
+  );
   const reset = () => {
-    for (const view of entities.values()) {
-      for (const entity of [view.body, view.labels]) {
-        entity.position.set(0, 0);
-        entity.alpha = 1;
+    for (const [id, view] of entities) {
+      view.body.position.set(0, 0);
+      view.labels.position.set(0, 0);
+      view.body.alpha = 1;
+      const pose = poses.get(id);
+      if (view.figure && pose) {
+        view.figure.position.set(pose.x, pose.y);
+        view.figure.rotation = pose.rotation;
+        view.figure.alpha = pose.alpha;
+      }
+      if (view.picket) {
+        view.picket.alpha = 1;
+        view.picket.scale.set(1);
       }
     }
+  };
+  for (const view of entities.values()) view.busy = true;
+  let frame = 0,
+    disposed = false;
+  const start = performance.now(),
+    speed = Math.max(1, plan.duration / 2200);
+  const finish = () => {
+    if (disposed) return;
+    disposed = true;
+    cancelAnimationFrame(frame);
+    reset();
+    for (const view of entities.values()) view.busy = false;
+    effects.destroy({ children: true });
+    onFinish?.();
+    render();
   };
   const tick = (now: number) => {
     if (disposed) return;
+    const elapsed = (now - start) * speed;
     reset();
-    const elapsed = now - start;
-    for (const [id, cells] of tracks) {
-      const view = entities.get(id);
-      if (!view || cells.length < 2) continue;
-      const duration =
-        id === "cart" ? 270 : Math.min(650, (cells.length - 1) * 150);
-      const progress = Math.min(1, elapsed / duration) * (cells.length - 1);
-      const index = Math.min(cells.length - 2, Math.floor(progress));
-      const t = progress - index;
-      const a = cellToScreen(cells[index]!),
-        b = cellToScreen(cells[index + 1]!);
-      const end = cellToScreen(cells.at(-1)!);
-      for (const entity of [view.body, view.labels])
-        entity.position.set(
-          a.x + (b.x - a.x) * t - end.x,
-          a.y + (b.y - a.y) * t - end.y,
-        );
-    }
-    const t = Math.max(0, Math.min(1, (elapsed - movementDuration) / 540));
-    effects.alpha = elapsed < movementDuration ? 0 : 1 - t;
-    for (const [id, reaction] of reactions) {
-      const view = entities.get(id);
-      if (!view) continue;
-      const weight = Math.sin(t * Math.PI);
-      for (const entity of [view.body, view.labels]) {
-        if (reaction === "hit") {
-          entity.x += Math.sin(t * Math.PI * 6) * 5 * (1 - t);
-          entity.alpha = 1 - weight * 0.35;
-        } else if (reaction === "strike")
-          entity.x += Math.sin(t * Math.PI * 2) * 5;
-        else entity.y -= weight * (reaction === "borrow" ? 9 : 4);
+    for (const [id, view] of entities) {
+      const cell =
+        id === "cart"
+          ? playback.before.cart_cell
+          : playback.before.setup.units[id]!.cell;
+      const a = cellToScreen(cell),
+        b = cellToScreen(plan.positions.get(id) ?? cell);
+      view.body.position.set(a.x - b.x, a.y - b.y);
+      view.labels.position.copyFrom(view.body.position);
+      if (
+        view.defeated &&
+        view.figure &&
+        typeof id === "number" &&
+        playback.before.setup.units[id]!.hp > 0
+      ) {
+        view.figure.alpha = 1;
+        view.figure.rotation = 0;
       }
     }
-    render();
-    if (elapsed < movementDuration + reactionDuration && !document.hidden)
-      frame = requestAnimationFrame(tick);
-    else {
-      reset();
-      effects.destroy({ children: true });
-      disposed = true;
-      render();
+    for (const move of plan.moves) {
+      if (elapsed < move.at) continue;
+      const view = entities.get(move.id);
+      if (!view) continue;
+      const t = Math.min(1, (elapsed - move.at) / Math.max(1, move.duration));
+      const progress = t * (move.cells.length - 1),
+        index = Math.min(move.cells.length - 2, Math.floor(progress));
+      if (index < 0) continue;
+      const a = cellToScreen(move.cells[index]!),
+        b = cellToScreen(move.cells[index + 1]!),
+        end = cellToScreen(plan.positions.get(move.id)!);
+      view.body.position.set(
+        a.x + (b.x - a.x) * (progress - index) - end.x,
+        a.y + (b.y - a.y) * (progress - index) - end.y,
+      );
+      view.labels.position.copyFrom(view.body.position);
+      const pose = poses.get(move.id);
+      if (view.figure && pose && t < 1) {
+        view.figure.y = pose.y - Math.abs(Math.sin(progress * Math.PI)) * 3.5;
+        view.figure.rotation =
+          pose.rotation +
+          Math.sin(progress * Math.PI * 2) *
+            (move.id === "cart" ? 0.045 : 0.035);
+      }
     }
+    plan.beats.forEach((beat, i) => {
+      const t = (elapsed - beat.at) / beat.duration;
+      visuals[i]!(t);
+      if (t < 0) return;
+      const view = beat.id === null ? undefined : entities.get(beat.id),
+        event = beat.event;
+      const weight = Math.sin(Math.min(1, t) * Math.PI),
+        pose = beat.id === null ? null : poses.get(beat.id);
+      if (event.kind === "attacked" && view && t < 1) {
+        const a = cellToScreen(beat.origin),
+          b = cellToScreen(beat.cell),
+          distance = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+        view.body.x += ((b.x - a.x) / distance) * weight * 13;
+        view.body.y += ((b.y - a.y) / distance) * weight * 13;
+        if (view.figure && pose)
+          view.figure.rotation =
+            pose.rotation + Math.sign(b.x - a.x || 1) * weight * 0.1;
+      } else if (event.kind === "damaged" && view) {
+        if (t < 1) {
+          view.body.x += Math.sin(t * Math.PI * 6) * 7 * (1 - t);
+          view.body.alpha = 1 - Math.sin(t * Math.PI) * 0.4;
+        }
+        if (event.hp === 0 && view.figure && pose) {
+          view.figure.rotation = pose.rotation * Math.min(1, t);
+          view.figure.alpha = 1 + (pose.alpha - 1) * Math.min(1, t);
+        }
+      } else if (event.kind === "strike" && view) {
+        if (t < 1) view.body.x += Math.sin(t * Math.PI * 2) * 8;
+        if (view.picket) {
+          view.picket.alpha = Math.min(1, t * 4);
+          view.picket.scale.set(1 + Math.sin(Math.min(1, t) * Math.PI) * 0.08);
+        }
+      } else if (event.kind === "borrowed" && view && t < 1)
+        view.body.y -= weight * 9;
+    });
+    // A new strike sign enters with the objection, never before its scheduled event.
+    for (const beat of plan.beats)
+      if (beat.event.kind === "strike" && elapsed < beat.at) {
+        const sign = entities.get(beat.event.unit)?.picket;
+        if (sign) sign.alpha = 0;
+      }
+    render();
+    if (elapsed < plan.duration && !document.hidden)
+      frame = requestAnimationFrame(tick);
+    else finish();
   };
-  frame = requestAnimationFrame(tick);
-  return () => {
-    cancelAnimationFrame(frame);
-    reset();
-    if (!disposed) effects.destroy({ children: true });
-    disposed = true;
-  };
+  tick(start);
+  return finish;
 }
