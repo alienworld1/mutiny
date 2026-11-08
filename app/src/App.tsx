@@ -875,6 +875,15 @@ function App() {
                         </span>
                         {u.status === "striking" &&
                           !u.borrowed &&
+                          !canBorrow(u.id) && (
+                            <span className="mt-1 block font-normal text-secondary">
+                              {state.activated.includes(0)
+                                ? "Your captain has acted."
+                                : "Borrow needs your captain within 2 tiles."}
+                            </span>
+                          )}
+                        {u.status === "striking" &&
+                          !u.borrowed &&
                           canBorrow(u.id) && (
                             <button
                               className="mt-2 block"

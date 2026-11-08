@@ -148,6 +148,15 @@ export default function ActionControls({
             ability("borrow", "Borrow", "Command a striker", false)}
         </div>
       </div>
+      {unit.id === 0 &&
+        state.setup.units.some(
+          (u) => u.side === "enemy" && u.status === "striking" && !u.borrowed,
+        ) &&
+        !options.actions.some((o) => o.action.kind === "borrow") && (
+          <p className="mt-3 text-sm text-secondary">
+            Move within 2 tiles of a striker to Borrow.
+          </p>
+        )}
       {mode !== "move" && (
         <p
           className="mt-3 border-l-2 border-primary pl-3 text-sm text-secondary"

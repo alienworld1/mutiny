@@ -322,3 +322,40 @@ test("small home and battle layouts stay inside the viewport at 200 percent text
     ),
   ).toBe(true);
 });
+test("Borrow explains range and becomes legal after clearing the captain's approach", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Play Free", exact: true }).click();
+  await page.getByRole("button", { name: /^Captain / }).click();
+  await page.getByRole("button", { name: "Burn Notice", exact: true }).click();
+  await page.locator('[data-cell="25"]').click();
+  await confirm(page);
+  await page.getByRole("button", { name: /^Mallow / }).click();
+  await page.getByRole("button", { name: "Desk Swap", exact: true }).click();
+  await page.locator('[data-cell="32"]').click();
+  await confirm(page);
+  await page.getByRole("button", { name: "End Phase", exact: true }).click();
+  await confirm(page);
+  await page.getByRole("button", { name: /^Captain / }).click();
+  await expect(
+    page.getByText("Move within 2 tiles of a striker to Borrow.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Borrow", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: /^Mallow / }).click();
+  await page.locator('[data-cell="33"]').click();
+  await page.getByRole("button", { name: "Guard", exact: true }).click();
+  await confirm(page);
+  await page.getByRole("button", { name: /^Captain / }).click();
+  await page.locator('[data-cell="32"]').click();
+  await page.getByRole("button", { name: "Borrow", exact: true }).click();
+  await page.locator('[data-cell="18"]').click();
+  await confirm(page);
+  await expect(
+    page.getByRole("button", { name: "Skip Borrow", exact: true }),
+  ).toBeVisible();
+});
