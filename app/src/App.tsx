@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import * as engine from "./game/engine";
 import {
   readProgress,
@@ -23,7 +23,9 @@ import type {
   Event,
 } from "./game/types";
 import { coordinate, outcomeText, actionText, packages } from "./game/types";
-import PixiStage from "./stage/PixiStage";
+const PixiStage = lazy(() => import("./stage/PixiStage"));
+import type { Playback } from "./stage/playback";
+import WorkerPortrait from "./near/WorkerPortrait";
 import ContractJobs from "./near/ContractJobs";
 import { useContractJob } from "./near/useContractJob";
 
@@ -47,6 +49,13 @@ function App() {
   const contract = useContractJob();
   const [contractBattle, setContractBattle] = useState(false);
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
+  const battleHeading = useRef<HTMLHeadingElement>(null);
+  const battleSetup = screen.kind === "battle" ? screen.state.setup.id : null;
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (screen.kind === "battle")
+      battleHeading.current?.focus({ preventScroll: true });
+  }, [screen.kind, battleSetup]);
   const [selected, setSelected] = useState<number | null>(null);
   const [path, setPath] = useState<number[]>([]);
   const [mode, updateMode] = useState<Mode>("move");
@@ -68,6 +77,7 @@ function App() {
     [],
   );
   const [feedback, setFeedback] = useState<Event[]>([]);
+  const [playback, setPlayback] = useState<Playback | null>(null);
   const [storageWarning, setStorageWarning] = useState("");
   const [focusedOrder, setFocusedOrder] = useState<number | null>(null);
   const [restart, setRestart] = useState(false);
@@ -131,6 +141,7 @@ function App() {
       clearSelection();
       setHistory([]);
       setFeedback([]);
+      setPlayback(null);
       setNotice("");
       setRestart(false);
       if (state.borrow_pending !== null) setSelected(state.borrow_pending);
@@ -173,6 +184,7 @@ function App() {
       setRestart(false);
       setHistory([]);
       setFeedback([]);
+      setPlayback(null);
       setNotice(
         state.borrow_pending !== null
           ? "Finish or skip the borrowed action."
@@ -251,6 +263,7 @@ function App() {
       if (contractBattle) await contract.persistLog(next.state.log);
       if (id !== requestId.current) return;
       setScreen({ kind: "battle", state: next.state });
+      setPlayback({ before: state, events: next.events });
       const actor =
         "unit" in preview.command
           ? state.setup.units[preview.command.unit]!.name
@@ -298,6 +311,15 @@ function App() {
   function cellClick(cell: number) {
     if (!state || state.outcome || preview) return;
     const target = state.setup.units.find((u) => u.hp > 0 && u.cell === cell);
+    if (
+      mode === "move" &&
+      target?.side === "enemy" &&
+      state.borrow_pending !== target.id
+    ) {
+      setFocusedOrder(target.id);
+      setNotice(`${target.name}: ${target.hp} HP. Posted order selected.`);
+      return;
+    }
     if (mode !== "move") {
       if (mode === "shove") {
         if (target && shoveTarget === null) {
@@ -344,7 +366,15 @@ function App() {
     } else setNotice("That cell is out of reach or blocked.");
   }
   return (
-    <main className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8">
+    <main
+      className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && preview) {
+          setPreview(null);
+          setNotice("Preview cancelled.");
+        }
+      }}
+    >
       <header className="mb-6 flex items-baseline justify-between gap-4 border-b border-border pb-4">
         <a href="./" className="font-display text-xl font-bold tracking-tight">
           MUTINY{" "}
@@ -381,26 +411,34 @@ function App() {
               Dock Fire · 7 × 7 tactics · about 5 minutes
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-[18px] bg-muted p-6 sm:p-9">
-            <div
-              aria-hidden="true"
-              className="mb-6 border-b-4 border-clay pb-8 text-center font-display text-6xl text-primary"
-            >
-              ♜ <span className="text-oxblood">⚑</span> ♜
+          <div className="relative overflow-hidden rounded-[18px] bg-muted shadow-sm">
+            <div aria-hidden="true" className="relative aspect-[4/3]">
+              <img
+                src="/assets/art/dock.webp"
+                alt=""
+                fetchPriority="high"
+                className="absolute h-full w-full object-cover"
+              />
+              <div className="absolute bottom-[10%] left-[6%] w-[29%] -rotate-6">
+                <WorkerPortrait token="captain" className="w-full" />
+              </div>
+              <div className="absolute bottom-[13%] left-[36%] w-[25%]">
+                <WorkerPortrait token="rook" className="w-full" />
+              </div>
+              <div className="absolute bottom-[10%] right-[5%] w-[31%] rotate-3">
+                <WorkerPortrait token="mallow" className="w-full" />
+              </div>
             </div>
-            <p className="text-xs uppercase tracking-[.2em] text-secondary">
-              Your first job
-            </p>
-            <h2 className="my-2 text-3xl">Dock Fire</h2>
-            <p className="max-w-sm text-secondary">
-              Three pushes to deliver the cart. Five rounds before the office
-              closes.
-            </p>
-            <p className="mt-6 border-l-2 border-oxblood pl-4 font-display text-xl italic">
-              “Safety is in the contract.
-              <br />
-              Reading it is apparently optional.”
-            </p>
+            <div className="bg-paper p-5 sm:p-6">
+              <p className="text-xs uppercase tracking-[.2em] text-secondary">
+                Your first job
+              </p>
+              <h2 className="my-2 text-3xl">Dock Fire</h2>
+              <p className="max-w-sm text-secondary">
+                Three pushes to deliver the cart. Five rounds before the office
+                closes.
+              </p>
+            </div>
           </div>
         </section>
       )}
@@ -442,7 +480,9 @@ function App() {
                 {contractBattle ? "Contract Job" : "Free Play"} ·{" "}
                 {state.setup.variant} · {state.log.config.placement}
               </p>
-              <h1 className="text-3xl">{state.setup.name}</h1>
+              <h1 ref={battleHeading} tabIndex={-1} className="text-3xl">
+                {state.setup.name}
+              </h1>
             </div>
             <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm tabular-nums">
               <div>
@@ -478,11 +518,23 @@ function App() {
                 </dd>
               </div>
             </dl>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {!contractBattle && (
-                <button onClick={() => setRestart(true)}>Restart</button>
+                <button
+                  className="inline-flex items-center gap-2"
+                  onClick={() => setRestart(true)}
+                >
+                  <img
+                    src="/assets/icons/arrow-counter-clockwise.svg"
+                    alt=""
+                    aria-hidden="true"
+                    className="h-4 w-4"
+                  />
+                  Restart
+                </button>
               )}
               <button
+                className="inline-flex items-center gap-2"
                 onClick={() => {
                   requestId.current++;
                   clearSelection();
@@ -490,6 +542,12 @@ function App() {
                   setScreen({ kind: "home" });
                 }}
               >
+                <img
+                  src="/assets/icons/list.svg"
+                  alt=""
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
                 Job Board
               </button>
             </div>
@@ -523,38 +581,50 @@ function App() {
                   PREVIEW · Confirm to apply
                 </p>
               )}
-              <PixiStage
-                state={preview?.result.state ?? state}
-                selected={selected}
-                path={path}
-                reachable={
-                  preview || mode !== "move"
-                    ? []
-                    : options.moves.map((m) => m.cell)
+              <Suspense
+                fallback={
+                  <p
+                    role="status"
+                    className="flex aspect-square items-center justify-center rounded-2xl bg-muted"
+                  >
+                    Opening the stage…
+                  </p>
                 }
-                targets={
-                  preview
-                    ? []
-                    : options.actions
-                        .filter(
-                          (o) =>
-                            o.action.kind === mode &&
-                            (mode !== "shove" ||
-                              shoveTarget === null ||
-                              ("target" in o.action &&
-                                o.action.target === shoveTarget)),
-                        )
-                        .flatMap((o) =>
-                          mode === "shove" &&
-                          shoveTarget === null &&
-                          "target" in o.action
-                            ? [state.setup.units[o.action.target]!.cell]
-                            : o.cells,
-                        )
-                }
-                focusedOrder={focusedOrder}
-                onCell={cellClick}
-              />
+              >
+                <PixiStage
+                  state={preview?.result.state ?? state}
+                  selected={selected}
+                  path={path}
+                  reachable={
+                    preview || mode !== "move"
+                      ? []
+                      : options.moves.map((m) => m.cell)
+                  }
+                  targets={
+                    preview
+                      ? []
+                      : options.actions
+                          .filter(
+                            (o) =>
+                              o.action.kind === mode &&
+                              (mode !== "shove" ||
+                                shoveTarget === null ||
+                                ("target" in o.action &&
+                                  o.action.target === shoveTarget)),
+                          )
+                          .flatMap((o) =>
+                            mode === "shove" &&
+                            shoveTarget === null &&
+                            "target" in o.action
+                              ? [state.setup.units[o.action.target]!.cell]
+                              : o.cells,
+                          )
+                  }
+                  focusedOrder={focusedOrder}
+                  playback={preview ? null : playback}
+                  onCell={cellClick}
+                />
+              </Suspense>
               <p className="mt-2 text-sm text-secondary">
                 ● Your crew · ⚑ Enemies · ⋯ Posted moves
               </p>
@@ -598,7 +668,7 @@ function App() {
               {state.outcome ? (
                 <section
                   aria-label="Job result"
-                  className="rounded-2xl border-2 border-primary bg-paper p-6"
+                  className="result-stamp rounded-2xl border-2 border-primary bg-paper p-6"
                 >
                   <p className="text-xs uppercase tracking-[.16em] text-secondary">
                     {contractBattle
@@ -821,7 +891,15 @@ function App() {
                           }
                         >
                           <span className="flex items-center justify-between gap-2 text-sm">
-                            <span>{u.name}</span>
+                            <span>
+                              <span
+                                aria-hidden="true"
+                                className="mr-2 font-mono text-xs text-danger"
+                              >
+                                {u.id + 1}
+                              </span>
+                              {u.name}
+                            </span>
                             <span className="text-xs font-normal text-secondary">
                               {u.hp} HP {focusedOrder === u.id ? "▴" : "▾"}
                             </span>

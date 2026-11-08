@@ -60,6 +60,12 @@ export default function JobBoard({
             <p className="mb-3 font-mono text-sm text-secondary">
               0{i + 1} / PAYROLL OFFICE
             </p>
+            <img
+              src={`/assets/art/${["dock", "bridge", "town"][i]}.webp`}
+              alt=""
+              loading="lazy"
+              className="mb-4 h-28 w-full rounded-lg object-cover object-top"
+            />
             <h3 className="mb-3 text-2xl">{name}</h3>
             <div className="space-y-2">
               {setups

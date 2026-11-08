@@ -1,0 +1,45 @@
+{
+  "source": "OpenAI built-in imagegen, November 2026",
+  "export": "Generate from the briefs below, inspect the alpha and cell boundaries, then export with ImageMagick: convert source.png -quality 88 output.webp. Scenery is resized to 1280px wide at quality 85. Runtime uses only these local WebP exports.",
+  "style_prompt": "Painterly gouache illustration for Mutiny: The Fine Print. A handcrafted miniature fantasy theatre, shallow orthographic three-quarter view, endearing adult characters, soft diffuse daylight, gentle contact shadows, tactile painted wood, fabric, plaster, stone and brass. Chalk, lichen, meadow, slate blue, oxblood, clay and brass palette. Crisp silhouettes and restrained brushed texture. No photorealism, pixel art, glossy 3D, text, letters, UI, grid or watermark.",
+  "scenery": {
+    "dock.webp": {
+      "brief": "A tiny patched wooden quay stage surrounded by blue-green water. Warehouse facade, ochre roofs, coiled rope, cargo and mooring posts only in outer margins. Painted theatre framing. Keep the central floor empty, evenly lit and flat, with subtle plank seams. No people, fire or smoke hazards.",
+      "size": [1280, 1120]
+    },
+    "bridge.webp": {
+      "brief": "A broad rectangular stone bridge checkpoint stage over a slate-blue canal. Tiny official gatehouses, moss, low parapets and banners only in outer margins. Keep the central warm grey paving empty and evenly lit. No people, fire, smoke or barriers inside the playing floor.",
+      "size": [1280, 1120]
+    },
+    "town.webp": {
+      "brief": "A crooked civic street crossing stage with plaster and timber buildings, terracotta roofs, lichen greenery and a notice board only in outer margins. Keep the central pale warm cobbled plaza empty and evenly lit. No people, hazards or markings inside the playing floor.",
+      "size": [1280, 1120]
+    }
+  },
+  "characters.webp": {
+    "brief": "Eight isolated full-body painted cutout characters in a strict four-column, two-row atlas. Equal cells, consistent viewpoint and scale, complete equipment and boots, transparent padding, no ground shadows or backdrops. Row 1: fastidious slate-capped courier Rook with satchel and envelope; broad green shieldbearer Mallow with round shield and lunchbox; tall oxblood-hatted mage Nix with spectacles and round staff finial; nimble ochre-hooded courier Dot with feather and red scarf. Row 2: upright grey-green armored shieldbearer Brisk with tall rectangular shield; weary plum-robed mage Peebles with bent hat and diamond staff finial; slate-blue Captain with bicorne, brass feather, cape and sheathed sword; stern oxblood Supervisor with tricorn, folio and baton. Keep distinct silhouettes at small scale.",
+    "alpha_refinement_prompt": "Remove all colored gradient and background around the figures. Preserve the original 1536x1024 canvas, every character's position, size, silhouette, costume, expression and equipment, and the exact four-by-two grid. No ground shadows, glow or aura. Empty space must have alpha zero; retain antialiased edges.",
+    "size": [1536, 1024],
+    "grid": [4, 2],
+    "order": [
+      "Rook",
+      "Mallow",
+      "Nix",
+      "Dot",
+      "Brisk",
+      "Peebles",
+      "Captain",
+      "Supervisor"
+    ],
+    "anchor": [0.5, 0.96],
+    "house_role_reuse": "House mage Wisp shares the mage art. House roles retain their engine-authored names, packages and allegiances. Solid rings and opposing chevrons show allegiance independently of clothing."
+  },
+  "props.webp": {
+    "brief": "Three isolated painterly miniature props, strict single row of three equal square cells, transparent background and generous padding, base near 85 percent of cell height. Same three-quarter viewpoint, warm diffuse light and ink contour. Left: small wooden payroll handcart with two iron wheels, brass straps, short handles and canvas-covered wage chest. Middle: squat shipping crate with diagonal braces and rope binding. Right: low wide barricade of three chipped pale stones. No text, scenery, glow or ground plane.",
+    "size": [2172, 724],
+    "grid": [3, 1],
+    "order": ["payroll cart", "impassable crate", "low stone cover"],
+    "anchor": [0.5, 0.85]
+  },
+  "runtime": "PixiJS projects all props, sprites, route steps, hazards, health, orders and event feedback from the Rust engine. Artwork never defines passability or game state. WebGL or image failure keeps semantic board controls available; reduced motion renders final state directly. No external image service is used at runtime."
+}

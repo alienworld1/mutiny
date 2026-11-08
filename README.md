@@ -16,6 +16,8 @@ pnpm dev
 
 `pnpm dev` and `pnpm build` compile the shared Rust engine to browser Wasm. Progress is saved on this browser when IndexedDB is available.
 
+`pnpm build` produces the complete static site in `app/dist`, including offline Free Play. Preview with `pnpm --filter @mutiny/app preview`. Deploy that directory to a static host after building with the prerequisites above. A hosted release and five unfamiliar-player release sessions are still pending.
+
 ```sh
 pnpm contract:build
 cargo test --workspace --locked
@@ -23,7 +25,7 @@ pnpm test
 pnpm test:parity
 pnpm lint
 pnpm build
-pnpm exec playwright install chromium
+pnpm exec playwright install --with-deps chromium firefox webkit
 pnpm test:e2e
 MUTINY_PREVIEW=1 pnpm test:e2e --grep "production offline"
 ```
@@ -39,6 +41,8 @@ After confirmed activation, play locally and **Save Job**. The Registry replays 
 Moves and pending requests survive refresh. Use **Check status**, **Check payment**, or **Check claim** to recover. Before activation, **Cancel hire** returns the full fee and storage deposit after the staged worker credit returns. An uncertain transfer stays locked; timeout never triggers a second payment. Owners can edit or withdraw idle offers and transfer NFT title. An active renter keeps the same job after transfer; only the current owner can initiate an earnings claim. Standard NFT approvals and transfer-call acceptance/rollback are supported. Pending claims and transfer-call resolution lock conflicting title or earnings operations.
 
 Registry: [`m5.mutiny-m5-2026.testnet`](https://testnet.nearblocks.io/address/m5.mutiny-m5-2026.testnet). Worker accounts are `rook.<registry>`, `mallow.<registry>`, `nix.<registry>`, `dot.<registry>`, `brisk.<registry>`, and `peebles.<registry>`. Seeded operator/Alice: `mutiny-m5-2026.testnet`; Bob: `mutiny-m5-bob-2026.testnet`; Carol: `mutiny-m5-carol-2026.testnet`. Set `VITE_REGISTRY_ID` to another compatible testnet Registry if needed.
+
+Copy `app/.env.example` to `app/.env.local` to change the public Registry. After building contracts, `node scripts/audit-testnet.mjs` checks deployed code hashes, access keys, configuration and reserves without signing. Set `MUTINY_REGISTRY_ID` to audit another deployment. The source pins replay to 32 commands / 4 KiB; browser operations attach 200 Tgas. Advertised fees stay within 0.001–1 testnet NEAR.
 
 Verified live: [Escort saved after transfer](https://testnet.nearblocks.io/txns/6bU9AqJS6obiHU7qVQWE7gxJU7ePB5RjUwdBD6yK5p5x), [Infiltration saved after transfer](https://testnet.nearblocks.io/txns/8K14tLsaSRwo28XcWvZXetpXL9yVWNzuK1v9TGFjhzAu), [former-owner claim rejected](https://testnet.nearblocks.io/txns/GrPc3LrnE4nCUNKy9SF7KQcanSXyxvkJiLvbAxn7zYjW), and [current-owner claim paid](https://testnet.nearblocks.io/txns/Gy1TUrNzYCfQF3QNi83qYCqqubrCmKxMHwUcYS9DXgYV).
 
@@ -64,3 +68,4 @@ MUTINY_TESTNET_OWNER=your-owner.testnet MUTINY_TESTNET_RENTER=your-bob.testnet \
 Build contracts before workspace Rust tests: Registry embeds Worker Wasm. Sandbox tests use the official [NEAR sandbox 2.14.0](https://github.com/near/nearcore/releases/tag/2.14.0) binary; receiver fixtures and fault injection stay in local tests. Live integration verification uses CLI signing. Browser tests substitute only wallet/RPC, keeping the real Wasm game. Browser reads use the [documented FastNEAR testnet RPC](https://docs.near.org/api/rpc/providers).
 
 Built with React, Vite, Tailwind CSS, PixiJS, wasm-bindgen, near-sdk and HOT Connect. Atkinson Hyperlegible Next and Fraunces are bundled under their included SIL Open Font Licenses.
+IBM Plex Mono uses the SIL Open Font License; Phosphor icons use MIT. Painted scenery, characters and props were generated with OpenAI imagegen and are bundled locally. Asset layout and generation briefs are in `app/public/assets/art/manifest.json`. The game has no audio dependency.

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Application, Container } from "pixi.js";
 import type { State } from "../game/types";
-import { coordinate } from "../game/types";
+import { actionText, coordinate } from "../game/types";
 import { draw } from "./renderer";
+import { loadStageArt, type StageArt } from "./art";
+import { playEvents, type Playback } from "./playback";
 import {
   cellToScreen,
   WIDTH,
@@ -17,6 +19,7 @@ interface Props {
   reachable: number[];
   targets: number[];
   focusedOrder: number | null;
+  playback: Playback | null;
   onCell: (cell: number) => void;
 }
 export default function PixiStage(props: Props) {
@@ -26,11 +29,55 @@ export default function PixiStage(props: Props) {
   const latest = useRef(props);
   const [fallback, setFallback] = useState(false);
   const [focus, setFocus] = useState(44);
+  const [art, setArt] = useState<StageArt>({});
+  const latestArt = useRef(art);
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  const [highContrast, setHighContrast] = useState(
+    () => window.matchMedia("(forced-colors: active)").matches,
+  );
+  const textBoard = fallback || highContrast;
+  const played = useRef<Playback | null>(null);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const change = () => setReduced(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  useEffect(() => {
+    const media = window.matchMedia("(forced-colors: active)");
+    const change = () => setHighContrast(media.matches);
+    media.addEventListener("change", change);
+    return () => media.removeEventListener("change", change);
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    void loadStageArt(props.state.setup.policy).then((loaded) => {
+      if (!cancelled) setArt(loaded);
+      else
+        [...(loaded.characters ?? []), ...(loaded.props ?? [])].forEach(
+          (texture) => texture.destroy(false),
+        );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [props.state.setup.policy]);
+  useEffect(
+    () => () => {
+      [...(art.characters ?? []), ...(art.props ?? [])].forEach((texture) =>
+        texture.destroy(false),
+      );
+    },
+    [art],
+  );
   useEffect(() => {
     latest.current = props;
+    latestArt.current = art;
     const r = renderer.current;
     if (r) {
-      draw(
+      const entities = draw(
         r.scene,
         props.state,
         props.selected,
@@ -38,10 +85,31 @@ export default function PixiStage(props: Props) {
         props.reachable,
         props.targets,
         props.focusedOrder,
+        art,
       );
       r.app.render();
+      const playback = props.playback;
+      if (playback && playback !== played.current) {
+        played.current = playback;
+        if (!reduced && !document.hidden) {
+          const stop = playEvents(r.scene, entities, playback, () =>
+            r.app.render(),
+          );
+          const finish = () => {
+            if (document.hidden) {
+              stop();
+              r.app.render();
+            }
+          };
+          document.addEventListener("visibilitychange", finish);
+          return () => {
+            stop();
+            document.removeEventListener("visibilitychange", finish);
+          };
+        }
+      }
     }
-  }, [props]);
+  }, [props, art, reduced]);
   useEffect(() => {
     let cancelled = false;
     const app = new Application();
@@ -76,6 +144,7 @@ export default function PixiStage(props: Props) {
           p.reachable,
           p.targets,
           p.focusedOrder,
+          latestArt.current,
         );
         app.render();
       })
@@ -94,9 +163,17 @@ export default function PixiStage(props: Props) {
   return (
     <div
       className="relative w-full"
+      data-motion={reduced ? "reduced" : "full"}
+      data-art={
+        art.environment && art.characters && art.props ? "ready" : "loading"
+      }
       style={{ aspectRatio: `${WIDTH}/${HEIGHT}` }}
     >
-      <div ref={host} aria-hidden="true" className="absolute inset-0" />
+      <div
+        ref={host}
+        aria-hidden="true"
+        className={`absolute inset-0 ${highContrast ? "invisible" : ""}`}
+      />
       <div
         ref={grid}
         role="grid"
@@ -118,9 +195,9 @@ export default function PixiStage(props: Props) {
                   : "",
                 state.cart_cell === cell ? `Cart, ${state.cart_hp} HP` : "",
                 state.setup.route.includes(cell)
-                  ? `Cart route${cell === state.setup.route[3] ? ", exit" : ""}`
+                  ? `Cart route, ${state.setup.route.indexOf(cell) === 0 ? "start" : `push ${state.setup.route.indexOf(cell)} of 3`}${cell === state.setup.route[3] ? ", exit" : ""}`
                   : "",
-                state.setup.walls.includes(cell) ? "Cargo, impassable" : "",
+                state.setup.walls.includes(cell) ? "Obstacle, impassable" : "",
                 state.fire.includes(cell) ? "Fire, 1 damage on entry" : "",
                 state.smoke.includes(cell)
                   ? "Smoke, opaque until phase end"
@@ -134,6 +211,12 @@ export default function PixiStage(props: Props) {
                 state.orders.some((o) => o.affected.includes(cell))
                   ? "Posted action area"
                   : "",
+                ...state.orders
+                  .filter((o) => o.unit === u?.id)
+                  .map(
+                    (o) =>
+                      `Posted route ${[o.start, ...o.path].map(coordinate).join(" to ")}. ${actionText(o.action, state)}${o.affected.length ? `. Affects ${o.affected.map(coordinate).join(", ")}` : ""}`,
+                  ),
                 props.reachable.includes(cell) ? "Reachable" : "",
                 props.targets.includes(cell) ? "Legal target" : "",
               ]
@@ -173,7 +256,7 @@ export default function PixiStage(props: Props) {
                       }
                     }}
                     onClick={() => props.onCell(cell)}
-                    className={`absolute !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 hover:!bg-white/15 focus-visible:!outline-offset-[-4px] ${fallback ? "!border !border-border !bg-muted !text-xs" : "text-transparent"}`}
+                    className={`battle-cell absolute !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 hover:!bg-white/15 focus-visible:!outline-offset-[-4px] ${textBoard ? "!border !border-border !bg-muted !text-[10px] !leading-tight" : "text-transparent"}`}
                     style={{
                       left: `${((p.x - TILE_WIDTH / 2) / WIDTH) * 100}%`,
                       top: `${((p.y - TILE_HEIGHT / 2) / HEIGHT) * 100}%`,
@@ -181,8 +264,8 @@ export default function PixiStage(props: Props) {
                       height: `${(TILE_HEIGHT / HEIGHT) * 100}%`,
                     }}
                   >
-                    {fallback
-                      ? `${coordinate(cell)} ${u?.name ?? (state.cart_cell === cell ? "Cart" : state.setup.walls.includes(cell) ? "Cargo" : "")}`
+                    {textBoard
+                      ? `${coordinate(cell)} ${u ? `${u.name} ${u.hp}HP` : state.cart_cell === cell ? `Cart ${state.cart_hp}HP` : state.fire.includes(cell) ? "Fire" : state.setup.walls.includes(cell) ? "Obstacle" : state.setup.route.includes(cell) ? `Push ${state.setup.route.indexOf(cell)}` : ""}`
                       : coordinate(cell)}
                   </button>
                 </div>

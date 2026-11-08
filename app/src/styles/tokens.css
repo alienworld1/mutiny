@@ -20,4 +20,8 @@
   --font-display: "Fraunces", Georgia, serif;
   --font-ui: "Atkinson Hyperlegible Next", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --duration-press: 100ms;
+  --duration-select: 140ms;
+  --duration-panel: 210ms;
+  --duration-strike: 540ms;
 }

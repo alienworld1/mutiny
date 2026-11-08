@@ -1,23 +1,17 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { characterSlots } from "./assets";
+import type { StageArt } from "./art";
+import type { Entity, EntityView } from "./playback";
 import type { State } from "../game/types";
-import { coordinate } from "../game/types";
 import {
   cellToScreen,
   TILE_WIDTH as TW,
   TILE_HEIGHT as TH,
+  HEIGHT,
+  ORIGIN_Y,
 } from "./projection";
-const C = {
-  ink: 0x2d3432,
-  stone: 0xd8d5ca,
-  clay: 0xb78b76,
-  brass: 0xb9a273,
-  slate: 0x67899b,
-  enemy: 0x994d57,
-  chalk: 0xf3f1e9,
-  water: 0x87a5a8,
-  green: 0x71896c,
-  dark: 0x3e604d,
-};
+import { palette as C } from "./palette";
+
 function label(
   root: Container,
   text: string,
@@ -47,33 +41,61 @@ export function draw(
   reachable: number[],
   targets: number[],
   focusedOrder: number | null,
+  art: StageArt = {},
 ) {
+  const entities = new Map<Entity, EntityView>();
+  const labelsLayer = new Container();
   for (const child of root.removeChildren()) child.destroy({ children: true });
+  if (art.environment) {
+    const background = new Sprite(art.environment);
+    background.width = 640;
+    background.height = HEIGHT;
+    root.addChild(background);
+  }
   const g = new Graphics();
   root.addChild(g);
-  g.roundRect(0, 0, 640, 560, 22).fill(
-    state.setup.policy === "dock"
-      ? C.water
-      : state.setup.policy === "bridge"
-        ? C.slate
-        : C.green,
-  );
-  for (let y = 12; y < 560; y += 23)
-    for (let x = (y % 3) * 18; x < 640; x += 67)
-      g.moveTo(x, y)
-        .bezierCurveTo(x + 8, y - 3, x + 22, y + 3, x + 32, y)
-        .stroke({ color: C.chalk, width: 1, alpha: 0.23 });
-  g.roundRect(32, 59, 576, 468, 8).fill({ color: C.ink, alpha: 0.22 });
-  g.roundRect(37, 60, 566, 456, 5).fill(C.clay);
+  if (!art.environment)
+    g.roundRect(0, 0, 640, HEIGHT, 22).fill(
+      state.setup.policy === "dock"
+        ? C.water
+        : state.setup.policy === "bridge"
+          ? C.slate
+          : C.green,
+    );
+  if (!art.environment)
+    for (let y = 12; y < HEIGHT; y += 23)
+      for (let x = (y % 3) * 18; x < 640; x += 67)
+        g.moveTo(x, y)
+          .bezierCurveTo(x + 8, y - 3, x + 22, y + 3, x + 32, y)
+          .stroke({ color: C.chalk, width: 1, alpha: 0.23 });
+  g.roundRect(32, ORIGIN_Y - 5, 576, 460, 8).fill({
+    color: C.ink,
+    alpha: art.environment ? 0.05 : 0.22,
+  });
+  g.roundRect(37, ORIGIN_Y - 4, 566, 456, 5).fill({
+    color: state.setup.policy === "dock" ? C.clay : C.stone,
+    alpha: art.environment ? 0.12 : 1,
+  });
   for (let c = 0; c < 49; c++) {
     const { x, y } = cellToScreen(c);
-    g.rect(x - TW / 2 + 1, y - TH / 2 + 1, TW - 2, TH - 2).fill(
-      c % 3 === 0 ? 0xc2a38a : c % 2 === 0 ? 0xceb59a : 0xd7c2a6,
-    );
-    for (let offset = -21; offset < 25; offset += 16)
-      g.moveTo(x - 37, y + offset)
-        .lineTo(x + 37, y + offset + (c % 2))
-        .stroke({ color: C.clay, alpha: 0.45, width: 1 });
+    g.rect(x - TW / 2 + 1, y - TH / 2 + 1, TW - 2, TH - 2)
+      .fill({
+        color:
+          state.setup.policy === "dock"
+            ? c % 3 === 0
+              ? 0xc2a38a
+              : 0xd7c2a6
+            : c % 3 === 0
+              ? C.stone
+              : C.chalk,
+        alpha: art.environment ? 0.24 : 1,
+      })
+      .stroke({ color: C.ink, alpha: 0.18, width: 1 });
+    if (!art.environment && state.setup.policy === "dock")
+      for (let offset = -21; offset < 25; offset += 16)
+        g.moveTo(x - 37, y + offset)
+          .lineTo(x + 37, y + offset + (c % 2))
+          .stroke({ color: C.clay, alpha: 0.45, width: 1 });
     if (state.setup.route.includes(c))
       g.roundRect(x - 25, y - 20, 50, 40, 5)
         .fill({ color: C.chalk, alpha: 0.65 })
@@ -90,12 +112,23 @@ export function draw(
         .lineTo(x, y + 10)
         .stroke({ color: C.enemy, width: 2 });
     }
-    if (state.setup.route.includes(c) && c !== state.cart_cell)
-      label(root, String(state.setup.route.indexOf(c)), x, y, 13, C.dark);
+    if (state.setup.route.includes(c) && c !== state.cart_cell) {
+      const step = state.setup.route.indexOf(c);
+      label(root, step === 0 ? "START" : String(step), x, y, 13, C.dark);
+    }
     if (state.setup.cover.includes(c)) {
-      g.roundRect(x - 29, y - 8, 58, 25, 4)
-        .fill(C.stone)
-        .stroke({ color: C.ink, width: 2 });
+      if (art.props) {
+        const cover = new Sprite(art.props[2]);
+        cover.anchor.set(0.5, 0.85);
+        cover.width = 70;
+        cover.height = 54;
+        cover.position.set(x, y + 19);
+        root.addChild(cover);
+      } else {
+        g.roundRect(x - 29, y - 8, 58, 25, 4)
+          .fill(C.stone)
+          .stroke({ color: C.ink, width: 2 });
+      }
       label(
         root,
         state.setup.walkable_cover.includes(c) ? "LOW / STEP" : "LOW",
@@ -109,36 +142,63 @@ export function draw(
       label(root, "✓", x + 22, y - 17, 15, C.dark);
     }
     if (state.setup.walls.includes(c)) {
-      g.ellipse(x, y + 12, 32, 12).fill({ color: C.ink, alpha: 0.12 });
-      g.poly([
-        x - 29,
-        y - 17,
-        x + 19,
-        y - 23,
-        x + 30,
-        y - 14,
-        x - 18,
-        y - 7,
-      ]).fill(0xc4a477);
-      g.poly([
-        x - 29,
-        y - 17,
-        x - 18,
-        y - 7,
-        x - 18,
-        y + 22,
-        x - 29,
-        y + 12,
-      ]).fill(0x8f7058);
-      g.poly([x - 18, y - 7, x + 30, y - 14, x + 30, y + 15, x - 18, y + 22])
-        .fill(0xa68662)
-        .stroke({ color: C.ink, width: 1, alpha: 0.3 });
-      g.moveTo(x - 13, y - 3)
-        .lineTo(x + 26, y + 12)
-        .moveTo(x + 24, y - 9)
-        .lineTo(x - 13, y + 18)
-        .stroke({ color: 0xd5bb95, width: 3 });
+      if (art.props) {
+        const crate = new Sprite(art.props[1]);
+        crate.anchor.set(0.5, 0.85);
+        crate.width = 70;
+        crate.height = 64;
+        crate.position.set(x, y + 22);
+        root.addChild(crate);
+      } else {
+        g.ellipse(x, y + 12, 32, 12).fill({ color: C.ink, alpha: 0.12 });
+        g.poly([
+          x - 29,
+          y - 17,
+          x + 19,
+          y - 23,
+          x + 30,
+          y - 14,
+          x - 18,
+          y - 7,
+        ]).fill(0xc4a477);
+        g.poly([
+          x - 29,
+          y - 17,
+          x - 18,
+          y - 7,
+          x - 18,
+          y + 22,
+          x - 29,
+          y + 12,
+        ]).fill(0x8f7058);
+        g.poly([x - 18, y - 7, x + 30, y - 14, x + 30, y + 15, x - 18, y + 22])
+          .fill(0xa68662)
+          .stroke({ color: C.ink, width: 1, alpha: 0.3 });
+        g.moveTo(x - 13, y - 3)
+          .lineTo(x + 26, y + 12)
+          .moveTo(x + 24, y - 9)
+          .lineTo(x - 13, y + 18)
+          .stroke({ color: 0xd5bb95, width: 3 });
+      }
     }
+  }
+  // A continuous route connects the three authored push milestones.
+  for (let i = 1; i < state.setup.route.length; i++) {
+    const a = cellToScreen(state.setup.route[i - 1]!),
+      b = cellToScreen(state.setup.route[i]!);
+    const dx = Math.sign(b.x - a.x),
+      dy = Math.sign(b.y - a.y);
+    g.moveTo(a.x + dx * 22, a.y + dy * 22)
+      .lineTo(b.x - dx * 22, b.y - dy * 22)
+      .stroke({ color: C.dark, width: 3, alpha: 0.7 });
+    g.poly([
+      b.x - dx * 27 - dy * 5,
+      b.y - dy * 27 + dx * 5,
+      b.x - dx * 20,
+      b.y - dy * 20,
+      b.x - dx * 27 + dy * 5,
+      b.y - dy * 27 - dx * 5,
+    ]).fill(C.dark);
   }
   const exit = cellToScreen(state.setup.route[3]!);
   g.moveTo(exit.x + 23, exit.y - 17)
@@ -168,6 +228,9 @@ export function draw(
           )
           .stroke({ color: C.enemy, width: 3, alpha: 0.85 });
     }
+    const end = cellToScreen(order.endpoint);
+    g.circle(end.x, end.y, 7).stroke({ color: C.enemy, width: 2 });
+    label(root, `${order.unit + 1}`, end.x + 12, end.y - 12, 11, C.enemy);
     for (const cell of order.affected) {
       const p = cellToScreen(cell);
       g.rect(p.x - 34, p.y - 26, 68, 52).stroke({
@@ -175,6 +238,10 @@ export function draw(
         width: 2,
         alpha: 0.6,
       });
+      for (let offset = -24; offset <= 24; offset += 12)
+        g.moveTo(p.x + offset - 4, p.y - 21)
+          .lineTo(p.x + offset + 4, p.y - 13)
+          .stroke({ color: C.enemy, width: 1, alpha: 0.45 });
     }
   }
   if (selected !== null && path.length) {
@@ -188,34 +255,76 @@ export function draw(
     g.circle(end.x, end.y, 6).fill(C.dark);
   }
   const objects = [
-    ...state.setup.units
-      .filter((u) => u.hp > 0)
-      .map((u) => ({ cell: u.cell, unit: u })),
+    ...state.setup.units.map((u) => ({ cell: u.cell, unit: u })),
     { cell: state.cart_cell, unit: null },
   ].sort((a, b) => a.cell - b.cell);
   for (const object of objects) {
     const { x, y } = cellToScreen(object.cell);
     const u = object.unit;
+    const entity = new Container();
+    const hud = new Container();
+    labelsLayer.addChild(hud);
+    root.addChild(entity);
+    entities.set(u ? u.id : "cart", { body: entity, labels: hud });
+    if (u && u.hp <= 0) {
+      const fallen = new Graphics()
+        .ellipse(x, y + 15, 22, 8)
+        .fill({ color: C.ink, alpha: 0.12 });
+      fallen
+        .moveTo(x - 7, y + 10)
+        .lineTo(x + 7, y + 20)
+        .moveTo(x + 7, y + 10)
+        .lineTo(x - 7, y + 20)
+        .stroke({ color: C.ink, width: 2, alpha: 0.5 });
+      entity.addChild(fallen);
+      continue;
+    }
     const p = new Graphics();
-    root.addChild(p);
+    entity.addChild(p);
     p.ellipse(x, y + 17, 26, 10).fill({ color: C.ink, alpha: 0.2 });
     if (!u) {
-      p.circle(x - 18, y + 12, 8)
-        .fill(C.ink)
-        .circle(x + 19, y + 12, 8)
-        .fill(C.ink);
-      p.roundRect(x - 27, y - 17, 54, 30, 4)
-        .fill(0x9a795a)
-        .stroke({ color: C.ink, width: 2 });
-      p.rect(x - 23, y - 12, 46, 5)
-        .fill(C.brass)
-        .rect(x - 23, y, 46, 4)
-        .fill(C.brass);
-      p.roundRect(x - 14, y - 31, 28, 18, 6)
-        .fill(C.chalk)
-        .stroke({ color: C.ink, width: 1 });
-      label(root, "¤", x, y - 23, 17);
-      label(root, `Cart ${state.cart_hp}/2`, x, y + 29, 12);
+      if (art.props) {
+        const cart = new Sprite(art.props[0]);
+        cart.anchor.set(0.5, 0.85);
+        cart.width = 80;
+        cart.height = 80;
+        cart.position.set(x, y + 19);
+        if (state.cart_hp === 0) {
+          cart.tint = C.stone;
+          cart.alpha = 0.65;
+        }
+        entity.addChild(cart);
+        if (state.cart_hp < 2)
+          label(
+            hud,
+            state.cart_hp === 0 ? "LOST" : "1 HP",
+            x,
+            y - 49,
+            12,
+            C.enemy,
+          );
+      } else {
+        p.circle(x - 18, y + 12, 8)
+          .fill(C.ink)
+          .circle(x + 19, y + 12, 8)
+          .fill(C.ink);
+        p.roundRect(x - 27, y - 17, 54, 30, 4)
+          .fill(0x9a795a)
+          .stroke({ color: C.ink, width: 2 });
+        p.rect(x - 23, y - 12, 46, 5)
+          .fill(C.brass)
+          .rect(x - 23, y, 46, 4)
+          .fill(C.brass);
+        p.roundRect(x - 14, y - 31, 28, 18, 6)
+          .fill(C.chalk)
+          .stroke({ color: C.ink, width: 1 });
+        label(hud, "¤", x, y - 23, 17);
+      }
+      const plate = new Graphics()
+        .roundRect(x - 31, y + 23, 62, 17, 4)
+        .fill({ color: C.chalk, alpha: 0.95 });
+      hud.addChild(plate);
+      label(hud, `Cart ${state.cart_hp}/2`, x, y + 29, 12);
       continue;
     }
     const color = u.side === "player" ? C.slate : C.enemy;
@@ -228,131 +337,159 @@ export function draw(
       });
     if (u.id === selected)
       p.ellipse(x, y + 16, 34, 15).stroke({ color: C.ink, width: 3 });
-    p.roundRect(x - 10, y - 8, 20, 24, 6)
-      .fill(color)
-      .stroke({ color: C.ink, width: 1 });
-    p.moveTo(x - 5, y + 12)
-      .lineTo(x - 9, y + 22)
-      .moveTo(x + 5, y + 12)
-      .lineTo(x + 10, y + 22)
-      .stroke({ color: C.ink, width: 5 });
-    p.circle(x, y - 18, 10)
-      .fill(0xe2c4a2)
-      .stroke({ color: C.ink, width: 1 });
-    if (u.role === "captain" || u.role === "supervisor") {
-      p.poly([
-        x - 18,
-        y - 25,
-        x - 12,
-        y - 30,
-        x - 5,
-        y - 25,
-        x + 8,
-        y - 31,
-        x + 19,
-        y - 24,
-        x + 12,
-        y - 17,
-        x - 12,
-        y - 17,
-      ]).fill(C.ink);
-      p.poly([
-        x + 2,
-        y - 28,
-        x + 4,
-        y - 43,
-        x + 10,
-        y - 36,
-        x + 6,
-        y - 25,
-      ]).fill(C.brass);
-    } else if (u.role === "courier") {
-      p.roundRect(x - 13, y - 29, 24, 10, 5).fill(color);
-      p.moveTo(x - 10, y - 6)
-        .lineTo(x + 11, y + 10)
-        .stroke({ color: C.brass, width: 4 });
-      p.roundRect(x + 5, y + 4, 13, 12, 3).fill(0x8f7058);
-    } else if (u.role === "mage") {
-      p.poly([x - 13, y - 23, x, y - 43, x + 13, y - 23])
-        .fill(color)
-        .stroke({ color: C.ink, width: 1 });
-      p.moveTo(x + 21, y + 17)
-        .lineTo(x + 21, y - 30)
-        .stroke({ color: 0x8f7058, width: 4 });
-      p.circle(x + 21, y - 31, 6)
-        .fill(C.brass)
-        .stroke({ color: C.ink, width: 1 });
+    const texture =
+      art.characters?.[
+        characterSlots[u.name] ??
+          (u.role === "mage" ? 2 : u.role === "shieldbearer" ? 1 : 0)
+      ];
+    if (texture) {
+      const sprite = new Sprite(texture);
+      sprite.anchor.set(0.5, 0.96);
+      sprite.height = u.role === "captain" || u.role === "supervisor" ? 92 : 84;
+      sprite.scale.x = sprite.scale.y;
+      sprite.position.set(x, y + 19);
+      entity.addChild(sprite);
     } else {
-      p.roundRect(x - 11, y - 29, 23, 12, 5).fill(0x8d9790);
-      p.poly([
-        x - 25,
-        y - 6,
-        x - 7,
-        y - 8,
-        x - 9,
-        y + 11,
-        x - 18,
-        y + 18,
-        x - 26,
-        y + 8,
-      ])
+      p.roundRect(x - 10, y - 8, 20, 24, 6)
         .fill(color)
-        .stroke({ color: C.chalk, width: 2 });
-    }
-    // Equipment distinguishes the authored workers while allegiance keeps its color.
-    if (u.name === "Dot")
-      p.poly([x + 4, y - 28, x + 23, y - 33, x + 14, y - 20]).fill(C.brass);
-    if (u.name === "Rook") p.rect(x + 8, y + 7, 7, 5).fill(C.chalk);
-    if (u.name === "Mallow") p.roundRect(x + 12, y + 8, 12, 9, 2).fill(C.brass);
-    if (u.name === "Brisk") {
-      p.rect(x - 27, y - 10, 21, 26)
-        .fill(C.stone)
-        .stroke({ color: C.ink, width: 2 });
-      p.moveTo(x - 23, y - 4)
-        .lineTo(x - 10, y - 4)
-        .moveTo(x - 23, y + 2)
-        .lineTo(x - 10, y + 2)
         .stroke({ color: C.ink, width: 1 });
-    }
-    if (u.name === "Nix")
-      p.rect(x - 7, y - 22, 6, 5)
-        .rect(x + 2, y - 22, 6, 5)
+      p.moveTo(x - 5, y + 12)
+        .lineTo(x - 9, y + 22)
+        .moveTo(x + 5, y + 12)
+        .lineTo(x + 10, y + 22)
+        .stroke({ color: C.ink, width: 5 });
+      p.circle(x, y - 18, 10)
+        .fill(0xe2c4a2)
         .stroke({ color: C.ink, width: 1 });
-    if (u.name === "Peebles")
-      p.poly([x - 2, y - 37, x + 14, y - 39, x + 9, y - 31]).fill(C.brass);
-    p.circle(x + 4, y - 19, 1.5).fill(C.ink);
+      if (u.role === "captain" || u.role === "supervisor") {
+        p.poly([
+          x - 18,
+          y - 25,
+          x - 12,
+          y - 30,
+          x - 5,
+          y - 25,
+          x + 8,
+          y - 31,
+          x + 19,
+          y - 24,
+          x + 12,
+          y - 17,
+          x - 12,
+          y - 17,
+        ]).fill(C.ink);
+        p.poly([
+          x + 2,
+          y - 28,
+          x + 4,
+          y - 43,
+          x + 10,
+          y - 36,
+          x + 6,
+          y - 25,
+        ]).fill(C.brass);
+      } else if (u.role === "courier") {
+        p.roundRect(x - 13, y - 29, 24, 10, 5).fill(color);
+        p.moveTo(x - 10, y - 6)
+          .lineTo(x + 11, y + 10)
+          .stroke({ color: C.brass, width: 4 });
+        p.roundRect(x + 5, y + 4, 13, 12, 3).fill(0x8f7058);
+      } else if (u.role === "mage") {
+        p.poly([x - 13, y - 23, x, y - 43, x + 13, y - 23])
+          .fill(color)
+          .stroke({ color: C.ink, width: 1 });
+        p.moveTo(x + 21, y + 17)
+          .lineTo(x + 21, y - 30)
+          .stroke({ color: 0x8f7058, width: 4 });
+        p.circle(x + 21, y - 31, 6)
+          .fill(C.brass)
+          .stroke({ color: C.ink, width: 1 });
+      } else {
+        p.roundRect(x - 11, y - 29, 23, 12, 5).fill(0x8d9790);
+        p.poly([
+          x - 25,
+          y - 6,
+          x - 7,
+          y - 8,
+          x - 9,
+          y + 11,
+          x - 18,
+          y + 18,
+          x - 26,
+          y + 8,
+        ])
+          .fill(color)
+          .stroke({ color: C.chalk, width: 2 });
+      }
+      // Equipment distinguishes the authored workers while allegiance keeps its color.
+      if (u.name === "Dot")
+        p.poly([x + 4, y - 28, x + 23, y - 33, x + 14, y - 20]).fill(C.brass);
+      if (u.name === "Rook") p.rect(x + 8, y + 7, 7, 5).fill(C.chalk);
+      if (u.name === "Mallow")
+        p.roundRect(x + 12, y + 8, 12, 9, 2).fill(C.brass);
+      if (u.name === "Brisk") {
+        p.rect(x - 27, y - 10, 21, 26)
+          .fill(C.stone)
+          .stroke({ color: C.ink, width: 2 });
+        p.moveTo(x - 23, y - 4)
+          .lineTo(x - 10, y - 4)
+          .moveTo(x - 23, y + 2)
+          .lineTo(x - 10, y + 2)
+          .stroke({ color: C.ink, width: 1 });
+      }
+      if (u.name === "Nix")
+        p.rect(x - 7, y - 22, 6, 5)
+          .rect(x + 2, y - 22, 6, 5)
+          .stroke({ color: C.ink, width: 1 });
+      if (u.name === "Peebles")
+        p.poly([x - 2, y - 37, x + 14, y - 39, x + 9, y - 31]).fill(C.brass);
+      p.circle(x + 4, y - 19, 1.5).fill(C.ink);
+    }
+    const status = new Graphics();
+    hud.addChild(status);
     if (u.guard) {
-      p.poly([
-        x + 15,
-        y - 7,
-        x + 28,
-        y - 7,
-        x + 27,
-        y + 4,
-        x + 21,
-        y + 10,
-        x + 15,
-        y + 4,
-      ])
+      status
+        .poly([
+          x + 15,
+          y - 7,
+          x + 28,
+          y - 7,
+          x + 27,
+          y + 4,
+          x + 21,
+          y + 10,
+          x + 15,
+          y + 4,
+        ])
         .fill(C.chalk)
         .stroke({ color: C.ink, width: 2 });
     }
     if (u.status === "striking") {
-      p.moveTo(x + 23, y + 15)
+      status
+        .moveTo(x + 23, y + 15)
         .lineTo(x + 23, y - 35)
         .stroke({ color: 0x8f7058, width: 3 });
-      p.roundRect(x + 2, y - 45, 54, 22, 2)
+      status
+        .roundRect(x - 5, y - 47, 68, 22, 2)
         .fill(C.chalk)
         .stroke({ color: C.enemy, width: 2 });
-      label(root, "STRIKE", x + 29, y - 34, 10, C.enemy);
+      label(hud, "ON STRIKE", x + 29, y - 36, 10, C.enemy);
     }
     if (u.status === "recovering")
-      label(root, "RECOVERING", x, y - 52, 10, C.enemy);
-    label(root, u.name, x, y + 34, 12);
+      label(hud, "RECOVERING", x, y - 62, 10, C.enemy);
+    if (state.borrow_pending === u.id)
+      label(hud, "BORROWED", x, y - 62, 11, C.dark);
+    status
+      .roundRect(x - 30, y + 24, 60, 18, 4)
+      .fill({ color: C.chalk, alpha: 0.95 });
+    label(hud, u.name, x, y + 34, 12);
     for (let h = 0; h < u.hp; h++)
-      p.roundRect(x - u.hp * 4 + h * 8, y - 43, 6, 5, 1).fill(C.ink);
+      status
+        .roundRect(x - u.hp * 4 + h * 8, y - 58, 6, 5, 1)
+        .fill(C.ink)
+        .stroke({ color: C.chalk, width: 1 });
     if (state.activated.includes(u.id))
-      label(root, "✓", x - 22, y - 15, 16, C.dark);
+      label(hud, "✓", x - 26, y - 18, 16, C.dark);
   }
   for (const c of state.fire) {
     const { x, y } = cellToScreen(c);
@@ -407,14 +544,11 @@ export function draw(
     label(root, "SMOKE", x, y - 4, 10);
   }
   for (let n = 0; n < 7; n++) {
-    label(root, "ABCDEFG"[n]!, 80 + n * 80, 34, 13);
-    label(root, `${n + 1}`, 20, 96 + n * 64, 13);
+    g.roundRect(71 + n * 80, ORIGIN_Y - 21, 18, 18, 3).fill(C.chalk);
+    g.roundRect(11, ORIGIN_Y + 23 + n * 64, 18, 18, 3).fill(C.chalk);
+    label(root, "ABCDEFG"[n]!, 80 + n * 80, ORIGIN_Y - 12, 13);
+    label(root, `${n + 1}`, 20, ORIGIN_Y + 32 + n * 64, 13);
   }
-  label(
-    root,
-    `${state.setup.name.toUpperCase()} · ${coordinate(state.cart_cell)}`,
-    320,
-    540,
-    12,
-  );
+  root.addChild(labelsLayer);
+  return entities;
 }

@@ -12,7 +12,8 @@
   button:focus-visible,
   a:focus-visible,
   summary:focus-visible,
-  select:focus-visible {
+  select:focus-visible,
+  input:focus-visible {
     @apply outline-3 outline-offset-3 outline-focus;
   }
   h1,
@@ -23,6 +24,18 @@
   button[aria-pressed="true"] {
     @apply border-ink bg-ink text-white;
   }
+  button:not(:disabled):not(.battle-cell):active {
+    transform: translateY(1px);
+  }
+  @media (forced-colors: active) {
+    .battle-cell {
+      border: 1px solid ButtonText !important;
+      color: ButtonText !important;
+    }
+    .battle-cell[aria-pressed="true"] {
+      outline: 3px solid Highlight;
+    }
+  }
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -31,4 +44,18 @@
       animation-duration: 0s !important;
     }
   }
+}
+
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.result-stamp {
+  animation: stamp 350ms ease-out;
 }

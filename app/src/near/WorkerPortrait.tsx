@@ -7,16 +7,42 @@ const colors: Record<string, string> = {
   peebles: "#87768d",
 };
 
-export default function WorkerPortrait({ token }: { token: string }) {
+export default function WorkerPortrait({
+  token,
+  className = "w-24 shrink-0",
+}: {
+  token: string;
+  className?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const name = token[0]?.toUpperCase() + token.slice(1);
+  const slot = characterSlots[name];
+  if (!failed && slot !== undefined)
+    return (
+      <div
+        aria-hidden="true"
+        className={`relative aspect-[3/4] overflow-hidden ${className}`}
+      >
+        <img
+          src={characterAtlas}
+          alt=""
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="pointer-events-none absolute !max-w-none"
+          style={{
+            width: "400%",
+            height: "200%",
+            left: `-${(slot % 4) * 100}%`,
+            top: `-${Math.floor(slot / 4) * 100}%`,
+          }}
+        />
+      </div>
+    );
   const courier = token === "rook" || token === "dot";
   const shield = token === "mallow" || token === "brisk";
   const color = colors[token] ?? colors.rook;
   return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 120 120"
-      className="h-24 w-24 shrink-0"
-    >
+    <svg aria-hidden="true" viewBox="0 0 120 120" className={className}>
       <path d="M12 104V44Q14 10 60 10T108 44V104Z" fill="#ded7c6" />
       <ellipse cx="60" cy="104" rx="35" ry="7" fill="#b3a68b" />
       <g stroke="#2d3432" strokeWidth="2" strokeLinejoin="round">
@@ -133,3 +159,5 @@ export default function WorkerPortrait({ token }: { token: string }) {
     </svg>
   );
 }
+import { useState } from "react";
+import { characterAtlas, characterSlots } from "../stage/assets";
