@@ -86,10 +86,10 @@ export default function JobBoard({
         <h3 className="text-2xl">{assembled.setup.variant}</h3>
         <p className="my-2 text-secondary">{assembled.setup.description}</p>
         <div className="my-4 flex flex-wrap gap-4">
-          <label className="grid min-w-0 max-w-full gap-1 text-sm">
+          <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
             House worker
             <select
-              className="min-h-11 max-w-full rounded-lg border border-border bg-paper px-3"
+              className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
               value={config.worker}
               onChange={(e) =>
                 setConfig({
@@ -104,10 +104,10 @@ export default function JobBoard({
               <option value={2}>Wisp · Mage</option>
             </select>
           </label>
-          <label className="grid min-w-0 max-w-full gap-1 text-sm">
+          <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
             Fine print
             <select
-              className="min-h-11 max-w-full rounded-lg border border-border bg-paper px-3"
+              className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
               value={config.package_option}
               onChange={(e) =>
                 setConfig({ ...config, package_option: Number(e.target.value) })
@@ -126,10 +126,10 @@ export default function JobBoard({
               })}
             </select>
           </label>
-          <label className="grid min-w-0 max-w-full gap-1 text-sm">
+          <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
             Placement
             <select
-              className="min-h-11 max-w-full rounded-lg border border-border bg-paper px-3"
+              className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
               value={config.placement}
               onChange={(e) =>
                 setConfig({

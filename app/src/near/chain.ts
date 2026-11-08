@@ -13,6 +13,7 @@ export interface ChainClient {
     method: string,
     args: unknown,
     depositYocto: bigint,
+    expectedSigner?: string,
   ): Promise<TxSubmission>;
   resolve(tx: TxSubmission): Promise<TxStatus>;
 }
@@ -99,7 +100,7 @@ export function createChainClient(contractId: string): ChainClient {
         new TextDecoder().decode(new Uint8Array(result.result)),
       ) as T;
     },
-    async change(method, args, depositYocto) {
+    async change(method, args, depositYocto, expectedSigner) {
       if (
         ![
           "smoke",
@@ -109,6 +110,7 @@ export function createChainClient(contractId: string): ChainClient {
           "retry_storage_refund",
           "hire_and_open",
           "set_offer",
+          "nft_transfer",
           "withdraw_offer",
           "request_claim",
           "reconcile_claim",
@@ -120,13 +122,17 @@ export function createChainClient(contractId: string): ChainClient {
         throw new Error("This action is unavailable");
       if (
         depositYocto < 0n ||
-        (!["open_owned_job", "hire_and_open"].includes(method) &&
-          depositYocto !== 0n)
+        (method === "nft_transfer"
+          ? depositYocto !== 1n
+          : !["open_owned_job", "hire_and_open"].includes(method) &&
+            depositYocto !== 0n)
       )
         throw new Error("Unexpected deposit");
       if (connector.network !== "testnet") throw new Error("Switch to testnet");
       const signer = await account();
       if (!signer) throw new Error("Connect a testnet wallet");
+      if (expectedSigner && signer !== expectedSigner)
+        throw new Error(`Connect ${expectedSigner} before signing.`);
       const wallet = await connector.wallet();
       const outcome = await wallet.signAndSendTransaction({
         network: "testnet",

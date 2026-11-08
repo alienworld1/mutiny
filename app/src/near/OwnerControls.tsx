@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { packages } from "../game/types";
 import { nearAmount, yoctoAmount } from "./jobs";
 import type { ContractJobController } from "./useContractJob";
 
@@ -10,6 +11,8 @@ export default function OwnerControls({
   const [start, setStart] = useState("0.004");
   const [floor, setFloor] = useState("0.001");
   const [step, setStep] = useState("0");
+  const [option, setOption] = useState(0);
+  const [receiver, setReceiver] = useState("");
   const [error, setError] = useState("");
   const w = c.worker;
   if (!w || w.token.owner_id !== c.account) return null;
@@ -17,7 +20,27 @@ export default function OwnerControls({
   const e = c.earnings;
   return (
     <div className="space-y-4 border-t border-border pt-4">
-      <h3 className="text-xl">Rook’s terms</h3>
+      <h3 className="text-xl">{w.character}’s terms</h3>
+      <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
+        Offer
+        <select
+          className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
+          value={option}
+          disabled={locked}
+          onChange={(e) => setOption(Number(e.target.value))}
+        >
+          {w.packages.map((p, i) => (
+            <option key={p} value={i}>
+              {packages[p as keyof typeof packages].name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {locked && (
+        <p className="text-sm">
+          Offer changes wait until the worker is idle and claims are resolved.
+        </p>
+      )}
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(event) => {
@@ -37,7 +60,7 @@ export default function OwnerControls({
               );
             setError("");
             c.moneyAction("set_offer", {
-              package_option: 0,
+              package_option: option,
               starting_ask: starting.toString(),
               floor_ask: minimum.toString(),
               discount_step: discount.toString(),
@@ -54,10 +77,13 @@ export default function OwnerControls({
             ["Discount per 120 blocks", step, setStep],
           ] as const
         ).map(([label, value, setter]) => (
-          <label key={label} className="grid gap-1 text-sm">
+          <label
+            key={label}
+            className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto"
+          >
             {label}
             <input
-              className="min-h-11 w-40 rounded-lg border border-border bg-paper px-3"
+              className="min-h-11 max-w-full w-40 rounded-lg border border-border bg-paper px-3"
               inputMode="decimal"
               value={value}
               disabled={locked}
@@ -66,11 +92,13 @@ export default function OwnerControls({
           </label>
         ))}
         <button disabled={locked}>Post offer</button>
-        {w.offer && (
+        {w.offers?.[option] && (
           <button
             type="button"
             disabled={locked}
-            onClick={() => c.moneyAction("withdraw_offer")}
+            onClick={() =>
+              c.moneyAction("withdraw_offer", { package_option: option })
+            }
           >
             Withdraw
           </button>
@@ -82,11 +110,55 @@ export default function OwnerControls({
         </p>
       )}
       <p className="text-sm text-secondary">
-        Not On The Fire · Prices in testnet NEAR. At most 3 discounts. Terms can
-        change while Rook is idle.
+        Prices in testnet NEAR. At most 3 discounts. Editing one option resets
+        only its discount clock.
       </p>
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (
+            !/^(?=.{2,64}$)([a-z0-9]+[-_])*[a-z0-9]+(\.([a-z0-9]+[-_])*[a-z0-9]+)*$/.test(
+              receiver,
+            ) ||
+            receiver === w.token.owner_id
+          ) {
+            setError("Enter the new owner's NEAR account.");
+            return;
+          }
+          setError("");
+          c.moneyAction("nft_transfer", {
+            receiver_id: receiver,
+            approval_id: null,
+            memo: null,
+          });
+        }}
+      >
+        <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
+          New owner
+          <input
+            className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
+            value={receiver}
+            onChange={(e) => setReceiver(e.target.value)}
+            required
+          />
+        </label>
+        <button
+          disabled={
+            c.busy ||
+            w.status === "transfer_pending" ||
+            w.claim?.status === "pending"
+          }
+        >
+          Transfer NFT
+        </button>
+        <p className="w-full text-sm text-secondary">
+          The new owner receives title and future earnings rights. An active
+          renter keeps the shift. Wallet gas plus 1 yoctoNEAR.
+        </p>
+      </form>
       {e && (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 break-words text-sm">
           <p>
             Available earnings:{" "}
             <strong>{nearAmount(e.claimable)} testnet NEAR</strong>
@@ -118,11 +190,14 @@ export default function OwnerControls({
                 c.moneyAction("request_claim", { amount: e.claimable })
               }
             >
-              Claim {nearAmount(e.claimable)} NEAR
+              Claim
             </button>
           )}
           {w.claim?.status === "paid" && (
-            <p>Earnings claimed · {nearAmount(w.claim.amount)} testnet NEAR</p>
+            <p>
+              Earnings claimed · {nearAmount(w.claim.amount)} testnet NEAR ·
+              Paid to {w.claim.recipient}
+            </p>
           )}
           {w.claim?.status === "failed" && (
             <p>Claim failed. Check available earnings, then Retry.</p>

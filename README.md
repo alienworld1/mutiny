@@ -30,32 +30,37 @@ MUTINY_PREVIEW=1 pnpm test:e2e --grep "production offline"
 
 ## Contract Jobs (NEAR testnet)
 
-In **Contract Job**, Rook’s owner can post one **Not On The Fire** offer. A different wallet can review the current fee, choose Escort or Infiltration, and **Hire**. The worker account receives 95% of the fee (with integer rounding); the Hall keeps 5%. Payment reserves the NFT globally. **Resume Job** appears only after the Registry confirms activation. Play locally, then **Save Job**: the immutable Registry replays the same Rust rules before recording the result.
+The Hiring Hall has six NFT workers: Rook, Mallow, Nix, Dot, Brisk, and Peebles. Each can advertise two independently priced fine-print packages, with one shared shift. Compare the current fees, floors, roles, and abilities, or use **Find Cheapest** for a package and maximum fee. Choose an Escort or Infiltration placement and review the actual crew before **Hire**. Prices come from chain blocks: an owner may set a discount every 120 idle blocks, capped at three discounts. Editing one option resets only its clock; returning from a shift and cooldown resets both.
 
-Each job also requires a separate **0.03 testnet NEAR storage deposit**, plus wallet gas. Saving or expiring an active job charges actual retained storage and returns the rest. The lease lasts 2,400 blocks from activation, followed by 20 blocks of rest. The owner can use either immutable package without a hire fee or rental earnings. Battle results never change the fee or pay rewards.
+A paid hire sends 95% of its fee to that NFT's separate worker account; the Hall keeps 5%, with exact integer rounding. Each job also requires a **0.03 testnet NEAR storage deposit**, plus wallet gas. The owner can reserve an idle worker without a hire fee, including an unadvertised package. Self-use adds no rental income or paid-hire history. The profile shows the newest ten confirmed paid hires and their actual job records. These seeded test accounts demonstrate behavior, not organic demand.
 
-Pending jobs and moves survive refresh in IndexedDB. Use **Check status**, **Check payment**, or **Check claim** to recover. Before activation, **Cancel hire** returns the full fee and storage deposit after the staged worker credit is returned. An uncertain transfer stays locked; a timeout never triggers a second payment. **Claim** pays only recognized worker earnings above its storage/reserve floor, excluding staged credits and direct donations. NFT title cannot transfer during an unresolved claim.
+After confirmed activation, play locally and **Save Job**. The Registry replays the shared Rust engine before accepting a result. Battle outcomes never change the fee or pay rewards. Saving or expiring a job charges actual retained job storage and returns the rest. Leases last 2,400 blocks from activation, followed by 20 blocks of rest. Both offers stay unavailable throughout the reservation and cooldown.
 
-Seeded demonstration owner/operator: `mutiny-m4-safe-2026.testnet`; independent renter: `mutiny-m4-safe-renter-2026.testnet`. Registry: [`m4.mutiny-m4-safe-2026.testnet`](https://testnet.nearblocks.io/address/m4.mutiny-m4-safe-2026.testnet). Worker: [`rook.m4.mutiny-m4-safe-2026.testnet`](https://testnet.nearblocks.io/address/rook.m4.mutiny-m4-safe-2026.testnet). These are controlled test accounts, with no claim of organic demand. One worker and one paid option are implemented; the six-worker market is not yet available. Set `VITE_REGISTRY_ID` to another compatible testnet Registry if needed.
+Moves and pending requests survive refresh. Use **Check status**, **Check payment**, or **Check claim** to recover. Before activation, **Cancel hire** returns the full fee and storage deposit after the staged worker credit returns. An uncertain transfer stays locked; timeout never triggers a second payment. Owners can edit or withdraw idle offers and transfer NFT title. An active renter keeps the same job after transfer; only the current owner can initiate an earnings claim. Standard NFT approvals and transfer-call acceptance/rollback are supported. Pending claims and transfer-call resolution lock conflicting title or earnings operations.
 
-Both contract accounts are keyless and immutable. The original deployment operator can enable paid hiring after resource tests and a worker-funding check. It can also attest a finalized native-transfer receipt when its callback was lost. **This recovery authority is trusted:** a false failure attestation can allow duplicate payment. It cannot change the original recipient or amount, withdraw arbitrary funds, or change NFT ownership. The Hall’s earned share remains in Registry; there is no treasury withdrawal method.
+Registry: [`m5.mutiny-m5-2026.testnet`](https://testnet.nearblocks.io/address/m5.mutiny-m5-2026.testnet). Worker accounts are `rook.<registry>`, `mallow.<registry>`, `nix.<registry>`, `dot.<registry>`, `brisk.<registry>`, and `peebles.<registry>`. Seeded operator/Alice: `mutiny-m5-2026.testnet`; Bob: `mutiny-m5-bob-2026.testnet`; Carol: `mutiny-m5-carol-2026.testnet`. Set `VITE_REGISTRY_ID` to another compatible testnet Registry if needed.
 
-For a missing native callback, inspect the transaction’s **FINAL** receipts and the matching job/claim ID first. The original operator may call `repair_native_callback({job_id, succeeded, receipt_id})`, using a job ID for a refund or `null` for the current claim. `succeeded` must match the original transfer receipt. Then use **Check claim** or, only after confirmed transfer failure, **Retry deposit return**. Never attest failure while a transfer is pending. Ordinary credit lookup and reversal recovery require no operator privilege.
+Verified live: [Escort saved after transfer](https://testnet.nearblocks.io/txns/6bU9AqJS6obiHU7qVQWE7gxJU7ePB5RjUwdBD6yK5p5x), [Infiltration saved after transfer](https://testnet.nearblocks.io/txns/8K14tLsaSRwo28XcWvZXetpXL9yVWNzuK1v9TGFjhzAu), [former-owner claim rejected](https://testnet.nearblocks.io/txns/GrPc3LrnE4nCUNKy9SF7KQcanSXyxvkJiLvbAxn7zYjW), and [current-owner claim paid](https://testnet.nearblocks.io/txns/Gy1TUrNzYCfQF3QNi83qYCqqubrCmKxMHwUcYS9DXgYV).
+
+Registry and workers are keyless and immutable. Each worker starts with 3 independently funded testnet NEAR. Claims exclude staged credits, direct donations, and the protected storage/reserve floor shown in its profile. The original operator may enable payments after resource checks and attest a **FINAL** native-transfer receipt if its callback is lost. **This recovery authority is trusted:** falsely attesting failure can allow duplicate payment. It cannot change the original recipient or amount, withdraw arbitrary funds, or change NFT ownership. There is no treasury withdrawal method.
+
+For a missing native callback, inspect FINAL receipts and the matching job/claim ID first. The operator can call `repair_native_callback({token_id, job_id, succeeded, receipt_id})`, using a job ID for a refund or `null` for a claim. Then use **Check claim**, or retry a return only after confirmed transfer failure. Never attest failure while a transfer is pending. Ordinary credit lookup and reversal recovery require no operator privilege.
+
+Use the [NEAR CLI](https://docs.near.org/tools/cli) with three funded testnet accounts in its keychain.
 
 ```sh
 pnpm contract:build
 NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:sandbox
 NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:paid
-# Uses your testnet CLI keychain; requires 17 testnet NEAR plus gas:
+NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:market
+# Deploys a new immutable Registry and six workers.
+# Owner needs 32 testnet NEAR plus gas; Bob and Carol also need testnet gas/deposits.
 bash scripts/deploy-testnet.sh your-owner.testnet
-MUTINY_TESTNET_OWNER=your-owner.testnet node scripts/testnet-jobs.mjs
-# Only after sandbox and testnet resource gates pass, verify a real paid job:
-MUTINY_TESTNET_OWNER=your-owner.testnet MUTINY_TESTNET_RENTER=your-renter.testnet \
-  MUTINY_TESTNET_PAID_ONLY=1 MUTINY_ENABLE_PAID=1 node scripts/testnet-jobs.mjs
+MUTINY_TESTNET_OWNER=your-owner.testnet MUTINY_TESTNET_RENTER=your-bob.testnet \
+  MUTINY_TESTNET_CAROL=your-carol.testnet MUTINY_ENABLE_PAID=1 \
+  node scripts/testnet-market.mjs
 ```
 
-Verified live testnet: [paid hire](https://testnet.nearblocks.io/txns/5jMwQ22NHEeprYQqDuhkbcbYyM3vZvXRxEHSQviVBVsU), [saved job](https://testnet.nearblocks.io/txns/BQmJ3t8x2SZereogYSnnLR5vhigB7fthSLiJdNoYY5Nj), [earnings claim](https://testnet.nearblocks.io/txns/HdzzUi58Yo2UNvcgEPkaedPQytXMCDDZmQkTG8YydFhJ), and [five-round Infiltration](https://testnet.nearblocks.io/txns/2jGRnY5EHPnk5y3jbYyTfNugKNup96tXqoQ4n9wR9XkM). Hire used 24.15 Tgas; the five-round save used 16 Tgas and 554 storage bytes. Exact worker/Hall split, unused deposits, and return to the original 3 NEAR worker funding after claiming were checked. Browser reads use the [documented FastNEAR testnet RPC](https://docs.near.org/api/rpc/providers).
-
-Build contracts before workspace Rust tests: Registry embeds Worker Wasm. Sandbox tests use the official [NEAR sandbox 2.14.0](https://github.com/near/nearcore/releases/tag/2.14.0) binary and inject failures only in the local sandbox. Live transactions use CLI signing; automated browser tests substitute the wallet/RPC boundary while retaining the real Wasm game. The earlier [Meteor compatibility call](https://testnet.nearblocks.io/txns/6yTmeNkxoHrZ7N5R3Q8pecvhw2GEKvQMnPDk3wWgfaj6) verifies the connector separately.
+Build contracts before workspace Rust tests: Registry embeds Worker Wasm. Sandbox tests use the official [NEAR sandbox 2.14.0](https://github.com/near/nearcore/releases/tag/2.14.0) binary; receiver fixtures and fault injection stay in local tests. Live integration verification uses CLI signing. Browser tests substitute only wallet/RPC, keeping the real Wasm game. Browser reads use the [documented FastNEAR testnet RPC](https://docs.near.org/api/rpc/providers).
 
 Built with React, Vite, Tailwind CSS, PixiJS, wasm-bindgen, near-sdk and HOT Connect. Atkinson Hyperlegible Next and Fraunces are bundled under their included SIL Open Font Licenses.

@@ -5,26 +5,29 @@ const winning = JSON.parse(
 )[0].log;
 // Test-only service boundary. Uses real browser Wasm for every game transition,
 // frozen opening and commitment. No fake wallet or Registry enters release code.
-async function mockChain(page: Page, paid = false) {
+async function mockChain(page: Page, paid = false, six = false) {
   await page.route(/\/src\/near\/chain\.ts(?:\?.*)?$/, (route) =>
     route.fulfill({
       contentType: "text/javascript",
       body: `
     import * as engine from '/src/game/engine.ts';
     import {digest,supportedContentHash} from '/src/near/jobs.ts';
-    const accountId='owner.testnet',paid=${paid};
+    const accountId='owner.testnet',paid=${paid},six=${six};
+    const ids=['rook','mallow','nix','dot','brisk','peebles'],indices=[0,1,3,4,5,6],names=['Rook','Mallow','Nix','Dot','Brisk','Peebles'],roles=['courier','shieldbearer','mage','courier','shieldbearer','mage'],options=[['fire','shouting'],['shouting','friendly'],['fire','friendly'],['shouting','friendly'],['fire','friendly'],['fire','shouting']];
     const activeAccount=()=>localStorage.getItem('test-account')||(paid?'renter.testnet':accountId);
     const fee=()=>localStorage.getItem('test-price')||'4000000000000000000001';
     const stored=()=>JSON.parse(localStorage.getItem('test-chain')||'null');
-    const put=(v)=>localStorage.setItem('test-chain',JSON.stringify(v));
+    const put=(v)=>{localStorage.setItem('test-chain',JSON.stringify(v));const jobs=JSON.parse(localStorage.getItem('test-jobs')||'{}');jobs[v.job_id]=v;localStorage.setItem('test-jobs',JSON.stringify(jobs));};
     const height=()=>Number(localStorage.getItem('test-height')||'100');
     export function createChainClient(){return {
       async account(){return activeAccount();},
       async connect(){},async disconnect(){localStorage.setItem('test-account','other.testnet');},
       async view(method,args){
         if(localStorage.getItem('test-outage')) throw Error('Testnet is unavailable.');
-        const job=stored();
-        if(method==='get_worker')return {token:{token_id:'rook',owner_id:accountId},worker_account:'rook.registry.testnet',character:'Rook',role:'courier',packages:['fire','shouting'],visual_identity:'rook',status:['active','payment_pending','recovery_pending'].includes(job?.status)?job.status:job&&job.status!=='cancelled'?'cooldown':'idle',job,block_height:String(height()),job_storage_deposit:'30000000000000000000000',lease_blocks:'2400',cooldown_blocks:'20',content_hash:localStorage.getItem('test-bad-content') || await supportedContentHash(),...(paid?{paid_enabled:true,offer:{package_option:0,starting_ask:fee(),floor_ask:fee(),discount_step:'0',available_since:'100'},quote:fee(),claim:JSON.parse(localStorage.getItem('test-claim')||'null')}: {})};
+        const current=stored(),jobs=JSON.parse(localStorage.getItem('test-jobs')||'{}');if(current)jobs[current.job_id]=current;const index=Math.max(0,ids.indexOf(args.token_id||current?.token_id||'rook')),token=ids[index];const job=args.job_id!==undefined?jobs[args.job_id]:Object.values(jobs).filter(j=>j.token_id===token).sort((a,b)=>Number(b.job_id)-Number(a.job_id))[0]||null;
+        if(method==='get_market')return Promise.all((six?ids:['rook']).map(token_id=>this.view('get_worker',{token_id})));
+        if(method==='find_cheapest')return (await this.view('get_market',{})).filter(w=>w.status==='idle'&&w.packages.includes(args.package)&&BigInt(w.quotes[w.packages.indexOf(args.package)])<=BigInt(args.max_price)).sort((a,b)=>a.token.token_id.localeCompare(b.token.token_id))[0]||null;
+        if(method==='get_worker')return {token:{token_id:token,owner_id:localStorage.getItem('test-owner-'+token)||accountId},worker_account:token+'.registry.testnet',character:names[index],role:roles[index],packages:options[index],visual_identity:token,status:['active','payment_pending','recovery_pending'].includes(job?.status)?job.status:job&&job.status!=='cancelled'?'cooldown':'idle',job,block_height:String(height()),job_storage_deposit:'30000000000000000000000',lease_blocks:'2400',cooldown_blocks:'20',content_hash:localStorage.getItem('test-bad-content') || await supportedContentHash(),...(paid?{paid_enabled:true,offer:{package_option:0,starting_ask:fee(),floor_ask:fee(),discount_step:'0',available_since:'100'},quote:fee(),offers:[{package_option:0,starting_ask:fee(),floor_ask:fee(),discount_step:'0',available_since:'100'},...(six?[{package_option:1,starting_ask:'5000000000000000000000',floor_ask:'1000000000000000000000',discount_step:'0',available_since:'100'}]:[null])],quotes:[fee(),six?'5000000000000000000000':null],recent_paid_hires:job&&job.accepted_fee!=='0'&&['active','saved','expired'].includes(job.status)?[job]:[],claim:JSON.parse(localStorage.getItem('test-claim')||'null')}: {})};
         if(method==='accounting')return {reserve:'1000000000000000000000000',balance:'3000000000000000000000000',staged:'0',recognized:'3800000000000000000001',paid:'0',claimable:localStorage.getItem('test-claimed')?'0':'3800000000000000000001'};
         if(method==='get_job')return job;
         if(method==='get_opening')return JSON.parse(JSON.stringify(engine.configure(job.config)),(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
@@ -36,12 +39,13 @@ async function mockChain(page: Page, paid = false) {
         const counts=JSON.parse(localStorage.getItem('test-calls')||'{}');counts[method]=(counts[method]||0)+1;localStorage.setItem('test-calls',JSON.stringify(counts));
         if(localStorage.getItem('test-cancel')) {localStorage.removeItem('test-cancel');throw Error('User rejected signature');}
         if(method==='open_owned_job'||method==='hire_and_open'){
-          if(deposit!==30000000000000000000000n+(method==='hire_and_open'?BigInt(fee()):0n))throw Error('Wrong deposit');
-          const config={setup_id:args.setup_id,placement:args.placement,worker:0,package_option:args.package_option};
+          if(deposit!==30000000000000000000000n+(method==='hire_and_open'?BigInt(args.package_option===1?'5000000000000000000000':fee()):0n))throw Error('Wrong deposit');
+          const config={setup_id:args.setup_id,placement:args.placement,worker:indices[ids.indexOf(args.token_id)],package_option:args.package_option};
           const s=engine.configure(config);
-          put({job_id:String(Number(stored()?.job_id??-1)+1),renter_id:activeAccount(),token_id:'rook',worker_account:'rook.registry.testnet',config,unit_slot:config.placement==='escort'?1:4,rules_version:s.log.rules_version,content_version:s.log.content_version,content_hash:localStorage.getItem('test-bad-content') || await supportedContentHash(),setup_hash:await digest(new TextEncoder().encode(JSON.stringify(s.setup))),accepted_fee:paid?fee():'0',credit_status:paid?'staged':'none',created_at_block:'100',expires_at_block:'2500',status:localStorage.getItem('test-credit-pending')?'payment_pending':'active',cooldown_until:'0',record:null,bond:String(deposit),storage_bytes:500,refund_owed:'0',refund_in_flight:false});
+          put({job_id:String(Number(stored()?.job_id??-1)+1),renter_id:activeAccount(),token_id:args.token_id,worker_account:args.token_id+'.registry.testnet',config,unit_slot:config.placement==='escort'?1:4,rules_version:s.log.rules_version,content_version:s.log.content_version,content_hash:localStorage.getItem('test-bad-content') || await supportedContentHash(),setup_hash:await digest(new TextEncoder().encode(JSON.stringify(s.setup))),accepted_fee:method==='hire_and_open'?(args.package_option===1?'5000000000000000000000':fee()):'0',credit_status:paid?'staged':'none',created_at_block:'100',expires_at_block:'2500',status:localStorage.getItem('test-credit-pending')?'payment_pending':'active',cooldown_until:'0',record:null,bond:String(deposit),storage_bytes:500,refund_owed:'0',refund_in_flight:false});
         } else if(method==='reconcile_payment'){const job=stored();job.status='active';job.credit_status='finalized';put(job);
         } else if(method==='cancel_pending_hire'){const job=stored();job.status='cancelled';job.credit_status='reversed';put(job);
+        } else if(method==='nft_transfer'){if(deposit!==1n)throw Error('Need one yocto');localStorage.setItem('test-owner-'+args.token_id,args.receiver_id);
         } else if(method==='request_claim'){localStorage.setItem('test-claim',JSON.stringify({claim_id:'0',recipient:activeAccount(),amount:args.amount,status:'pending'}));
         } else if(method==='reconcile_claim'){const claim=JSON.parse(localStorage.getItem('test-claim'));claim.status='paid';localStorage.setItem('test-claim',JSON.stringify(claim));localStorage.setItem('test-claimed','1');
         } else if(method==='set_offer'||method==='withdraw_offer'){} else if(method==='settle'){
@@ -331,7 +335,7 @@ test("owner claim stays pending across refresh until the worker confirms payment
     localStorage.setItem("test-account", "owner.testnet"),
   );
   await page.getByRole("button", { name: "Contract Job", exact: true }).click();
-  await page.getByRole("button", { name: /^Claim 0/ }).click();
+  await page.getByRole("button", { name: "Claim", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Check claim", exact: true }),
   ).toBeVisible();
@@ -372,4 +376,191 @@ test("reconnect restores a newer paid job opened in another browser", async ({
   await expect(page.getByText("Job 1 · escort · First Shift")).toBeVisible();
   await page.getByRole("button", { name: "Resume Job", exact: true }).click();
   await expect(page.getByRole("button", { name: /^Captain / })).toBeVisible();
+});
+
+test("six-worker hall compares both packages, signs the selected Infiltration and locks both offers", async ({
+  page,
+}) => {
+  await mockChain(page, true, true);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  for (const name of ["Rook", "Mallow", "Nix", "Dot", "Brisk", "Peebles"])
+    await expect(
+      page.getByRole("button", { name: new RegExp(`^${name} ·`) }),
+    ).toBeVisible();
+  await page.getByRole("button", { name: /^Peebles ·/ }).click();
+  await page
+    .getByRole("region", { name: "Contract Job", exact: true })
+    .getByRole("combobox", { name: /^Fine print/ })
+    .selectOption("1");
+  await page
+    .getByRole("region", { name: "Contract Job", exact: true })
+    .getByRole("combobox", { name: /^Placement/ })
+    .selectOption("infiltration");
+  await expect(
+    page.getByText("Peebles joins the enemy crew.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Hire", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume Job", exact: true }),
+  ).toBeVisible();
+  const job = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("test-chain")!),
+  );
+  expect(job.token_id).toBe("peebles");
+  expect(job.config).toMatchObject({
+    worker: 6,
+    package_option: 1,
+    placement: "infiltration",
+  });
+  await expect(
+    page.getByRole("button", { name: "Hire", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("region", { name: "Contract Job", exact: true })
+    .getByRole("combobox", { name: /^Fine print/ })
+    .selectOption("0");
+  await expect(
+    page.getByRole("button", { name: "Hire", exact: true }),
+  ).toBeDisabled();
+  await page.reload();
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume Job", exact: true }),
+  ).toBeVisible();
+});
+
+test("Find Cheapest shows the selected live package without opening a shift", async ({
+  page,
+}) => {
+  await mockChain(page, true, true);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("combobox", { name: /^Package/ }).selectOption("fire");
+  await page.getByLabel("Maximum fee (NEAR)").fill("0.005");
+  await page
+    .getByRole("button", { name: "Find Cheapest", exact: true })
+    .click();
+  await expect(
+    page.getByText("Brisk selected. Review the package and fee before Hire."),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Contract Job", exact: true })
+      .getByRole("combobox", { name: /^Fine print/ }),
+  ).toHaveValue("0");
+  expect(
+    await page.evaluate(() => localStorage.getItem("test-chain")),
+  ).toBeNull();
+  await page.getByLabel("Maximum fee (NEAR)").fill("0.0001");
+  await page
+    .getByRole("button", { name: "Find Cheapest", exact: true })
+    .click();
+  await expect(
+    page.getByText("No available offer within that fee."),
+  ).toBeVisible();
+});
+
+test("owner transfer refreshes current title and keeps active renter rights", async ({
+  page,
+}) => {
+  await mockChain(page, true, true);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hire", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume Job", exact: true }),
+  ).toBeVisible();
+  await page.evaluate(() =>
+    localStorage.setItem("test-account", "owner.testnet"),
+  );
+  await page.getByRole("button", { name: "Check status", exact: true }).click();
+  await page.getByLabel("New owner", { exact: true }).fill("carol.testnet");
+  await page.getByRole("button", { name: "Transfer NFT", exact: true }).click();
+  await expect(
+    page.getByText("Owner: carol.testnet", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Transfer NFT", exact: true }),
+  ).toHaveCount(0);
+  await page.evaluate(() =>
+    localStorage.setItem("test-account", "renter.testnet"),
+  );
+  await page.getByRole("button", { name: "Check status", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume Job", exact: true }),
+  ).toBeVisible();
+  const job = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("test-chain")!),
+  );
+  expect(job.renter_id).toBe("renter.testnet");
+});
+
+test("switching workers keeps each active job's local moves", async ({
+  page,
+}) => {
+  await mockChain(page, true, true);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hire", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume Job", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Resume Job", exact: true }).click();
+  await page.getByRole("button", { name: /^Captain / }).click();
+  await page.getByRole("button", { name: "Guard", exact: true }).click();
+  await confirm(page);
+  await expect(page.getByRole("button", { name: /^Captain ✓/ })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: /^Peebles ·/ }).click();
+  await page.getByRole("button", { name: "Hire", exact: true }).click();
+  await expect(
+    page.getByText("Job 1 · escort", { exact: false }),
+  ).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await expect(
+    page.getByText("Job 1 · escort", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /^Rook ·/ }).click();
+  await expect(
+    page.getByText("Job 0 · escort", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Resume Job", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Captain ✓/ })).toBeVisible();
+});
+
+test("Hiring Hall and owner controls fit a narrow screen with enlarged text", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockChain(page, true, true);
+  await page.goto("/");
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = "200%";
+    localStorage.setItem("test-account", "owner.testnet");
+  });
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Transfer NFT", exact: true }),
+  ).toBeVisible();
+  const overflow = await page.evaluate(() =>
+    [...document.querySelectorAll("main *")]
+      .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+      .map((el) => ({
+        tag: el.tagName,
+        text: el.textContent?.slice(0, 60),
+        cls: el.className,
+        right: Math.round(el.getBoundingClientRect().right),
+      }))
+      .slice(0, 20),
+  );
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+    JSON.stringify(overflow),
+  ).toBe(true);
+  await expect(page.getByRole("button", { name: /^Peebles ·/ })).toBeVisible();
 });

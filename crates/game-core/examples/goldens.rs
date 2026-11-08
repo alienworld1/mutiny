@@ -19,6 +19,23 @@ fn main() {
         ))
         .unwrap(),
     );
+    for worker in [0, 1, 3, 4, 5, 6] {
+        for placement in ["escort", "infiltration"] {
+            for package_option in 0..2 {
+                let mut state = start_config(&Configuration {
+                    worker,
+                    placement: placement.into(),
+                    package_option,
+                    ..Configuration::default()
+                })
+                .unwrap();
+                while state.outcome.is_none() {
+                    state = apply(&state, &Command::EndPhase).unwrap().state;
+                }
+                logs.push(state.log);
+            }
+        }
+    }
     let s = start();
     logs.push(s.log.clone());
     for commands in [

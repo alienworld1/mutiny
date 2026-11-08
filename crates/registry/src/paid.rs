@@ -3,16 +3,27 @@ use super::*;
 #[near]
 impl Registry {
     /// Deployment gate: only the original testnet operator enables new payments after resource tests.
-    pub fn enable_paid_hiring(&self) -> Promise {
+    pub fn enable_paid_hiring(&self, token_id: Option<TokenId>) -> Promise {
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
         require!(
             env::predecessor_account_id() == self.deployment_owner,
             "Only deployment operator"
         );
-        self.worker_call("accounting", near_sdk::serde_json::json!({}), 0, 10)
-            .then(self.callback("on_funding", near_sdk::serde_json::json!({}), 10))
+        self.worker_call(
+            &token_id,
+            "accounting",
+            near_sdk::serde_json::json!({}),
+            0,
+            10,
+        )
+        .then(self.callback(
+            "on_funding",
+            near_sdk::serde_json::json!({"token_id":token_id}),
+            10,
+        ))
     }
     #[private]
-    pub fn on_funding(&mut self) {
+    pub fn on_funding(&mut self, token_id: TokenId) {
         if let Some(v) = result::<near_sdk::serde_json::Value>() {
             let amount = |key: &str| {
                 v[key]
@@ -20,25 +31,30 @@ impl Registry {
                     .and_then(|s| s.parse::<u128>().ok())
                     .unwrap_or(0)
             };
-            self.paid_enabled = amount("reserve") >= 10u128.pow(24)
+            self.workers
+                .get_mut(&token_id)
+                .expect("Unknown worker")
+                .paid_enabled = amount("reserve") >= 10u128.pow(24)
                 && amount("balance")
                     >= amount("reserve") + amount("staged") + amount("recognized") + 10u128.pow(23);
         }
     }
     pub fn set_offer(
         &mut self,
+        token_id: Option<TokenId>,
         package_option: u8,
         starting_ask: U128,
         floor_ask: U128,
         discount_step: U128,
     ) {
-        self.owner();
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
+        self.owner(&token_id);
         require!(
-            self.get_worker().status == "idle" && !self.claim_pending(),
+            self.get_worker(Some(token_id.clone())).status == "idle"
+                && !self.claim_pending(&token_id),
             "Worker is occupied"
         );
-        // M4 exposes one advertised option on the first worker.
-        require!(package_option == 0, "Only Not On The Fire is offered");
+        require!(package_option < 2, "Unknown package option");
         require!(
             floor_ask.0 >= MIN_PRICE
                 && floor_ask.0 <= starting_ask.0
@@ -46,7 +62,7 @@ impl Registry {
                 && discount_step.0 <= MAX_PRICE,
             "Invalid price bounds"
         );
-        self.offer = Some(Offer {
+        self.workers.get_mut(&token_id).unwrap().offers[package_option as usize] = Some(Offer {
             package_option,
             starting_ask,
             floor_ask,
@@ -54,13 +70,17 @@ impl Registry {
             available_since: U64(env::block_height()),
         });
     }
-    pub fn withdraw_offer(&mut self) {
-        self.owner();
+    pub fn withdraw_offer(&mut self, token_id: Option<TokenId>, package_option: Option<u8>) {
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
+        self.owner(&token_id);
         require!(
-            self.get_worker().status == "idle" && !self.claim_pending(),
+            self.get_worker(Some(token_id.clone())).status == "idle"
+                && !self.claim_pending(&token_id),
             "Worker is occupied"
         );
-        self.offer = None;
+        let option = package_option.unwrap_or(0);
+        require!(option < 2, "Unknown package option");
+        self.workers.get_mut(&token_id).unwrap().offers[option as usize] = None;
     }
     #[payable]
     pub fn hire_and_open(
@@ -72,17 +92,23 @@ impl Registry {
         expected_content_hash: Base64VecU8,
         expected_quote: U128,
     ) -> Job {
-        require!(self.paid_enabled, "Paid hiring is not enabled");
+        require!(
+            self.worker(&token_id).paid_enabled,
+            "Paid hiring is not enabled"
+        );
         require!(
             self.nft.owner_by_id.get(&token_id) != Some(env::predecessor_account_id()),
             "Use owner self-use"
         );
-        let offer = self.offer.as_ref().expect("No advertised offer");
+        require!(package_option < 2, "Unknown package option");
+        let offer = self.worker(&token_id).offers[package_option as usize]
+            .as_ref()
+            .expect("No advertised offer");
         require!(
             package_option == offer.package_option,
             "Option is not advertised"
         );
-        let quote = self.price(offer);
+        let quote = self.price(&token_id, offer);
         require!(
             expected_quote.0 == quote,
             "Price changed; confirm the current price"
@@ -100,6 +126,7 @@ impl Registry {
             quote,
         );
         self.worker_call(
+            &job.token_id,
             "stage_credit",
             near_sdk::serde_json::json!({"credit_id":job.job_id}),
             Self::worker_share(quote),
@@ -119,6 +146,7 @@ impl Registry {
         require!(job.accepted_fee.0 > 0, "Not a paid job");
         if job.credit_status == "reversed" {
             return self.worker_call(
+                &job.token_id,
                 "reconcile_reversal",
                 near_sdk::serde_json::json!({"credit_id":job_id}),
                 0,
@@ -126,6 +154,7 @@ impl Registry {
             );
         }
         self.worker_call(
+            &job.token_id,
             "get_credit",
             near_sdk::serde_json::json!({"credit_id":job_id}),
             0,
@@ -156,11 +185,21 @@ impl Registry {
             job.status = "active".into();
             job.expires_at_block = U64(env::block_height().saturating_add(LEASE_BLOCKS));
             self.hall_earned += job.accepted_fee.0 - credit.amount.0;
+            let history = &mut self
+                .workers
+                .get_mut(&job.token_id)
+                .unwrap()
+                .recent_paid_hires;
+            if history.len() == 10 {
+                history.remove(0);
+            }
+            history.push(job.job_id.0);
         }
         if ["active", "saved", "expired"].contains(&job.status.as_str()) {
             if credit.status == "staged" {
                 job.credit_status = "staged".into();
                 self.worker_call(
+                    &job.token_id,
                     "finalize_credit",
                     near_sdk::serde_json::json!({"credit_id":job_id}),
                     0,
@@ -191,6 +230,7 @@ impl Registry {
         job.status = "recovery_pending".into();
         self.update_job(&mut job);
         self.worker_call(
+            &job.token_id,
             "reverse_credit",
             near_sdk::serde_json::json!({"credit_id":job_id}),
             0,
@@ -202,6 +242,7 @@ impl Registry {
         let job = self.jobs.get(&job_id.0).expect("Unknown job");
         require!(job.status == "recovery_pending", "No recovery pending");
         self.worker_call(
+            &job.token_id,
             "retry_reversal",
             near_sdk::serde_json::json!({"credit_id":job_id}),
             0,
@@ -212,7 +253,12 @@ impl Registry {
     #[payable]
     pub fn receive_reversal(&mut self, job_id: U64) {
         require!(
-            env::predecessor_account_id() == self.worker_account,
+            env::predecessor_account_id()
+                == self
+                    .jobs
+                    .get(&job_id.0)
+                    .expect("Unknown job")
+                    .worker_account,
             "Only worker may return credit"
         );
         let mut job = self.jobs.get(&job_id.0).expect("Unknown job");
@@ -233,9 +279,11 @@ impl Registry {
     pub fn repair_native_callback(
         &mut self,
         job_id: Option<U64>,
+        token_id: Option<TokenId>,
         succeeded: bool,
         receipt_id: String,
     ) {
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
         require!(
             env::predecessor_account_id() == self.deployment_owner,
             "Only deployment operator"
@@ -256,9 +304,10 @@ impl Registry {
             job.refund_in_flight = false;
             self.update_job(&mut job);
         } else {
-            let claim = self.claim.as_ref().expect("No claim");
+            let claim = self.worker(&token_id).claim.as_ref().expect("No claim");
             require!(claim.status == "pending", "No uncertain claim");
             self.worker_call(
+                &token_id,
                 "repair_payout",
                 near_sdk::serde_json::json!({"claim_id":claim.claim_id,"succeeded":succeeded}),
                 0,
@@ -267,9 +316,13 @@ impl Registry {
             .detach();
         }
     }
-    pub fn request_claim(&mut self, amount: U128) -> Claim {
-        self.owner();
-        require!(!self.claim_pending(), "Claim is pending; check its status");
+    pub fn request_claim(&mut self, amount: U128, token_id: Option<TokenId>) -> Claim {
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
+        self.owner(&token_id);
+        require!(
+            !self.claim_pending(&token_id),
+            "Claim is pending; check its status"
+        );
         require!(amount.0 > 0, "Enter an earnings amount");
         let claim = Claim {
             claim_id: U64(self.next_claim),
@@ -278,19 +331,20 @@ impl Registry {
             status: "pending".into(),
         };
         self.next_claim = self.next_claim.checked_add(1).expect("Claim limit");
-        self.claim = Some(claim.clone());
-        self.send_claim(&claim);
+        self.workers.get_mut(&token_id).unwrap().claim = Some(claim.clone());
+        self.send_claim(&token_id, &claim);
         claim
     }
-    pub fn reconcile_claim(&self) {
-        let claim = self.claim.as_ref().expect("No claim");
+    pub fn reconcile_claim(&self, token_id: Option<TokenId>) {
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
+        let claim = self.worker(&token_id).claim.as_ref().expect("No claim");
         require!(claim.status == "pending", "Claim already resolved");
         // Worker payout is keyed by ID; replaying this call cannot repeat a native transfer.
-        self.send_claim(claim);
+        self.send_claim(&token_id, claim);
     }
     #[private]
-    pub fn on_claim(&mut self, claim_id: U64) {
-        let Some(mut claim) = self.claim.clone() else {
+    pub fn on_claim(&mut self, claim_id: U64, token_id: TokenId) {
+        let Some(mut claim) = self.worker(&token_id).claim.clone() else {
             return;
         };
         if claim.claim_id != claim_id || claim.status != "pending" {
@@ -312,7 +366,7 @@ impl Registry {
             } else {
                 claim.status = "failed".into();
             }
-            self.claim = Some(claim);
+            self.workers.get_mut(&token_id).unwrap().claim = Some(claim);
         }
     }
 }
@@ -328,48 +382,57 @@ impl Registry {
         };
         self.jobs.insert(&job.job_id.0, job);
     }
-    pub(super) fn owner(&self) {
-        require!(!self.transfer_pending, "Title transfer is pending");
+    pub(super) fn owner(&self, token_id: &str) {
         require!(
-            self.nft.owner_by_id.get(&TOKEN.into()) == Some(env::predecessor_account_id()),
-            "Only the current owner may manage Rook"
+            !self.worker(token_id).transfer_pending,
+            "Title transfer is pending"
+        );
+        require!(
+            self.nft.owner_by_id.get(&token_id.to_string()) == Some(env::predecessor_account_id()),
+            "Only the current owner may manage this worker"
         );
     }
-    pub(super) fn claim_pending(&self) -> bool {
-        self.claim.as_ref().is_some_and(|c| c.status == "pending")
+    pub(super) fn claim_pending(&self, token_id: &str) -> bool {
+        self.worker(&token_id)
+            .claim
+            .as_ref()
+            .is_some_and(|c| c.status == "pending")
     }
-    pub(super) fn price(&self, offer: &Offer) -> u128 {
+    pub(super) fn price(&self, token_id: &str, offer: &Offer) -> u128 {
         let available = self
+            .worker(token_id)
             .current_job
             .and_then(|id| self.jobs.get(&id))
             .map_or(offer.available_since.0, |j| {
                 offer.available_since.0.max(j.cooldown_until.0)
             });
-        let steps = (env::block_height().saturating_sub(available) / IDLE_BLOCKS).min(3);
-        offer
-            .starting_ask
-            .0
-            .saturating_sub(offer.discount_step.0.saturating_mul(steps.into()))
-            .max(offer.floor_ask.0)
+        offer_price(offer, env::block_height(), available)
     }
+
     fn worker_share(fee: u128) -> u128 {
         fee - fee / 20
     }
     fn worker_call(
         &self,
+        token_id: &str,
         method: &str,
         args: near_sdk::serde_json::Value,
         amount: u128,
         gas: u64,
     ) -> Promise {
-        Promise::new(self.worker_account.clone()).function_call(
+        Promise::new(self.worker(token_id).worker_account.clone()).function_call(
             method.to_string(),
             near_sdk::serde_json::to_vec(&args).unwrap(),
             NearToken::from_yoctonear(amount),
             Gas::from_tgas(gas),
         )
     }
-    fn callback(&self, method: &str, args: near_sdk::serde_json::Value, gas: u64) -> Promise {
+    pub(super) fn callback(
+        &self,
+        method: &str,
+        args: near_sdk::serde_json::Value,
+        gas: u64,
+    ) -> Promise {
         Promise::new(env::current_account_id()).function_call(
             method.to_string(),
             near_sdk::serde_json::to_vec(&args).unwrap(),
@@ -377,13 +440,55 @@ impl Registry {
             Gas::from_tgas(gas),
         )
     }
-    fn send_claim(&self, claim: &Claim) {
-        self.worker_call("payout", near_sdk::serde_json::json!({"claim_id":claim.claim_id,"recipient":claim.recipient,"amount":claim.amount}), 0, 40)
-            .then(self.callback("on_claim", near_sdk::serde_json::json!({"claim_id":claim.claim_id}), 15)).detach();
+    fn send_claim(&self, token_id: &str, claim: &Claim) {
+        self.worker_call(&token_id, "payout", near_sdk::serde_json::json!({"claim_id":claim.claim_id,"recipient":claim.recipient,"amount":claim.amount}), 0, 40)
+            .then(self.callback("on_claim", near_sdk::serde_json::json!({"claim_id":claim.claim_id,"token_id":token_id}), 15)).detach();
     }
 }
 fn result<T: near_sdk::serde::de::DeserializeOwned>() -> Option<T> {
     env::promise_result_checked(0, 4096)
         .ok()
         .and_then(|bytes| near_sdk::serde_json::from_slice(&bytes).ok())
+}
+
+fn offer_price(offer: &Offer, block: u64, available: u64) -> u128 {
+    let steps = (block.saturating_sub(available) / IDLE_BLOCKS).min(3);
+    offer
+        .starting_ask
+        .0
+        .saturating_sub(offer.discount_step.0.saturating_mul(steps.into()))
+        .max(offer.floor_ask.0)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn idle_price_boundaries_floor_and_overflow() {
+        let mut o = Offer {
+            package_option: 0,
+            starting_ask: U128(4000),
+            floor_ask: U128(1000),
+            discount_step: U128(1000),
+            available_since: U64(50),
+        };
+        for (elapsed, expected) in [
+            (0, 4000),
+            (119, 4000),
+            (120, 3000),
+            (239, 3000),
+            (240, 2000),
+            (359, 2000),
+            (360, 1000),
+            (u64::MAX - 50, 1000),
+        ] {
+            assert_eq!(offer_price(&o, 50 + elapsed, 50), expected);
+        }
+        assert_eq!(offer_price(&o, 49, 50), 4000);
+        o.discount_step = U128(u128::MAX);
+        assert_eq!(offer_price(&o, u64::MAX, 50), 1000);
+        o.discount_step = U128(0);
+        assert_eq!(offer_price(&o, u64::MAX, 50), 4000);
+        // Reopening after cooldown starts the clock anew.
+        assert_eq!(offer_price(&o, 500, 500), 4000);
+    }
 }

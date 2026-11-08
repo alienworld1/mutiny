@@ -10,6 +10,9 @@ import {
   parseEarnings,
   openingState,
   parseJob,
+  parseWorker,
+  workerTokens,
+  workerIndices,
   sameConfig,
   verifyRecord,
 } from "./jobs";
@@ -141,4 +144,81 @@ it("parses exact NEAR values and rejects imprecise or untrusted amounts", () => 
       status: "payment_pending",
     }).status,
   ).toBe("payment_pending");
+});
+
+describe("six-worker market boundaries", () => {
+  function worker(index: number) {
+    const token = workerTokens[index]!,
+      cfg = { ...log.config, worker: workerIndices[index]! };
+    const opening = engine.configure(cfg),
+      unit = opening.setup.units[1]!;
+    const offer = {
+      package_option: 0,
+      starting_ask: "4000000000000000000000",
+      floor_ask: "1000000000000000000000",
+      discount_step: "0",
+      available_since: "1",
+    };
+    return {
+      token: { token_id: token, owner_id: "alice.testnet" },
+      worker_account: `${token}.registry.testnet`,
+      character: unit.name,
+      role: unit.role,
+      packages: [0, 1].map(
+        (package_option) =>
+          engine.configure({ ...cfg, package_option }).setup.units[1]!.package,
+      ),
+      visual_identity: token,
+      status: "idle",
+      block_height: "2",
+      job_storage_deposit: job.bond,
+      content_hash: "content",
+      offers: [offer, null],
+      quotes: [offer.starting_ask, null],
+      recent_paid_hires: [],
+    };
+  }
+  it("accepts all six immutable identities and rejects mismatched packages and frozen worker IDs", () => {
+    for (let i = 0; i < 6; i++) {
+      const w = worker(i);
+      expect(parseWorker(w).token.token_id).toBe(workerTokens[i]);
+      expect(() => parseWorker({ ...w, packages: ["none", "fire"] })).toThrow(
+        "identity",
+      );
+      expect(() =>
+        parseJob({
+          ...job,
+          token_id: workerTokens[i],
+          config: { ...job.config, worker: 99 },
+        }),
+      ).toThrow("Invalid job");
+    }
+  });
+  it("rejects malformed offers, self-use advertised as paid history and cross-token history", () => {
+    const w = worker(0);
+    expect(() => parseWorker({ ...w, quotes: ["invented", null] })).toThrow(
+      "offer",
+    );
+    expect(() => parseWorker({ ...w, offers: [w.offers[0]] })).toThrow(
+      "offers",
+    );
+    expect(() => parseWorker({ ...w, recent_paid_hires: [job] })).toThrow(
+      "paid hire history",
+    );
+    expect(() =>
+      parseWorker({
+        ...worker(1),
+        recent_paid_hires: [{ ...job, accepted_fee: "1" }],
+      }),
+    ).toThrow("paid hire history");
+    expect(() =>
+      parseWorker({
+        ...w,
+        recent_paid_hires: Array.from({ length: 11 }, () => ({
+          ...job,
+          accepted_fee: "1",
+        })),
+      }),
+    ).toThrow("history");
+  });
 });

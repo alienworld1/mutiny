@@ -92,6 +92,7 @@ try {
     owner_id: owner.accountId,
     worker_account: `rook.${registry.accountId}`,
   });
+  await call(owner, "provision_worker", { token_id: "rook" });
   const worker = owner.getAccount(`rook.${registry.accountId}`);
   const view = (method, args = {}) => registry.view(method, args);
   const accounting = () => worker.view("accounting", {});

@@ -14,6 +14,7 @@ import {
   registryId,
   verifyRecord,
   writeSession,
+  yoctoAmount,
 } from "./jobs";
 import type { Session, Worker, Earnings } from "./jobs";
 
@@ -27,6 +28,9 @@ export function useContractJob() {
     hash: string;
     signer: string;
   } | null>(null);
+  const selected = useRef("rook");
+  const checkedAccount = useRef<string | null>(null);
+  const [market, setMarket] = useState<Worker[]>([]);
   const [worker, setWorker] = useState<Worker | null>(null);
   const [account, setAccount] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -65,12 +69,44 @@ export function useContractJob() {
       setBusy(false);
     }
   }
-  async function check() {
+  async function check(selectedByPlayer = false) {
     const c = chain();
     await engine.loadEngine();
     const connected = await c.account();
     setAccount(connected);
-    const market = parseWorker(await c.view("get_worker", {}));
+    let all: Worker[];
+    try {
+      all = (await c.view<unknown[]>("get_market", {})).map(parseWorker);
+    } catch (error) {
+      setMarket([]);
+      setWorker(null);
+      setEarnings(null);
+      throw error;
+    }
+    setMarket(all);
+    let saved = connected ? await readSession(connected) : null;
+    if (
+      connected &&
+      checkedAccount.current !== connected &&
+      !selectedByPlayer
+    ) {
+      const active = all.filter(
+        (w) =>
+          w.job?.renter_id === connected &&
+          ["active", "payment_pending", "recovery_pending"].includes(
+            w.job.status,
+          ),
+      );
+      selected.current =
+        active.find((w) => w.token.token_id === saved?.job?.token_id)?.token
+          .token_id ??
+        active[0]?.token.token_id ??
+        saved?.job?.token_id ??
+        selected.current;
+    }
+    checkedAccount.current = connected;
+    const market = all.find((w) => w.token.token_id === selected.current);
+    if (!market) throw new Error("Selected worker is unavailable");
     setWorker(market);
     if (market.paid_enabled !== undefined)
       setEarnings(
@@ -80,17 +116,19 @@ export function useContractJob() {
       ? localStorage.getItem(`${registryId}:${connected}:finance`)
       : null;
     setFinanceTx(storedTx ? JSON.parse(storedTx) : null);
-    let saved = connected ? await readSession(connected) : null;
-    // A job opened in another browser supersedes an older, closed local session.
+    // Keep a separate action log per job when this wallet has several workers.
     if (
       market.job?.renter_id === connected &&
-      saved?.job &&
-      market.job.job_id !== saved.job.job_id &&
+      saved?.job?.job_id !== market.job.job_id &&
       ["active", "payment_pending", "recovery_pending"].includes(
         market.job.status,
       )
-    )
-      saved = null;
+    ) {
+      saved = connected
+        ? await readSession(connected, market.token.token_id)
+        : null;
+      if (saved?.job?.job_id !== market.job.job_id) saved = null;
+    }
     current.current = saved;
     setSession(saved);
     if (!connected) {
@@ -130,11 +168,15 @@ export function useContractJob() {
     }
     if (!saved) {
       setNotice(
-        market.token.owner_id === connected
-          ? "Rook is ready when you are."
-          : market.offer
-            ? "Rook has a shift available."
-            : "No shift is advertised.",
+        market.claim?.status === "pending"
+          ? "Claim pending. Check claim status."
+          : market.status !== "idle"
+            ? `${market.character} is unavailable. Check the current shift.`
+            : market.token.owner_id === connected
+              ? `${market.character} is ready when you are.`
+              : market.offers?.some(Boolean)
+                ? `${market.character} has a shift available.`
+                : "No shift is advertised.",
       );
       return;
     }
@@ -297,17 +339,18 @@ export function useContractJob() {
     void run(async () => {
       if (!account) throw new Error("Connect a testnet wallet");
       await signer(account);
-      const market = parseWorker(await chain().view("get_worker", {}));
+      const market = parseWorker(
+        await chain().view("get_worker", { token_id: selected.current }),
+      );
       setWorker(market);
       const owned = market.token.owner_id === account;
       if (market.status !== "idle" || market.claim?.status === "pending")
-        throw new Error("Rook is unavailable. Check status.");
+        throw new Error("This worker is unavailable. Check status.");
       if (
         !owned &&
         (!market.paid_enabled ||
-          !market.offer ||
-          market.offer.package_option !== config.package_option ||
-          market.quote !== acceptedQuote)
+          !market.offers?.[config.package_option] ||
+          market.quotes?.[config.package_option] !== acceptedQuote)
       )
         throw new Error(
           "Price or availability changed. Review the current price and Hire again.",
@@ -351,7 +394,7 @@ export function useContractJob() {
       const tx = await chain().change(
         owned ? "open_owned_job" : "hire_and_open",
         {
-          token_id: "rook",
+          token_id: market.token.token_id,
           package_option: config.package_option,
           placement: config.placement,
           setup_id: config.setup_id,
@@ -360,6 +403,7 @@ export function useContractJob() {
         },
         BigInt(market.job_storage_deposit) +
           (owned ? 0n : BigInt(acceptedQuote!)),
+        account,
       );
       await persist({ ...next, activity: "Submitted", tx });
       setNotice("Submitted. Checking the Registry.");
@@ -368,6 +412,7 @@ export function useContractJob() {
   }
   function moneyAction(
     method:
+      | "nft_transfer"
       | "set_offer"
       | "withdraw_offer"
       | "request_claim"
@@ -380,14 +425,21 @@ export function useContractJob() {
     void run(async () => {
       if (!account) throw new Error("Connect a testnet wallet");
       await signer(account);
-      const tx = await chain().change(method, args, 0n);
+      const tx = await chain().change(
+        method,
+        { token_id: selected.current, ...args },
+        method === "nft_transfer" ? 1n : 0n,
+        account,
+      );
       localStorage.setItem(
         `${registryId}:${account}:finance`,
         JSON.stringify(tx),
       );
       setFinanceTx(tx);
       await check();
-      const market = parseWorker(await chain().view("get_worker", {}));
+      const market = parseWorker(
+        await chain().view("get_worker", { token_id: selected.current }),
+      );
       setWorker(market);
       if (method === "request_claim" || method === "reconcile_claim")
         setNotice(
@@ -397,7 +449,16 @@ export function useContractJob() {
               ? "Claim failed. Funds remain in the worker account."
               : "Claim pending. Check claim status.",
         );
-      else if (method === "set_offer" || method === "withdraw_offer") {
+      else if (method === "nft_transfer") {
+        const status = await chain().resolve(tx);
+        setNotice(
+          status === "confirmed" && market.token.owner_id === args.receiver_id
+            ? "New owner confirmed"
+            : status === "failed"
+              ? "Transfer not completed. Check status."
+              : "Transfer pending. Check status.",
+        );
+      } else if (method === "set_offer" || method === "withdraw_offer") {
         const status = await chain().resolve(tx);
         setNotice(
           status === "confirmed"
@@ -450,6 +511,7 @@ export function useContractJob() {
         "settle",
         { job_id: job.job_id, action_log: JSON.stringify(saved.log) },
         0n,
+        saved.account,
       );
       await persist({ ...saved, activity: "Submitted", operation: "save", tx });
       setNotice("Submitted. Checking the Registry.");
@@ -471,6 +533,7 @@ export function useContractJob() {
         "expire",
         { job_id: saved.job.job_id },
         0n,
+        saved.account,
       );
       await persist({
         ...saved,
@@ -490,6 +553,7 @@ export function useContractJob() {
         "retry_storage_refund",
         { job_id: saved.job.job_id },
         0n,
+        saved.account,
       );
       await check();
     });
@@ -507,6 +571,35 @@ export function useContractJob() {
     return engine.replay(saved.log).state;
   }
   return {
+    market,
+    selectWorker: (token: string) => {
+      if (lock.current) return;
+      selected.current = token;
+      setEarnings(null);
+      void run(() => check(true));
+    },
+    findCheapest: (
+      packageId: string,
+      maximum: string,
+      onFound: (option: number) => void,
+    ) =>
+      void run(async () => {
+        const found = await chain().view<unknown>("find_cheapest", {
+          package: packageId,
+          max_price: yoctoAmount(maximum).toString(),
+        });
+        if (!found) {
+          setNotice("No available offer within that fee.");
+          return;
+        }
+        const w = parseWorker(found);
+        selected.current = w.token.token_id;
+        onFound(w.packages.indexOf(packageId));
+        await check(true);
+        setNotice(
+          `${w.character} selected. Review the package and fee before Hire.`,
+        );
+      }),
     enabled,
     earnings,
     financeTx,

@@ -2,6 +2,7 @@ mod paid;
 use game_core::{ActionLog, Configuration, Event};
 use near_contract_standards::non_fungible_token::{
     NonFungibleToken, Token, TokenId,
+    approval::NonFungibleTokenApproval,
     core::{NonFungibleTokenCore, NonFungibleTokenResolver},
     enumeration::NonFungibleTokenEnumeration,
     metadata::{NFTContractMetadata, NonFungibleTokenMetadataProvider, TokenMetadata},
@@ -20,6 +21,7 @@ const LEASE_BLOCKS: u64 = 2400;
 const COOLDOWN_BLOCKS: u64 = 20;
 const MAX_LOG_BYTES: usize = 4096;
 const TOKEN: &str = "rook";
+const TOKENS: [&str; 6] = ["rook", "mallow", "nix", "dot", "brisk", "peebles"];
 const MIN_PRICE: u128 = 1_000_000_000_000_000_000_000;
 const MAX_PRICE: u128 = 1_000_000_000_000_000_000_000_000;
 const IDLE_BLOCKS: u64 = 120;
@@ -102,6 +104,9 @@ pub struct WorkerView {
     pub lease_blocks: U64,
     pub cooldown_blocks: U64,
     pub content_hash: Base64VecU8,
+    pub offers: [Option<Offer>; 2],
+    pub quotes: [Option<U128>; 2],
+    pub recent_paid_hires: Vec<Job>,
     pub offer: Option<Offer>,
     pub quote: Option<U128>,
     pub hall_earned: U128,
@@ -109,20 +114,28 @@ pub struct WorkerView {
     pub paid_enabled: bool,
 }
 
+#[near(serializers = [borsh])]
+pub struct WorkerState {
+    worker_account: AccountId,
+    current_job: Option<u64>,
+    transfer_pending: bool,
+    offers: [Option<Offer>; 2],
+    claim: Option<Claim>,
+    paid_enabled: bool,
+    recent_paid_hires: Vec<u64>,
+    provisioned: bool,
+    provision_pending: bool,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Registry {
     nft: NonFungibleToken,
-    worker_account: AccountId,
+    workers: std::collections::BTreeMap<String, WorkerState>,
     jobs: LookupMap<u64, Job>,
-    current_job: Option<u64>,
     next_job: u64,
-    transfer_pending: bool,
-    offer: Option<Offer>,
     hall_earned: u128,
-    claim: Option<Claim>,
     next_claim: u64,
-    paid_enabled: bool,
     deployment_owner: AccountId,
 }
 
@@ -158,16 +171,63 @@ impl Registry {
             env::current_account_id(),
             Some(b"m".to_vec()),
             Some(b"e".to_vec()),
-            None::<Vec<u8>>,
+            Some(b"a".to_vec()),
         );
-        nft.internal_mint_with_refund(TOKEN.into(), owner_id.clone(), Some(TokenMetadata {
-            title: Some("Rook".into()),
-            description: Some("Courier. Not On The Fire / Within Shouting Distance.".into()),
-            copies: Some(1),
-            extra: Some(near_sdk::serde_json::json!({"worker_account":worker_account,"visual_identity":"rook","role":"courier","packages":["fire","shouting"]}).to_string()),
-            ..Default::default()
-        }), None);
-        Promise::new(worker_account.clone())
+        let mut workers = std::collections::BTreeMap::new();
+        for (index, token) in TOKENS.iter().enumerate() {
+            let (name, role, _, _, packages) = game_core::worker_identity(if index < 2 {
+                index as u8
+            } else {
+                index as u8 + 1
+            })
+            .expect("genesis identity");
+            let worker_account: AccountId = format!("{token}.{}", env::current_account_id())
+                .parse()
+                .unwrap();
+            nft.internal_mint_with_refund((*token).into(), owner_id.clone(), Some(TokenMetadata {
+                title: Some(name.into()), copies: Some(1),
+                extra: Some(near_sdk::serde_json::json!({"worker_account":worker_account,"visual_identity":token,"role":role,"packages":packages}).to_string()),
+                ..Default::default()
+            }), None);
+            workers.insert(
+                (*token).into(),
+                WorkerState {
+                    worker_account,
+                    current_job: None,
+                    transfer_pending: false,
+                    offers: [None, None],
+                    claim: None,
+                    paid_enabled: false,
+                    recent_paid_hires: Vec::new(),
+                    provisioned: false,
+                    provision_pending: false,
+                },
+            );
+        }
+        Self {
+            nft,
+            workers,
+            jobs: LookupMap::new(b"j"),
+            next_job: 0,
+            hall_earned: 0,
+            next_claim: 0,
+            deployment_owner: owner_id,
+        }
+    }
+
+    /// Bootstrap each account separately to stay inside NEAR's transaction gas limit.
+    pub fn provision_worker(&mut self, token_id: TokenId) -> Promise {
+        require!(
+            env::predecessor_account_id() == self.deployment_owner,
+            "Only deployment operator"
+        );
+        let w = self.workers.get_mut(&token_id).expect("Unknown worker");
+        require!(
+            !w.provisioned && !w.provision_pending,
+            "Worker already provisioned or pending"
+        );
+        w.provision_pending = true;
+        Promise::new(w.worker_account.clone())
             .create_account()
             .transfer(NearToken::from_near(3))
             .deploy_contract(
@@ -183,26 +243,28 @@ impl Registry {
                 NearToken::from_yoctonear(0),
                 Gas::from_tgas(10),
             )
-            .detach();
-        Self {
-            nft,
-            worker_account,
-            jobs: LookupMap::new(b"j"),
-            current_job: None,
-            next_job: 0,
-            transfer_pending: false,
-            offer: None,
-            hall_earned: 0,
-            claim: None,
-            next_claim: 0,
-            paid_enabled: false,
-            deployment_owner: owner_id,
-        }
+            .then(self.callback(
+                "on_provision",
+                near_sdk::serde_json::json!({"token_id":token_id}),
+                5,
+            ))
+    }
+    #[private]
+    pub fn on_provision(&mut self, token_id: TokenId) {
+        let w = self.workers.get_mut(&token_id).expect("Unknown worker");
+        w.provisioned = env::promise_result_checked(0, 32).is_ok();
+        w.provision_pending = false;
     }
 
-    pub fn get_worker(&self) -> WorkerView {
-        let job = self.current_job.and_then(|id| self.jobs.get(&id));
-        let status = if self.transfer_pending {
+    pub fn get_worker(&self, token_id: Option<TokenId>) -> WorkerView {
+        let token_id = token_id.unwrap_or_else(|| TOKEN.into());
+        let w = self.worker(&token_id);
+        let index = Self::worker_index(&token_id);
+        let (name, role, _, _, packages) = game_core::worker_identity(index).expect("identity");
+        let job = w.current_job.and_then(|id| self.jobs.get(&id));
+        let status = if !w.provisioned {
+            "unavailable"
+        } else if w.transfer_pending {
             "transfer_pending"
         } else {
             match &job {
@@ -223,13 +285,25 @@ impl Registry {
                 _ => "idle",
             }
         };
+        let mut offers = w.offers.clone();
+        for o in offers.iter_mut().flatten() {
+            if let Some(j) = &job {
+                o.available_since = U64(o.available_since.0.max(j.cooldown_until.0));
+            }
+        }
         WorkerView {
-            token: self.nft.nft_token(TOKEN.into()).expect("genesis token"),
-            worker_account: self.worker_account.clone(),
-            character: "Rook".into(),
-            role: "courier".into(),
-            packages: ["fire".into(), "shouting".into()],
-            visual_identity: "rook".into(),
+            token: self.nft.nft_token(token_id.clone()).expect("genesis token"),
+            worker_account: w.worker_account.clone(),
+            character: name.into(),
+            role: role.into(),
+            packages: packages.map(|p| {
+                near_sdk::serde_json::to_value(p)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            }),
+            visual_identity: token_id.clone(),
             status: status.into(),
             job,
             block_height: U64(env::block_height()),
@@ -237,11 +311,21 @@ impl Registry {
             lease_blocks: U64(LEASE_BLOCKS),
             cooldown_blocks: U64(COOLDOWN_BLOCKS),
             content_hash: content_hash(),
-            offer: self.offer.clone(),
-            quote: self.offer.as_ref().map(|o| U128(self.price(o))),
+            offers: offers.clone(),
+            quotes: std::array::from_fn(|i| {
+                w.offers[i].as_ref().map(|o| U128(self.price(&token_id, o)))
+            }),
+            recent_paid_hires: w
+                .recent_paid_hires
+                .iter()
+                .rev()
+                .filter_map(|id| self.jobs.get(id))
+                .collect(),
+            offer: w.offers[0].clone(),
+            quote: w.offers[0].as_ref().map(|o| U128(self.price(&token_id, o))),
             hall_earned: U128(self.hall_earned),
-            claim: self.claim.clone(),
-            paid_enabled: self.paid_enabled,
+            claim: w.claim.clone(),
+            paid_enabled: w.paid_enabled,
         }
     }
     pub fn get_job(&self, job_id: U64) -> Option<Job> {
@@ -264,7 +348,7 @@ impl Registry {
         setup_id: String,
         expected_content_hash: Base64VecU8,
     ) -> Job {
-        self.owner();
+        self.owner(&token_id);
         require!(
             env::attached_deposit().as_yoctonear() == JOB_BOND,
             "Attach exactly the job storage deposit"
@@ -289,27 +373,35 @@ impl Registry {
         expected_content_hash: Base64VecU8,
         fee: u128,
     ) -> Job {
-        require!(token_id == TOKEN, "Unknown worker");
+        Self::worker_index(&token_id);
         require!(
-            self.get_worker().status == "idle",
+            self.get_worker(Some(token_id.clone())).status == "idle",
             "Worker is occupied or cooling down"
         );
-        require!(!self.claim_pending(), "Claim is pending");
+        require!(!self.claim_pending(&token_id), "Claim is pending");
         require!(
             expected_content_hash == content_hash(),
             "Content changed; refresh before opening"
         );
-        if let Some(o) = &mut self.offer {
-            if let Some(j) = self.current_job.and_then(|id| self.jobs.get(&id)) {
-                if j.cooldown_until.0 > o.available_since.0 {
-                    o.available_since = j.cooldown_until;
-                }
-            }
+        let cooldown = self
+            .worker(&token_id)
+            .current_job
+            .and_then(|id| self.jobs.get(&id))
+            .map_or(0, |j| j.cooldown_until.0);
+        for o in self
+            .workers
+            .get_mut(&token_id)
+            .unwrap()
+            .offers
+            .iter_mut()
+            .flatten()
+        {
+            o.available_since = U64(o.available_since.0.max(cooldown));
         }
         let config = Configuration {
             setup_id,
             placement,
-            worker: 0,
+            worker: Self::worker_index(&token_id),
             package_option,
         };
         let opening = game_core::start_config(&config).expect("Unsupported job configuration");
@@ -319,8 +411,8 @@ impl Registry {
         let mut job = Job {
             job_id: U64(id),
             renter_id: env::predecessor_account_id(),
-            token_id,
-            worker_account: self.worker_account.clone(),
+            token_id: token_id.clone(),
+            worker_account: self.worker(&token_id).worker_account.clone(),
             unit_slot: if config.placement == "escort" { 1 } else { 4 },
             config,
             rules_version: game_core::RULES_VERSION,
@@ -348,15 +440,19 @@ impl Registry {
         };
         self.jobs.insert(&id, &job);
         // Option<u64> in root state grows by eight bytes on the first reservation.
-        job.storage_bytes =
-            env::storage_usage() - before + if self.current_job.is_none() { 8 } else { 0 };
+        job.storage_bytes = env::storage_usage() - before
+            + if self.worker(&token_id).current_job.is_none() {
+                8
+            } else {
+                0
+            };
         require!(
             u128::from(job.storage_bytes + 768) * env::storage_byte_cost().as_yoctonear()
                 <= JOB_BOND,
             "Storage reserve too small"
         );
         self.jobs.insert(&id, &job);
-        self.current_job = Some(id);
+        self.workers.get_mut(&token_id).unwrap().current_job = Some(id);
         job
     }
 }
@@ -517,7 +613,7 @@ impl NonFungibleTokenCore for Registry {
         memo: Option<String>,
     ) {
         require!(
-            !self.transfer_pending && !self.claim_pending(),
+            !self.worker(&token_id).transfer_pending && !self.claim_pending(&token_id),
             "Title transfer or claim is pending"
         );
         self.nft
@@ -533,10 +629,13 @@ impl NonFungibleTokenCore for Registry {
         msg: String,
     ) -> PromiseOrValue<bool> {
         require!(
-            !self.transfer_pending && !self.claim_pending(),
+            !self.worker(&token_id).transfer_pending && !self.claim_pending(&token_id),
             "Title transfer or claim is pending"
         );
-        self.transfer_pending = true;
+        self.workers
+            .get_mut(&token_id)
+            .expect("Unknown worker")
+            .transfer_pending = true;
         self.nft
             .nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)
     }
@@ -557,10 +656,13 @@ impl NonFungibleTokenResolver for Registry {
         let retained = self.nft.nft_resolve_transfer(
             previous_owner_id,
             receiver_id,
-            token_id,
+            token_id.clone(),
             approved_account_ids,
         );
-        self.transfer_pending = false;
+        self.workers
+            .get_mut(&token_id)
+            .expect("Unknown worker")
+            .transfer_pending = false;
         retained
     }
 }
@@ -596,5 +698,90 @@ impl NonFungibleTokenMetadataProvider for Registry {
             reference: None,
             reference_hash: None,
         }
+    }
+}
+
+impl Registry {
+    fn worker(&self, token: &str) -> &WorkerState {
+        self.workers.get(token).expect("Unknown worker")
+    }
+    fn worker_index(token: &str) -> u8 {
+        let index = TOKENS
+            .iter()
+            .position(|id| *id == token)
+            .expect("Unknown worker") as u8;
+        if index < 2 { index } else { index + 1 }
+    }
+}
+#[near]
+impl Registry {
+    pub fn get_market(&self) -> Vec<WorkerView> {
+        TOKENS
+            .iter()
+            .map(|id| self.get_worker(Some((*id).into())))
+            .collect()
+    }
+    pub fn find_cheapest(&self, package: String, max_price: U128) -> Option<WorkerView> {
+        self.get_market()
+            .into_iter()
+            .filter(|w| {
+                w.status == "idle"
+                    && w.paid_enabled
+                    && !w.claim.as_ref().is_some_and(|c| c.status == "pending")
+            })
+            .filter_map(|w| {
+                let price = w
+                    .packages
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, p)| **p == package)
+                    .filter_map(|(i, _)| w.quotes[i].map(|q| q.0))
+                    .filter(|q| *q <= max_price.0)
+                    .min()?;
+                Some((price, w))
+            })
+            .min_by(|(a, wa), (b, wb)| a.cmp(b).then(wa.token.token_id.cmp(&wb.token.token_id)))
+            .map(|(_, w)| w)
+    }
+}
+#[near]
+impl NonFungibleTokenApproval for Registry {
+    #[payable]
+    fn nft_approve(
+        &mut self,
+        token_id: TokenId,
+        account_id: AccountId,
+        msg: Option<String>,
+    ) -> Option<Promise> {
+        require!(
+            !self.worker(&token_id).transfer_pending,
+            "Title transfer is pending"
+        );
+        self.nft.nft_approve(token_id, account_id, msg)
+    }
+    #[payable]
+    fn nft_revoke(&mut self, token_id: TokenId, account_id: AccountId) {
+        require!(
+            !self.worker(&token_id).transfer_pending,
+            "Title transfer is pending"
+        );
+        self.nft.nft_revoke(token_id, account_id);
+    }
+    #[payable]
+    fn nft_revoke_all(&mut self, token_id: TokenId) {
+        require!(
+            !self.worker(&token_id).transfer_pending,
+            "Title transfer is pending"
+        );
+        self.nft.nft_revoke_all(token_id);
+    }
+    fn nft_is_approved(
+        &self,
+        token_id: TokenId,
+        approved_account_id: AccountId,
+        approval_id: Option<u64>,
+    ) -> bool {
+        self.nft
+            .nft_is_approved(token_id, approved_account_id, approval_id)
     }
 }

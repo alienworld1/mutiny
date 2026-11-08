@@ -34,6 +34,7 @@ try {
     { owner_id: root.accountId, worker_account: `rook.${registry.accountId}` },
     { gas },
   );
+  await root.call(registry, "provision_worker", { token_id: "rook" }, { gas });
   let market = await registry.view("get_worker", {});
   const bond = market.job_storage_deposit;
   const workerId = market.worker_account;
@@ -47,7 +48,7 @@ try {
     ),
     "0",
   );
-  assert.equal(await registry.view("nft_total_supply", {}), "1");
+  assert.equal(await registry.view("nft_total_supply", {}), "6");
   assert.equal(
     (
       await registry.view("nft_tokens_for_owner", {

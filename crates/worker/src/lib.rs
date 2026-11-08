@@ -48,7 +48,11 @@ impl Worker {
             "Initialize from Registry"
         );
         require!(
-            env::current_account_id().as_str() == format!("rook.{registry_id}"),
+            env::current_account_id()
+                .as_str()
+                .split_once('.')
+                .is_some_and(|(name, parent)| parent == registry_id.as_str()
+                    && ["rook", "mallow", "nix", "dot", "brisk", "peebles"].contains(&name)),
             "Invalid worker identity"
         );
         require!(

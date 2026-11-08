@@ -2,7 +2,7 @@ import * as engine from "../game/engine";
 import type { ActionLog, Configuration, State } from "../game/types";
 
 export const registryId =
-  import.meta.env.VITE_REGISTRY_ID || "m4.mutiny-m4-safe-2026.testnet";
+  import.meta.env.VITE_REGISTRY_ID || "m5.mutiny-m5-2026.testnet";
 export type Activity =
   | "Draft"
   | "AwaitingSignature"
@@ -73,7 +73,19 @@ export interface Claim {
   amount: string;
   status: "pending" | "paid" | "failed";
 }
+export const workerTokens = [
+  "rook",
+  "mallow",
+  "nix",
+  "dot",
+  "brisk",
+  "peebles",
+] as const;
+export const workerIndices = [0, 1, 3, 4, 5, 6];
 export interface Worker {
+  offers?: (Offer | null)[];
+  quotes?: (string | null)[];
+  recent_paid_hires?: Job[];
   token: { token_id: string; owner_id: string };
   worker_account: string;
   character: string;
@@ -118,7 +130,7 @@ export function parseJob(value: unknown): Job {
     !integerString(value.bond) ||
     typeof value.renter_id !== "string" ||
     typeof value.worker_account !== "string" ||
-    value.token_id !== "rook" ||
+    !workerTokens.includes(value.token_id as (typeof workerTokens)[number]) ||
     typeof value.setup_hash !== "string" ||
     typeof value.content_hash !== "string" ||
     !integerString(value.accepted_fee) ||
@@ -131,7 +143,10 @@ export function parseJob(value: unknown): Job {
       "cancelled",
     ].includes(String(value.status)) ||
     !object(value.config) ||
-    value.config.worker !== 0 ||
+    value.config.worker !==
+      workerIndices[
+        workerTokens.indexOf(value.token_id as (typeof workerTokens)[number])
+      ] ||
     ![0, 1].includes(Number(value.config.package_option)) ||
     !["escort", "infiltration"].includes(String(value.config.placement))
   )
@@ -144,12 +159,15 @@ export function parseWorker(value: unknown): Worker {
   if (
     !object(value) ||
     !object(value.token) ||
-    value.token.token_id !== "rook" ||
+    !workerTokens.includes(
+      value.token.token_id as (typeof workerTokens)[number],
+    ) ||
     typeof value.token.owner_id !== "string" ||
     !integerString(value.job_storage_deposit) ||
     !integerString(value.block_height) ||
     typeof value.content_hash !== "string" ||
     ![
+      "unavailable",
       "idle",
       "active",
       "expired_pending",
@@ -160,10 +178,38 @@ export function parseWorker(value: unknown): Worker {
     ].includes(String(value.status))
   )
     throw new Error("Invalid worker response. Check status again.");
+  const index = workerTokens.indexOf(
+    value.token.token_id as (typeof workerTokens)[number],
+  );
+  const identity = engine.configure({
+    setup_id: "dock-fire-intro",
+    placement: "escort",
+    worker: workerIndices[index]!,
+    package_option: 0,
+  }).setup.units[1]!;
+  if (
+    value.character !== identity.name ||
+    value.role !== identity.role ||
+    typeof value.worker_account !== "string" ||
+    !value.worker_account.startsWith(`${value.token.token_id}.`) ||
+    !Array.isArray(value.packages) ||
+    value.packages.length !== 2 ||
+    value.packages.some(
+      (p, i) =>
+        p !==
+        engine.configure({
+          setup_id: "dock-fire-intro",
+          placement: "escort",
+          worker: workerIndices[index]!,
+          package_option: i,
+        }).setup.units[1]!.package,
+    )
+  )
+    throw new Error("Unsupported worker identity");
   if (
     value.offer &&
     (!object(value.offer) ||
-      value.offer.package_option !== 0 ||
+      ![0, 1].includes(Number(value.offer.package_option)) ||
       !["starting_ask", "floor_ask", "discount_step", "available_since"].every(
         (k) => integerString((value.offer as Record<string, unknown>)[k]),
       ) ||
@@ -179,6 +225,47 @@ export function parseWorker(value: unknown): Worker {
       !["pending", "paid", "failed"].includes(String(value.claim.status)))
   )
     throw new Error("Invalid claim response");
+  if (value.offers !== undefined) {
+    if (
+      !Array.isArray(value.offers) ||
+      value.offers.length !== 2 ||
+      !Array.isArray(value.quotes) ||
+      value.quotes.length !== 2
+    )
+      throw new Error("Invalid market offers");
+    value.offers.forEach((offer, i) => {
+      if (
+        offer &&
+        (!object(offer) ||
+          offer.package_option !== i ||
+          ![
+            "starting_ask",
+            "floor_ask",
+            "discount_step",
+            "available_since",
+          ].every((k) => integerString(offer[k])) ||
+          !integerString((value.quotes as unknown[])[i]))
+      )
+        throw new Error("Invalid market offer");
+    });
+  }
+  const tokenId = value.token.token_id;
+  if (value.recent_paid_hires !== undefined) {
+    if (
+      !Array.isArray(value.recent_paid_hires) ||
+      value.recent_paid_hires.length > 10
+    )
+      throw new Error("Invalid hire history");
+    value.recent_paid_hires.forEach((entry) => {
+      const job = parseJob(entry);
+      if (
+        job.token_id !== tokenId ||
+        BigInt(job.accepted_fee) === 0n ||
+        !["active", "saved", "expired"].includes(job.status)
+      )
+        throw new Error("Invalid paid hire history");
+    });
+  }
   if (value.job) parseJob(value.job);
   return value as unknown as Worker;
 }
@@ -286,10 +373,13 @@ export async function writeSession(session: Session): Promise<void> {
   try {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction("sessions", "readwrite");
-      tx.objectStore("sessions").put(
-        session,
-        `${session.contract}:${session.account}`,
-      );
+      const records = tx.objectStore("sessions");
+      records.put(session, `${session.contract}:${session.account}`);
+      if (session.job)
+        records.put(
+          session,
+          `${session.contract}:${session.account}:worker:${session.job.token_id}`,
+        );
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
       tx.onabort = () => reject(tx.error);
@@ -298,14 +388,19 @@ export async function writeSession(session: Session): Promise<void> {
     db.close();
   }
 }
-export async function readSession(account: string): Promise<Session | null> {
+export async function readSession(
+  account: string,
+  tokenId?: string,
+): Promise<Session | null> {
   const db = await openDB();
   try {
     return await new Promise((resolve, reject) => {
       const request = db
         .transaction("sessions")
         .objectStore("sessions")
-        .get(`${registryId}:${account}`);
+        .get(
+          `${registryId}:${account}${tokenId === undefined ? "" : `:worker:${tokenId}`}`,
+        );
       request.onsuccess = () => {
         const v: unknown = request.result;
         if (!v) return resolve(null);

@@ -1,9 +1,10 @@
+import WorkerPortrait from "./WorkerPortrait";
 import OwnerControls from "./OwnerControls";
 import { useState } from "react";
 import * as engine from "../game/engine";
 import { packages } from "../game/types";
 import type { Configuration, Setup } from "../game/types";
-import { nearAmount, registryId } from "./jobs";
+import { nearAmount, registryId, workerTokens, workerIndices } from "./jobs";
 import type { ContractJobController } from "./useContractJob";
 
 export default function ContractJobs({
@@ -23,11 +24,21 @@ export default function ContractJobs({
     worker: 0,
     package_option: 0,
   });
+  const [findPackage, setFindPackage] = useState("fire");
+  const [maximum, setMaximum] = useState("0.004");
   if (!c.enabled) return <button onClick={c.show}>Contract Job</button>;
-  const config =
-    c.worker && c.worker.token.owner_id !== c.account
-      ? { ...draftConfig, package_option: c.worker.offer?.package_option ?? 0 }
-      : draftConfig;
+  const config = {
+    ...draftConfig,
+    worker: c.worker
+      ? workerIndices[
+          workerTokens.indexOf(
+            c.worker.token.token_id as (typeof workerTokens)[number],
+          )
+        ]
+      : 0,
+  };
+  const offer = c.worker?.offers?.[config.package_option];
+  const quote = c.worker?.quotes?.[config.package_option];
 
   const s = c.session,
     job = s?.job;
@@ -52,13 +63,12 @@ export default function ContractJobs({
     !!c.account &&
     c.worker.claim?.status !== "pending" &&
     (c.worker.token.owner_id === c.account ||
-      (c.worker.paid_enabled &&
-        c.worker.offer?.package_option === config.package_option)) &&
+      (c.worker.paid_enabled && !!offer)) &&
     !unknown;
   return (
     <section
       aria-label="Contract Job"
-      className="my-5 space-y-4 rounded-2xl border border-border bg-paper p-5 sm:p-6"
+      className="my-5 space-y-4 break-words rounded-2xl border border-border bg-paper p-5 sm:p-6"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl">Contract Job</h2>
@@ -83,7 +93,7 @@ export default function ContractJobs({
           </button>
         </div>
       </div>
-      <p role="status" aria-live="polite" className="font-semibold">
+      <p role="status" aria-live="polite" className="break-words font-semibold">
         {c.busy ? "Checking… " : ""}
         {c.notice}
       </p>
@@ -112,26 +122,175 @@ export default function ContractJobs({
           <span className="ml-3 text-secondary">{s.activity}</span>
         </p>
       )}
-      {!inBattle && c.worker && (
-        <div className="text-sm text-secondary">
-          <p>
-            <strong className="text-foreground">Rook · Courier</strong> ·{" "}
-            {c.worker.status.replaceAll("_", " ")}
+      {!inBattle && (
+        <>
+          <h3 className="text-xl">Hiring Hall</h3>
+          <p className="text-sm text-secondary">
+            Six seeded testnet workers. Activity is demonstration data.
           </p>
-          <p className="break-all">Owner: {c.worker.token.owner_id}</p>
-          <p className="break-all">Worker: {c.worker.worker_account}</p>
-        </div>
-      )}
-      {!inBattle && c.worker?.offer && (
-        <p className="text-sm">
-          Not On The Fire · Fee {nearAmount(c.worker.quote!)} testnet NEAR ·
-          Floor {nearAmount(c.worker.offer.floor_ask)} · Drops{" "}
-          {nearAmount(c.worker.offer.discount_step)} every 120 idle blocks, up
-          to 3 times.
-        </p>
-      )}
-      {!inBattle && c.worker && !c.worker.offer && (
-        <p className="text-sm text-secondary">No shift is advertised.</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {c.market.map((w) => (
+              <button
+                key={w.token.token_id}
+                disabled={c.busy}
+                aria-pressed={w.token.token_id === c.worker?.token.token_id}
+                className="min-w-0 !h-auto !text-left !whitespace-normal [overflow-wrap:anywhere]"
+                onClick={() => c.selectWorker(w.token.token_id)}
+              >
+                <WorkerPortrait token={w.token.token_id} />
+                <strong>
+                  {w.character} · {w.role}
+                </strong>
+                <br />
+                <span>
+                  {w.claim?.status === "pending"
+                    ? "Claim pending"
+                    : w.status === "idle"
+                      ? w.offers?.some(Boolean)
+                        ? "Available"
+                        : "Not advertised"
+                      : w.status.replaceAll("_", " ")}
+                </span>
+                {w.packages.map((p, i) => (
+                  <span className="mt-2 block text-sm" key={p}>
+                    {packages[p as keyof typeof packages].name}:{" "}
+                    {w.offers?.[i]
+                      ? `${nearAmount(w.quotes![i]!)} NEAR`
+                      : "Not advertised"}
+                  </span>
+                ))}
+              </button>
+            ))}
+          </div>
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              c.findCheapest(findPackage, maximum, (option) =>
+                setConfig((current) => ({
+                  ...current,
+                  package_option: option,
+                })),
+              );
+            }}
+          >
+            <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
+              Package
+              <select
+                className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
+                value={findPackage}
+                onChange={(e) => setFindPackage(e.target.value)}
+              >
+                {["fire", "shouting", "friendly"].map((p) => (
+                  <option key={p} value={p}>
+                    {packages[p as keyof typeof packages].name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
+              Maximum fee (NEAR)
+              <input
+                className="min-h-11 max-w-full w-36 rounded-lg border border-border bg-paper px-3"
+                inputMode="decimal"
+                value={maximum}
+                onChange={(e) => setMaximum(e.target.value)}
+              />
+            </label>
+            <button disabled={c.busy}>Find Cheapest</button>
+          </form>
+          {c.worker && (
+            <div className="space-y-2 text-sm">
+              <WorkerPortrait token={c.worker.token.token_id} />
+              <h3 className="text-xl">
+                {c.worker.character} · {c.worker.role}
+              </h3>
+              <p>
+                {
+                  [
+                    "I can deliver anything except a resignation letter.",
+                    "I protect the team. The team protects my lunch.",
+                    "Fire is my department. Safety is outsourced.",
+                    "I'll be somewhere else if you need me.",
+                    "This shield is a workplace accommodation.",
+                    "We can discuss this after my break.",
+                  ][
+                    workerTokens.indexOf(
+                      c.worker.token.token_id as (typeof workerTokens)[number],
+                    )
+                  ]
+                }
+              </p>
+              <p>
+                {c.worker.status.replaceAll("_", " ")}
+                {c.worker.job?.status === "active"
+                  ? ` · Renter: ${c.worker.job.renter_id} · ${c.worker.job.config.placement}`
+                  : ""}
+              </p>
+              <p className="break-all">Owner: {c.worker.token.owner_id}</p>
+              <p className="break-all">
+                Worker:{" "}
+                <a
+                  className="underline"
+                  href={`https://testnet.nearblocks.io/address/${c.worker.worker_account}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {c.worker.worker_account}
+                </a>
+              </p>
+              {c.worker.offers?.map(
+                (o, i) =>
+                  o && (
+                    <p key={i}>
+                      {
+                        packages[c.worker!.packages[i] as keyof typeof packages]
+                          .name
+                      }{" "}
+                      · Current fee {nearAmount(c.worker!.quotes![i]!)} testnet
+                      NEAR · Starts {nearAmount(o.starting_ask)} · Floor{" "}
+                      {nearAmount(o.floor_ask)} · Drops{" "}
+                      {nearAmount(o.discount_step)} every 120 idle blocks, at
+                      most 3 times.
+                    </p>
+                  ),
+              )}
+              {c.earnings && c.worker.token.owner_id !== c.account && (
+                <p>
+                  Worker earnings: {nearAmount(c.earnings.claimable)} testnet
+                  NEAR available · Held {nearAmount(c.earnings.balance)} ·
+                  Protected reserve {nearAmount(c.earnings.reserve)} · Pending
+                  credit {nearAmount(c.earnings.staged)}
+                </p>
+              )}
+              <details>
+                <summary>Recent paid hires</summary>
+                {c.worker.recent_paid_hires?.length ? (
+                  c.worker.recent_paid_hires.map((j) => (
+                    <p key={j.job_id}>
+                      Job {j.job_id} · {nearAmount(j.accepted_fee)} NEAR ·{" "}
+                      {j.config.setup_id} · {j.config.placement} ·{" "}
+                      {
+                        packages[
+                          c.worker!.packages[
+                            j.config.package_option
+                          ] as keyof typeof packages
+                        ].name
+                      }{" "}
+                      · Booked at block {j.created_at_block} · {j.status}
+                      {j.record ? ` · ${j.record.outcome}` : ""}
+                    </p>
+                  ))
+                ) : (
+                  <p>No confirmed paid hires.</p>
+                )}
+              </details>
+              {c.worker.job?.accepted_fee === "0" && (
+                <p>Latest shift: owner self-use · {c.worker.job.status}</p>
+              )}
+            </div>
+          )}
+        </>
       )}
       {!inBattle && <OwnerControls controller={c} />}
       {job && (
@@ -148,8 +307,8 @@ export default function ContractJobs({
           {["payment_pending", "recovery_pending"].includes(job.status) && (
             <div className="flex flex-wrap gap-3">
               <p className="w-full text-sm">
-                Payment pending. Rook is reserved. Play begins after the worker
-                receives the fee.
+                Payment pending. The worker is reserved. Play begins after the
+                worker receives the fee.
               </p>
               <button
                 disabled={c.busy}
@@ -263,14 +422,15 @@ export default function ContractJobs({
           )}
         </div>
       )}
-      {!inBattle && canOpen && preview && unit && (
+      {!inBattle && c.worker && preview && unit && (
         <div className="space-y-4 border-t border-border pt-4">
-          <p className="text-secondary">Use your Rook NFT for one shift.</p>
+          <p className="text-secondary">Choose one worker for one shift.</p>
           <div className="flex flex-wrap gap-4">
-            <label className="grid min-w-0 max-w-full gap-1 text-sm">
+            <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
               Job
               <select
-                className="min-h-11 max-w-full rounded-lg border border-border bg-paper px-3"
+                disabled={c.busy || unknown}
+                className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
                 value={config.setup_id}
                 onChange={(e) =>
                   setConfig({ ...config, setup_id: e.target.value })
@@ -283,10 +443,11 @@ export default function ContractJobs({
                 ))}
               </select>
             </label>
-            <label className="grid min-w-0 max-w-full gap-1 text-sm">
+            <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
               Fine print
               <select
-                className="min-h-11 max-w-full rounded-lg border border-border bg-paper px-3"
+                disabled={c.busy || unknown}
+                className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
                 value={config.package_option}
                 onChange={(e) =>
                   setConfig({
@@ -295,16 +456,22 @@ export default function ContractJobs({
                   })
                 }
               >
-                <option value={0}>Not On The Fire</option>
-                {c.worker!.token.owner_id === c.account && (
-                  <option value={1}>Within Shouting Distance</option>
-                )}
+                {c.worker!.packages.map((p, i) => (
+                  <option key={p} value={i}>
+                    {packages[p as keyof typeof packages].name}
+                    {!c.worker!.offers?.[i] &&
+                    c.worker!.token.owner_id !== c.account
+                      ? " · Not advertised"
+                      : ""}
+                  </option>
+                ))}
               </select>
             </label>
-            <label className="grid min-w-0 max-w-full gap-1 text-sm">
+            <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
               Placement
               <select
-                className="min-h-11 max-w-full rounded-lg border border-border bg-paper px-3"
+                disabled={c.busy || unknown}
+                className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
                 value={config.placement}
                 onChange={(e) =>
                   setConfig({
@@ -320,8 +487,8 @@ export default function ContractJobs({
           </div>
           <p className="text-sm">
             {config.placement === "escort"
-              ? "Rook joins your crew."
-              : "Rook joins the enemy crew. Enemy orders control him until a strike earns Borrow."}{" "}
+              ? `${c.worker!.character} joins your crew.`
+              : `${c.worker!.character} joins the enemy crew. Enemy orders control this worker until a strike earns Borrow.`}{" "}
             {packages[unit.package].special} · {packages[unit.package].clause}
           </p>
           <p className="text-sm text-secondary">
@@ -341,7 +508,9 @@ export default function ContractJobs({
             Hire fee:{" "}
             {c.worker!.token.owner_id === c.account
               ? "0"
-              : nearAmount(c.worker!.quote!)}{" "}
+              : quote
+                ? nearAmount(quote)
+                : "Unavailable"}{" "}
             testnet NEAR
             <br />
             Storage deposit: {nearAmount(c.worker!.job_storage_deposit)} testnet
@@ -349,8 +518,8 @@ export default function ContractJobs({
           </p>
           {c.worker!.token.owner_id !== c.account && (
             <p className="text-sm text-secondary">
-              The Hall receives 5%; Rook receives the rest. The hire fee stays
-              paid after activation, whatever the battle result.
+              The Hall receives 5%; the worker receives the rest. The hire fee
+              stays paid after activation, whatever the battle result.
             </p>
           )}
           <p className="text-sm text-secondary">
@@ -359,11 +528,13 @@ export default function ContractJobs({
             {c.worker!.cooldown_blocks} blocks.
           </p>
           <button
-            disabled={c.busy}
+            disabled={c.busy || !canOpen}
             className="!bg-primary !text-white"
-            onClick={() => c.open(config, c.worker?.quote ?? undefined)}
+            onClick={() => c.open(config, quote ?? undefined)}
           >
-            {c.worker!.token.owner_id === c.account ? "Reserve Rook" : "Hire"}
+            {c.worker!.token.owner_id === c.account
+              ? `Reserve ${c.worker!.character}`
+              : "Hire"}
           </button>
         </div>
       )}

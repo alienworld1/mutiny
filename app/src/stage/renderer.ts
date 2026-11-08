@@ -299,6 +299,27 @@ export function draw(
         .fill(color)
         .stroke({ color: C.chalk, width: 2 });
     }
+    // Equipment distinguishes the authored workers while allegiance keeps its color.
+    if (u.name === "Dot")
+      p.poly([x + 4, y - 28, x + 23, y - 33, x + 14, y - 20]).fill(C.brass);
+    if (u.name === "Rook") p.rect(x + 8, y + 7, 7, 5).fill(C.chalk);
+    if (u.name === "Mallow") p.roundRect(x + 12, y + 8, 12, 9, 2).fill(C.brass);
+    if (u.name === "Brisk") {
+      p.rect(x - 27, y - 10, 21, 26)
+        .fill(C.stone)
+        .stroke({ color: C.ink, width: 2 });
+      p.moveTo(x - 23, y - 4)
+        .lineTo(x - 10, y - 4)
+        .moveTo(x - 23, y + 2)
+        .lineTo(x - 10, y + 2)
+        .stroke({ color: C.ink, width: 1 });
+    }
+    if (u.name === "Nix")
+      p.rect(x - 7, y - 22, 6, 5)
+        .rect(x + 2, y - 22, 6, 5)
+        .stroke({ color: C.ink, width: 1 });
+    if (u.name === "Peebles")
+      p.poly([x - 2, y - 37, x + 14, y - 39, x + 9, y - 31]).fill(C.brass);
     p.circle(x + 4, y - 19, 1.5).fill(C.ink);
     if (u.guard) {
       p.poly([

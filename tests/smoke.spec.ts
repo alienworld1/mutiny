@@ -121,7 +121,7 @@ test("development wallet probe rechecks a submitted transaction after reload", a
 }) => {
   // Test-only RPC fixtures. Live compatibility is checked with an actual wallet separately.
   await page.route(/https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
-  await page.route("https://rpc.testnet.near.org", (route) => {
+  await page.route("https://test.rpc.fastnear.com", (route) => {
     const request = route.request().postDataJSON() as { method: string };
     return route.fulfill({
       json: {

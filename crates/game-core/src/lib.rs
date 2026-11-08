@@ -294,9 +294,40 @@ pub fn validate_setup(s: &Setup) -> Result<(), String> {
 pub fn start() -> State {
     start_config(&Configuration::default()).expect("valid default")
 }
+pub fn worker_identity(worker: u8) -> Option<(&'static str, &'static str, u8, u8, [Package; 2])> {
+    Some(match worker {
+        0 => ("Rook", "courier", 2, 3, [Package::Fire, Package::Shouting]),
+        1 => (
+            "Mallow",
+            "shieldbearer",
+            3,
+            2,
+            [Package::Shouting, Package::Friendly],
+        ),
+        2 => ("Wisp", "mage", 2, 2, [Package::Friendly, Package::Fire]),
+        3 => ("Nix", "mage", 2, 2, [Package::Fire, Package::Friendly]),
+        4 => (
+            "Dot",
+            "courier",
+            2,
+            3,
+            [Package::Shouting, Package::Friendly],
+        ),
+        5 => (
+            "Brisk",
+            "shieldbearer",
+            3,
+            2,
+            [Package::Fire, Package::Friendly],
+        ),
+        6 => ("Peebles", "mage", 2, 2, [Package::Fire, Package::Shouting]),
+        _ => return None,
+    })
+}
+
 pub fn start_config(config: &Configuration) -> Result<State, String> {
     if config.setup_id.len() > 64
-        || config.worker > 2
+        || config.worker > 6
         || config.package_option > 1
         || !["escort", "infiltration"].contains(&config.placement.as_str())
     {
@@ -308,17 +339,8 @@ pub fn start_config(config: &Configuration) -> Result<State, String> {
         .find(|s| s.id == config.setup_id)
         .ok_or("Unknown job variant")?;
     let slot = if config.placement == "escort" { 1 } else { 4 };
-    let (name, role, hp, movement, packages) = match config.worker {
-        0 => ("Rook", "courier", 2, 3, [Package::Fire, Package::Shouting]),
-        1 => (
-            "Mallow",
-            "shieldbearer",
-            3,
-            2,
-            [Package::Shouting, Package::Friendly],
-        ),
-        _ => ("Wisp", "mage", 2, 2, [Package::Friendly, Package::Fire]),
-    };
+    let (name, role, hp, movement, packages) =
+        worker_identity(config.worker).ok_or("Unknown worker")?;
     let u = &mut setup.units[slot];
     u.name = name.into();
     u.role = role.into();
