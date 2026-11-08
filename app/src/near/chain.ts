@@ -8,7 +8,7 @@ export interface ChainClient {
   account(): Promise<string | null>;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
-  view<T>(method: string, args: unknown): Promise<T>;
+  view<T>(method: string, args: unknown, accountId?: string): Promise<T>;
   change(
     method: string,
     args: unknown,
@@ -40,7 +40,7 @@ export function createChainClient(contractId: string): ChainClient {
     features: { testnet: true, signAndSendTransaction: true },
   });
   async function rpc(method: string, params: unknown): Promise<unknown> {
-    const response = await fetch("https://rpc.testnet.near.org", {
+    const response = await fetch("https://test.rpc.fastnear.com", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -75,13 +75,17 @@ export function createChainClient(contractId: string): ChainClient {
     async disconnect() {
       await connector.disconnect();
     },
-    async view<T>(method: string, args: unknown): Promise<T> {
+    async view<T>(
+      method: string,
+      args: unknown,
+      accountId = contractId,
+    ): Promise<T> {
       const bytes = new TextEncoder().encode(JSON.stringify(args));
       const result = record(
         await rpc("query", {
           request_type: "call_function",
           finality: "final",
-          account_id: contractId,
+          account_id: accountId,
           method_name: method,
           args_base64: btoa(String.fromCharCode(...bytes)),
         }),
@@ -103,12 +107,21 @@ export function createChainClient(contractId: string): ChainClient {
           "settle",
           "expire",
           "retry_storage_refund",
+          "hire_and_open",
+          "set_offer",
+          "withdraw_offer",
+          "request_claim",
+          "reconcile_claim",
+          "reconcile_payment",
+          "cancel_pending_hire",
+          "retry_credit_return",
         ].includes(method)
       )
         throw new Error("This action is unavailable");
       if (
         depositYocto < 0n ||
-        (method !== "open_owned_job" && depositYocto !== 0n)
+        (!["open_owned_job", "hire_and_open"].includes(method) &&
+          depositYocto !== 0n)
       )
         throw new Error("Unexpected deposit");
       if (connector.network !== "testnet") throw new Error("Switch to testnet");
@@ -125,7 +138,7 @@ export function createChainClient(contractId: string): ChainClient {
             params: {
               methodName: method,
               args,
-              gas: method === "settle" ? "200000000000000" : "60000000000000",
+              gas: "200000000000000",
               deposit: depositYocto.toString(),
             },
           },

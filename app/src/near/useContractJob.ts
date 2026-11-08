@@ -7,6 +7,7 @@ import {
   openingState,
   parseJob,
   parseWorker,
+  parseEarnings,
   readSession,
   sameConfig,
   supportedContentHash,
@@ -14,13 +15,18 @@ import {
   verifyRecord,
   writeSession,
 } from "./jobs";
-import type { Session, Worker } from "./jobs";
+import type { Session, Worker, Earnings } from "./jobs";
 
 export function useContractJob() {
   const client = useRef<ChainClient | null>(null);
   const current = useRef<Session | null>(null);
   const lock = useRef(false);
   const [session, setSession] = useState<Session | null>(null);
+  const [earnings, setEarnings] = useState<Earnings | null>(null);
+  const [financeTx, setFinanceTx] = useState<{
+    hash: string;
+    signer: string;
+  } | null>(null);
   const [worker, setWorker] = useState<Worker | null>(null);
   const [account, setAccount] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -66,7 +72,25 @@ export function useContractJob() {
     setAccount(connected);
     const market = parseWorker(await c.view("get_worker", {}));
     setWorker(market);
+    if (market.paid_enabled !== undefined)
+      setEarnings(
+        parseEarnings(await c.view("accounting", {}, market.worker_account)),
+      );
+    const storedTx = connected
+      ? localStorage.getItem(`${registryId}:${connected}:finance`)
+      : null;
+    setFinanceTx(storedTx ? JSON.parse(storedTx) : null);
     let saved = connected ? await readSession(connected) : null;
+    // A job opened in another browser supersedes an older, closed local session.
+    if (
+      market.job?.renter_id === connected &&
+      saved?.job &&
+      market.job.job_id !== saved.job.job_id &&
+      ["active", "payment_pending", "recovery_pending"].includes(
+        market.job.status,
+      )
+    )
+      saved = null;
     current.current = saved;
     setSession(saved);
     if (!connected) {
@@ -76,7 +100,9 @@ export function useContractJob() {
     if (
       !saved &&
       market.job?.renter_id === connected &&
-      market.job.status === "active"
+      ["active", "payment_pending", "recovery_pending"].includes(
+        market.job.status,
+      )
     ) {
       const job = market.job;
       const opening = await openingState(
@@ -90,13 +116,15 @@ export function useContractJob() {
         previous_job_id: null,
         job,
         log: opening.log,
-        activity: "Confirmed",
+        activity: job.status === "active" ? "Confirmed" : "RecoveryRequired",
         operation: "open",
         tx: null,
       };
       await persist(saved);
       setNotice(
-        "Your reservation is active. No saved moves were found on this browser.",
+        job.status === "active"
+          ? "Your reservation is active. No saved moves were found on this browser."
+          : "Payment pending. Check payment or cancel before activation.",
       );
       return;
     }
@@ -104,7 +132,9 @@ export function useContractJob() {
       setNotice(
         market.token.owner_id === connected
           ? "Rook is ready when you are."
-          : "Only Rook’s current owner can reserve this worker.",
+          : market.offer
+            ? "Rook has a shift available."
+            : "No shift is advertised.",
       );
       return;
     }
@@ -118,8 +148,35 @@ export function useContractJob() {
     await persist({ ...saved, activity: "CheckingChain" });
     if (jobId !== null) {
       const job = parseJob(await c.view("get_job", { job_id: jobId }));
-      if (job.renter_id !== connected || !sameConfig(job.config, saved.config))
+      if (
+        job.renter_id !== connected ||
+        !sameConfig(job.config, saved.config) ||
+        (saved.accepted_fee !== undefined &&
+          job.accepted_fee !== saved.accepted_fee)
+      )
         throw new Error("The reservation does not match this job");
+      if (
+        ["payment_pending", "recovery_pending", "cancelled"].includes(
+          job.status,
+        )
+      ) {
+        await persist({
+          ...saved,
+          job,
+          activity:
+            job.status === "cancelled" && job.refund_owed === "0"
+              ? "Confirmed"
+              : "RecoveryRequired",
+        });
+        setNotice(
+          job.status === "cancelled"
+            ? job.refund_owed === "0"
+              ? "Hire cancelled. Fee and storage deposit returned."
+              : "Hire cancelled. Your refund is pending."
+            : "Hire needs attention. Check payment or cancel before activation.",
+        );
+        return;
+      }
       const opening = await openingState(
         job,
         await c.view("get_opening", { job_id: jobId }),
@@ -236,14 +293,25 @@ export function useContractJob() {
       setNotice("Wallet disconnected. Your saved actions are kept.");
     });
   }
-  function open(config: Configuration) {
+  function open(config: Configuration, acceptedQuote?: string) {
     void run(async () => {
       if (!account) throw new Error("Connect a testnet wallet");
       await signer(account);
       const market = parseWorker(await chain().view("get_worker", {}));
       setWorker(market);
-      if (market.token.owner_id !== account || market.status !== "idle")
+      const owned = market.token.owner_id === account;
+      if (market.status !== "idle" || market.claim?.status === "pending")
         throw new Error("Rook is unavailable. Check status.");
+      if (
+        !owned &&
+        (!market.paid_enabled ||
+          !market.offer ||
+          market.offer.package_option !== config.package_option ||
+          market.quote !== acceptedQuote)
+      )
+        throw new Error(
+          "Price or availability changed. Review the current price and Hire again.",
+        );
       if (market.content_hash !== (await supportedContentHash()))
         throw new Error(
           "The game content changed. Update this app before reserving a worker.",
@@ -266,6 +334,7 @@ export function useContractJob() {
         account,
         config,
         previous_job_id: market.job?.job_id ?? null,
+        accepted_fee: owned ? "0" : acceptedQuote,
         job: null,
         log: null,
         activity: "AwaitingSignature",
@@ -274,21 +343,72 @@ export function useContractJob() {
       };
       await persist({ ...next, activity: "Draft" });
       await persist(next);
-      setNotice("Awaiting signature. Storage deposit only.");
+      setNotice(
+        owned
+          ? "Awaiting signature. Storage deposit only."
+          : "Awaiting signature. Hire fee plus storage deposit.",
+      );
       const tx = await chain().change(
-        "open_owned_job",
+        owned ? "open_owned_job" : "hire_and_open",
         {
           token_id: "rook",
           package_option: config.package_option,
           placement: config.placement,
           setup_id: config.setup_id,
           expected_content_hash: market.content_hash,
+          ...(!owned ? { expected_quote: acceptedQuote } : {}),
         },
-        BigInt(market.job_storage_deposit),
+        BigInt(market.job_storage_deposit) +
+          (owned ? 0n : BigInt(acceptedQuote!)),
       );
       await persist({ ...next, activity: "Submitted", tx });
       setNotice("Submitted. Checking the Registry.");
       await check();
+    });
+  }
+  function moneyAction(
+    method:
+      | "set_offer"
+      | "withdraw_offer"
+      | "request_claim"
+      | "reconcile_claim"
+      | "reconcile_payment"
+      | "cancel_pending_hire"
+      | "retry_credit_return",
+    args: Record<string, unknown> = {},
+  ) {
+    void run(async () => {
+      if (!account) throw new Error("Connect a testnet wallet");
+      await signer(account);
+      const tx = await chain().change(method, args, 0n);
+      localStorage.setItem(
+        `${registryId}:${account}:finance`,
+        JSON.stringify(tx),
+      );
+      setFinanceTx(tx);
+      await check();
+      const market = parseWorker(await chain().view("get_worker", {}));
+      setWorker(market);
+      if (method === "request_claim" || method === "reconcile_claim")
+        setNotice(
+          market.claim?.status === "paid"
+            ? "Earnings claimed"
+            : market.claim?.status === "failed"
+              ? "Claim failed. Funds remain in the worker account."
+              : "Claim pending. Check claim status.",
+        );
+      else if (method === "set_offer" || method === "withdraw_offer") {
+        const status = await chain().resolve(tx);
+        setNotice(
+          status === "confirmed"
+            ? method === "set_offer"
+              ? "Offer posted"
+              : "Offer withdrawn"
+            : status === "failed"
+              ? "Offer change failed. Retry."
+              : "Offer change submitted. Check status.",
+        );
+      }
     });
   }
   async function persistLog(log: ActionLog) {
@@ -388,6 +508,9 @@ export function useContractJob() {
   }
   return {
     enabled,
+    earnings,
+    financeTx,
+    moneyAction,
     session,
     worker,
     account,

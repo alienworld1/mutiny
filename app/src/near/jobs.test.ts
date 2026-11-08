@@ -6,6 +6,8 @@ import type { ActionLog } from "../game/types";
 import {
   digest,
   nearAmount,
+  yoctoAmount,
+  parseEarnings,
   openingState,
   parseJob,
   sameConfig,
@@ -94,7 +96,7 @@ describe("Contract Job trust boundaries", () => {
   });
   it("rejects untrusted job identities and unsupported worker configurations", () => {
     expect(parseJob(job)).toEqual(job);
-    expect(() => parseJob({ ...job, accepted_fee: "1" })).toThrow(
+    expect(() => parseJob({ ...job, accepted_fee: "-1" })).toThrow(
       "Invalid job",
     );
     expect(() =>
@@ -123,4 +125,20 @@ describe("Contract Job trust boundaries", () => {
       "1.000000000000000000000001",
     );
   });
+});
+
+it("parses exact NEAR values and rejects imprecise or untrusted amounts", () => {
+  expect(yoctoAmount("0.004000000000000000000001")).toBe(
+    4000000000000000000001n,
+  );
+  for (const invalid of ["-1", "1e5", "0.0000000000000000000000001", "NaN"])
+    expect(() => yoctoAmount(invalid)).toThrow();
+  expect(() => parseEarnings({ claimable: "100" })).toThrow();
+  expect(
+    parseJob({
+      ...job,
+      accepted_fee: "4000000000000000000001",
+      status: "payment_pending",
+    }).status,
+  ).toBe("payment_pending");
 });

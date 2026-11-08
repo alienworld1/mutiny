@@ -18,7 +18,8 @@
     "prebuild": "pnpm wasm:build",
     "test:parity": "node scripts/check-parity.mjs",
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
-    "contract:build": "cargo build --locked -p worker --target wasm32-unknown-unknown --release && cargo build --locked -p registry --target wasm32-unknown-unknown --release"
+    "contract:build": "cargo build --locked -p worker --target wasm32-unknown-unknown --release && cargo build --locked -p registry --target wasm32-unknown-unknown --release",
+    "test:paid": "node scripts/sandbox-paid.mjs && node scripts/sandbox-paid.mjs --recovery"
   },
   "devDependencies": {
     "@playwright/test": "^1.0.0",

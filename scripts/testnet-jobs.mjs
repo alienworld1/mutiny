@@ -9,8 +9,9 @@ if (!owner?.endsWith(".testnet"))
   throw new Error(
     "Set MUTINY_TESTNET_OWNER to the authorized testnet NFT owner. This script signs real testnet calls through the CLI keychain.",
   );
-const registry = `m3.${owner}`;
-const rpcUrl = "https://rpc.testnet.near.org";
+const registry = process.env.MUTINY_REGISTRY_ID || `m4.${owner}`;
+const rpcUrl =
+  process.env.MUTINY_TESTNET_RPC_URL || "https://test.rpc.fastnear.com";
 async function rpc(method, params) {
   const response = await fetch(rpcUrl, {
     method: "POST",
@@ -28,11 +29,11 @@ async function rpc(method, params) {
   if (result.error) throw new Error(JSON.stringify(result.error));
   return result.result;
 }
-async function view(method, args = {}) {
+async function view(method, args = {}, contractId = registry) {
   const result = await rpc("query", {
     request_type: "call_function",
     finality: "final",
-    account_id: registry,
+    account_id: contractId,
     method_name: method,
     args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
   });
@@ -46,7 +47,7 @@ const account = (id) =>
   });
 const hash = (value) =>
   createHash("sha256").update(JSON.stringify(value)).digest("base64");
-async function change(method, args, deposit = "0 NEAR") {
+async function change(method, args, deposit = "0 NEAR", signer = owner) {
   const result = spawnSync(
     "near",
     [
@@ -62,7 +63,7 @@ async function change(method, args, deposit = "0 NEAR") {
       "attached-deposit",
       deposit,
       "sign-as",
-      owner,
+      signer,
       "network-config",
       "testnet",
       "sign-with-keychain",
@@ -75,7 +76,7 @@ async function change(method, args, deposit = "0 NEAR") {
   if (result.status !== 0 || !txHash) throw new Error(output);
   const tx = await rpc("tx", {
     tx_hash: txHash,
-    sender_account_id: owner,
+    sender_account_id: signer,
     wait_until: "FINAL",
   });
   assert(!tx.status.Failure, JSON.stringify(tx.status));
@@ -146,11 +147,15 @@ const evidence = {
   cooldown_blocks: market.cooldown_blocks,
   jobs: [],
 };
-for (const log of logs) {
+for (const log of process.env.MUTINY_TESTNET_PAID_ONLY
+  ? []
+  : process.env.MUTINY_TESTNET_FOCUSED
+    ? [logs[0], logs[4]]
+    : logs) {
   let available = await view("get_worker");
   if (available.status === "cooldown") {
     while (available.status === "cooldown") {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 2500));
       available = await view("get_worker");
     }
   }
@@ -220,6 +225,121 @@ assert.equal(
   workerBefore.amount,
   "Self-use must create no rental earnings",
 );
-console.log(
-  `Testnet: ${evidence.jobs.length} real verified jobs; both placements, five-round replay, frozen opening, exact storage refunds and unchanged worker balance passed.`,
-);
+if (evidence.jobs.length)
+  console.log(
+    `Testnet: ${evidence.jobs.length} real verified jobs; both placements, five-round replay, frozen opening, exact storage refunds and unchanged worker balance passed.`,
+  );
+
+const renter = process.env.MUTINY_TESTNET_RENTER;
+if (renter) {
+  if (!renter.endsWith(".testnet") || renter === owner)
+    throw Error("Use a separate testnet renter");
+  let available = await view("get_worker");
+  while (available.status === "cooldown") {
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+    available = await view("get_worker");
+  }
+  assert.equal(available.status, "idle");
+  if (!available.paid_enabled) {
+    if (process.env.MUTINY_ENABLE_PAID !== "1")
+      throw Error(
+        "Complete sandbox/resource gates, then set MUTINY_ENABLE_PAID=1",
+      );
+    evidence.enable = await change("enable_paid_hiring", {});
+    assert.equal((await view("get_worker")).paid_enabled, true);
+  }
+  const fee = 4000000000000000000001n,
+    share = fee - fee / 20n;
+  evidence.offer = await change("set_offer", {
+    package_option: 0,
+    starting_ask: fee.toString(),
+    floor_ask: fee.toString(),
+    discount_step: "0",
+  });
+  const before = await account(market.worker_account),
+    registryBefore = await account(registry),
+    priorAccounting = await view("accounting", {}, market.worker_account);
+  const priorHall = BigInt((await view("get_worker")).hall_earned);
+  const hire = await change(
+    "hire_and_open",
+    {
+      token_id: "rook",
+      package_option: 0,
+      placement: "escort",
+      setup_id: "dock-fire-intro",
+      expected_content_hash: available.content_hash,
+      expected_quote: fee.toString(),
+    },
+    `${fee + BigInt(available.job_storage_deposit)} yoctoNEAR`,
+    renter,
+  );
+  const job = (await view("get_worker")).job;
+  assert.equal(job.renter_id, renter);
+  assert.equal(job.status, "active");
+  assert.equal(job.accepted_fee, fee.toString());
+  assert.equal(job.credit_status, "finalized");
+  assert.equal(
+    BigInt((await account(market.worker_account)).amount) -
+      BigInt(before.amount),
+    share,
+  );
+  const earned = await view("accounting", {}, market.worker_account);
+  assert.equal(
+    BigInt(earned.recognized),
+    BigInt(priorAccounting.recognized) + share,
+  );
+  assert.equal(earned.staged, "0");
+  assert.equal(
+    (await view("get_worker")).hall_earned,
+    (priorHall + fee - share).toString(),
+  );
+  const save = await change(
+    "settle",
+    { job_id: job.job_id, action_log: JSON.stringify(delivery) },
+    "0 NEAR",
+    renter,
+  );
+  const saved = await view("get_job", { job_id: job.job_id });
+  assert.equal(
+    saved.record.final_hash,
+    hash(JSON.parse(replay(JSON.stringify(delivery))).state),
+  );
+  assert.equal(saved.refund_owed, "0");
+  const stored =
+    (await account(registry)).storage_usage - registryBefore.storage_usage;
+  assert.equal(saved.storage_bytes, stored);
+  const beforeClaim = await account(market.worker_account);
+  const claim = await change("request_claim", { amount: share.toString() });
+  const confirm = await change("reconcile_claim", {});
+  assert.equal((await view("get_worker")).claim.status, "paid");
+  const afterClaim = await account(market.worker_account);
+  assert.equal(BigInt(beforeClaim.amount) - BigInt(afterClaim.amount), share);
+  const final = await view("accounting", {}, market.worker_account);
+  assert.equal(final.recognized, priorAccounting.recognized);
+  assert.equal(BigInt(final.paid), BigInt(priorAccounting.paid) + share);
+  evidence.paid = {
+    renter,
+    job_id: job.job_id,
+    fee: fee.toString(),
+    worker_credit: share.toString(),
+    hall_fee: (fee - share).toString(),
+    worker_before: before.amount,
+    worker_after_hire: beforeClaim.amount,
+    worker_after_claim: afterClaim.amount,
+    accounting: final,
+    hire,
+    save,
+    claim,
+    confirm,
+    storage_bytes: stored,
+  };
+  if (process.env.MUTINY_TESTNET_EVIDENCE)
+    await writeFile(
+      process.env.MUTINY_TESTNET_EVIDENCE,
+      JSON.stringify(evidence, null, 2) + "\n",
+    );
+  console.log(JSON.stringify(evidence.paid));
+  console.log(
+    "Testnet: independent paid renter, exact conserved balances, real saved result, worker payout, reserve and keyless accounts passed.",
+  );
+}

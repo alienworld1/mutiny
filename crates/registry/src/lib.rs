@@ -1,3 +1,4 @@
+mod paid;
 use game_core::{ActionLog, Configuration, Event};
 use near_contract_standards::non_fungible_token::{
     NonFungibleToken, Token, TokenId,
@@ -19,6 +20,32 @@ const LEASE_BLOCKS: u64 = 2400;
 const COOLDOWN_BLOCKS: u64 = 20;
 const MAX_LOG_BYTES: usize = 4096;
 const TOKEN: &str = "rook";
+const MIN_PRICE: u128 = 1_000_000_000_000_000_000_000;
+const MAX_PRICE: u128 = 1_000_000_000_000_000_000_000_000;
+const IDLE_BLOCKS: u64 = 120;
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct Offer {
+    pub package_option: u8,
+    pub starting_ask: U128,
+    pub floor_ask: U128,
+    pub discount_step: U128,
+    pub available_since: U64,
+}
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct Claim {
+    pub claim_id: U64,
+    pub recipient: AccountId,
+    pub amount: U128,
+    pub status: String,
+}
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct Credit {
+    pub amount: U128,
+    pub status: String,
+}
 
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
@@ -57,6 +84,7 @@ pub struct Job {
     pub storage_bytes: u64,
     pub refund_owed: U128,
     pub refund_in_flight: bool,
+    pub credit_status: String,
 }
 
 #[near(serializers = [json])]
@@ -74,6 +102,11 @@ pub struct WorkerView {
     pub lease_blocks: U64,
     pub cooldown_blocks: U64,
     pub content_hash: Base64VecU8,
+    pub offer: Option<Offer>,
+    pub quote: Option<U128>,
+    pub hall_earned: U128,
+    pub claim: Option<Claim>,
+    pub paid_enabled: bool,
 }
 
 #[near(contract_state)]
@@ -85,6 +118,12 @@ pub struct Registry {
     current_job: Option<u64>,
     next_job: u64,
     transfer_pending: bool,
+    offer: Option<Offer>,
+    hall_earned: u128,
+    claim: Option<Claim>,
+    next_claim: u64,
+    paid_enabled: bool,
+    deployment_owner: AccountId,
 }
 
 fn hash(value: &impl near_sdk::serde::Serialize) -> Base64VecU8 {
@@ -121,7 +160,7 @@ impl Registry {
             Some(b"e".to_vec()),
             None::<Vec<u8>>,
         );
-        nft.internal_mint_with_refund(TOKEN.into(), owner_id, Some(TokenMetadata {
+        nft.internal_mint_with_refund(TOKEN.into(), owner_id.clone(), Some(TokenMetadata {
             title: Some("Rook".into()),
             description: Some("Courier. Not On The Fire / Within Shouting Distance.".into()),
             copies: Some(1),
@@ -152,6 +191,12 @@ impl Registry {
             current_job: None,
             next_job: 0,
             transfer_pending: false,
+            offer: None,
+            hall_earned: 0,
+            claim: None,
+            next_claim: 0,
+            paid_enabled: false,
+            deployment_owner: owner_id,
         }
     }
 
@@ -161,6 +206,12 @@ impl Registry {
             "transfer_pending"
         } else {
             match &job {
+                Some(j) if ["payment_pending", "recovery_pending"].contains(&j.status.as_str()) => {
+                    &j.status
+                }
+                Some(j) if j.refund_in_flight || j.status == "cancelled" && j.refund_owed.0 > 0 => {
+                    "recovery_pending"
+                }
                 Some(j) if j.status == "active" => {
                     if env::block_height() >= j.expires_at_block.0 {
                         "expired_pending"
@@ -186,6 +237,11 @@ impl Registry {
             lease_blocks: U64(LEASE_BLOCKS),
             cooldown_blocks: U64(COOLDOWN_BLOCKS),
             content_hash: content_hash(),
+            offer: self.offer.clone(),
+            quote: self.offer.as_ref().map(|o| U128(self.price(o))),
+            hall_earned: U128(self.hall_earned),
+            claim: self.claim.clone(),
+            paid_enabled: self.paid_enabled,
         }
     }
     pub fn get_job(&self, job_id: U64) -> Option<Job> {
@@ -208,23 +264,48 @@ impl Registry {
         setup_id: String,
         expected_content_hash: Base64VecU8,
     ) -> Job {
-        require!(token_id == TOKEN, "Unknown worker");
-        require!(
-            self.nft.owner_by_id.get(&token_id) == Some(env::predecessor_account_id()),
-            "Only the current owner may reserve Rook"
-        );
-        require!(
-            self.get_worker().status == "idle",
-            "Worker is occupied or cooling down"
-        );
+        self.owner();
         require!(
             env::attached_deposit().as_yoctonear() == JOB_BOND,
             "Attach exactly the job storage deposit"
         );
+        self.create_job(
+            token_id,
+            package_option,
+            placement,
+            setup_id,
+            expected_content_hash,
+            0,
+        )
+    }
+}
+impl Registry {
+    fn create_job(
+        &mut self,
+        token_id: TokenId,
+        package_option: u8,
+        placement: String,
+        setup_id: String,
+        expected_content_hash: Base64VecU8,
+        fee: u128,
+    ) -> Job {
+        require!(token_id == TOKEN, "Unknown worker");
+        require!(
+            self.get_worker().status == "idle",
+            "Worker is occupied or cooling down"
+        );
+        require!(!self.claim_pending(), "Claim is pending");
         require!(
             expected_content_hash == content_hash(),
             "Content changed; refresh before opening"
         );
+        if let Some(o) = &mut self.offer {
+            if let Some(j) = self.current_job.and_then(|id| self.jobs.get(&id)) {
+                if j.cooldown_until.0 > o.available_since.0 {
+                    o.available_since = j.cooldown_until;
+                }
+            }
+        }
         let config = Configuration {
             setup_id,
             placement,
@@ -246,18 +327,24 @@ impl Registry {
             content_version: game_core::CONTENT_VERSION,
             content_hash: content_hash(),
             setup_hash: hash(&opening.setup),
-            accepted_fee: U128(0),
+            accepted_fee: U128(fee),
             created_at_block: U64(env::block_height()),
             expires_at_block: U64(env::block_height()
                 .checked_add(LEASE_BLOCKS)
                 .expect("Block limit")),
-            status: "active".into(),
+            status: if fee == 0 {
+                "active"
+            } else {
+                "payment_pending"
+            }
+            .into(),
             cooldown_until: U64(0),
             record: None,
             bond: U128(JOB_BOND),
             storage_bytes: 0,
             refund_owed: U128(0),
             refund_in_flight: false,
+            credit_status: if fee == 0 { "none" } else { "unknown" }.into(),
         };
         self.jobs.insert(&id, &job);
         // Option<u64> in root state grows by eight bytes on the first reservation.
@@ -272,7 +359,9 @@ impl Registry {
         self.current_job = Some(id);
         job
     }
-
+}
+#[near]
+impl Registry {
     pub fn settle(&mut self, job_id: U64, action_log: String) -> JobRecord {
         require!(action_log.len() <= MAX_LOG_BYTES, "Oversized action log");
         let mut job = self.jobs.get(&job_id.0).expect("Unknown job");
@@ -343,7 +432,10 @@ impl Registry {
 
     pub fn retry_storage_refund(&mut self, job_id: U64) {
         let mut job = self.jobs.get(&job_id.0).expect("Unknown job");
-        require!(job.status != "active", "Job is still active");
+        require!(
+            ["saved", "expired", "cancelled"].contains(&job.status.as_str()),
+            "Job is still active"
+        );
         require!(!job.refund_in_flight, "Refund already submitted");
         self.refund(&mut job);
     }
@@ -351,7 +443,9 @@ impl Registry {
     #[private]
     pub fn on_storage_refund(&mut self, job_id: U64) {
         let mut job = self.jobs.get(&job_id.0).expect("Unknown job");
-        require!(job.refund_in_flight, "No pending refund");
+        if !job.refund_in_flight {
+            return;
+        }
         if env::promise_result_checked(0, 0).is_ok() {
             job.refund_owed = U128(0);
         }
@@ -422,7 +516,10 @@ impl NonFungibleTokenCore for Registry {
         approval_id: Option<u64>,
         memo: Option<String>,
     ) {
-        require!(!self.transfer_pending, "Title transfer is pending");
+        require!(
+            !self.transfer_pending && !self.claim_pending(),
+            "Title transfer or claim is pending"
+        );
         self.nft
             .nft_transfer(receiver_id, token_id, approval_id, memo);
     }
@@ -435,7 +532,10 @@ impl NonFungibleTokenCore for Registry {
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<bool> {
-        require!(!self.transfer_pending, "Title transfer is pending");
+        require!(
+            !self.transfer_pending && !self.claim_pending(),
+            "Title transfer or claim is pending"
+        );
         self.transfer_pending = true;
         self.nft
             .nft_transfer_call(receiver_id, token_id, approval_id, memo, msg)

@@ -2,7 +2,7 @@ import * as engine from "../game/engine";
 import type { ActionLog, Configuration, State } from "../game/types";
 
 export const registryId =
-  import.meta.env.VITE_REGISTRY_ID || "m3.mutiny-dev-2026.testnet";
+  import.meta.env.VITE_REGISTRY_ID || "m4.mutiny-m4-safe-2026.testnet";
 export type Activity =
   | "Draft"
   | "AwaitingSignature"
@@ -37,13 +37,41 @@ export interface Job {
   accepted_fee: string;
   created_at_block: string;
   expires_at_block: string;
-  status: "active" | "saved" | "expired";
+  status:
+    | "active"
+    | "saved"
+    | "expired"
+    | "payment_pending"
+    | "recovery_pending"
+    | "cancelled";
+  credit_status?: string;
   cooldown_until: string;
   record: JobRecord | null;
   bond: string;
   storage_bytes: number;
   refund_owed: string;
   refund_in_flight: boolean;
+}
+export interface Offer {
+  package_option: number;
+  starting_ask: string;
+  floor_ask: string;
+  discount_step: string;
+  available_since: string;
+}
+export interface Earnings {
+  reserve: string;
+  balance: string;
+  staged: string;
+  recognized: string;
+  paid: string;
+  claimable: string;
+}
+export interface Claim {
+  claim_id: string;
+  recipient: string;
+  amount: string;
+  status: "pending" | "paid" | "failed";
 }
 export interface Worker {
   token: { token_id: string; owner_id: string };
@@ -59,12 +87,18 @@ export interface Worker {
   lease_blocks: string;
   cooldown_blocks: string;
   content_hash: string;
+  offer?: Offer | null;
+  quote?: string | null;
+  hall_earned?: string;
+  claim?: Claim | null;
+  paid_enabled?: boolean;
 }
 export interface Session {
   contract: string;
   account: string;
   config: Configuration;
   previous_job_id: string | null;
+  accepted_fee?: string;
   job: Job | null;
   log: ActionLog | null;
   activity: Activity;
@@ -87,8 +121,15 @@ export function parseJob(value: unknown): Job {
     value.token_id !== "rook" ||
     typeof value.setup_hash !== "string" ||
     typeof value.content_hash !== "string" ||
-    value.accepted_fee !== "0" ||
-    !["active", "saved", "expired"].includes(String(value.status)) ||
+    !integerString(value.accepted_fee) ||
+    ![
+      "active",
+      "saved",
+      "expired",
+      "payment_pending",
+      "recovery_pending",
+      "cancelled",
+    ].includes(String(value.status)) ||
     !object(value.config) ||
     value.config.worker !== 0 ||
     ![0, 1].includes(Number(value.config.package_option)) ||
@@ -114,9 +155,30 @@ export function parseWorker(value: unknown): Worker {
       "expired_pending",
       "cooldown",
       "transfer_pending",
+      "payment_pending",
+      "recovery_pending",
     ].includes(String(value.status))
   )
     throw new Error("Invalid worker response. Check status again.");
+  if (
+    value.offer &&
+    (!object(value.offer) ||
+      value.offer.package_option !== 0 ||
+      !["starting_ask", "floor_ask", "discount_step", "available_since"].every(
+        (k) => integerString((value.offer as Record<string, unknown>)[k]),
+      ) ||
+      !integerString(value.quote))
+  )
+    throw new Error("Invalid offer response");
+  if (
+    value.claim &&
+    (!object(value.claim) ||
+      !integerString(value.claim.claim_id) ||
+      !integerString(value.claim.amount) ||
+      typeof value.claim.recipient !== "string" ||
+      !["pending", "paid", "failed"].includes(String(value.claim.status)))
+  )
+    throw new Error("Invalid claim response");
   if (value.job) parseJob(value.job);
   return value as unknown as Worker;
 }
@@ -282,4 +344,23 @@ export async function readSession(account: string): Promise<Session | null> {
   } finally {
     db.close();
   }
+}
+
+export function parseEarnings(value: unknown): Earnings {
+  if (
+    !object(value) ||
+    !["reserve", "balance", "staged", "recognized", "paid", "claimable"].every(
+      (k) => integerString(value[k]),
+    )
+  )
+    throw new Error("Invalid worker accounting");
+  return value as unknown as Earnings;
+}
+export function yoctoAmount(near: string): bigint {
+  if (!/^\d+(?:\.\d{1,24})?$/.test(near))
+    throw new Error("Enter NEAR with at most 24 decimal places");
+  const [whole, fraction = ""] = near.split(".");
+  const result = BigInt(whole) * 10n ** 24n + BigInt(fraction.padEnd(24, "0"));
+  if (result >= 2n ** 128n) throw new Error("Amount is too large");
+  return result;
 }
