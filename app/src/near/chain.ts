@@ -33,7 +33,7 @@ export function transactionStatus(value: unknown): TxStatus {
 }
 export function createChainClient(contractId: string): ChainClient {
   if (!contractId.endsWith(".testnet"))
-    throw new Error("Use a named testnet probe contract");
+    throw new Error("Use a named testnet contract");
   const connector = new NearConnector({
     network: "testnet",
     autoConnect: false,
@@ -45,7 +45,7 @@ export function createChainClient(contractId: string): ChainClient {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         jsonrpc: "2.0",
-        id: "mutiny-probe",
+        id: "mutiny",
         method,
         params,
       }),
@@ -96,9 +96,21 @@ export function createChainClient(contractId: string): ChainClient {
       ) as T;
     },
     async change(method, args, depositYocto) {
-      // This M1 probe cannot send deposits or call any financial method.
-      if (method !== "smoke" || depositYocto !== 0n)
-        throw new Error("Only the no-deposit smoke method is enabled");
+      if (
+        ![
+          "smoke",
+          "open_owned_job",
+          "settle",
+          "expire",
+          "retry_storage_refund",
+        ].includes(method)
+      )
+        throw new Error("This action is unavailable");
+      if (
+        depositYocto < 0n ||
+        (method !== "open_owned_job" && depositYocto !== 0n)
+      )
+        throw new Error("Unexpected deposit");
       if (connector.network !== "testnet") throw new Error("Switch to testnet");
       const signer = await account();
       if (!signer) throw new Error("Connect a testnet wallet");
@@ -113,8 +125,8 @@ export function createChainClient(contractId: string): ChainClient {
             params: {
               methodName: method,
               args,
-              gas: "30000000000000",
-              deposit: "0",
+              gas: method === "settle" ? "200000000000000" : "60000000000000",
+              deposit: depositYocto.toString(),
             },
           },
         ],

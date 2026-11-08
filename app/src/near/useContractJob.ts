@@ -1,0 +1,408 @@
+import { useRef, useState } from "react";
+import * as engine from "../game/engine";
+import type { ActionLog, Configuration, State } from "../game/types";
+import { createChainClient } from "./chain";
+import type { ChainClient } from "./chain";
+import {
+  openingState,
+  parseJob,
+  parseWorker,
+  readSession,
+  sameConfig,
+  supportedContentHash,
+  registryId,
+  verifyRecord,
+  writeSession,
+} from "./jobs";
+import type { Session, Worker } from "./jobs";
+
+export function useContractJob() {
+  const client = useRef<ChainClient | null>(null);
+  const current = useRef<Session | null>(null);
+  const lock = useRef(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [worker, setWorker] = useState<Worker | null>(null);
+  const [account, setAccount] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [enabled, setEnabled] = useState(false);
+  function chain() {
+    return (client.current ??= createChainClient(registryId));
+  }
+  async function persist(next: Session) {
+    await writeSession(next);
+    current.current = next;
+    setSession(next);
+  }
+  async function run(action: () => Promise<void>) {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    try {
+      await action();
+    } catch (error) {
+      const rejected = /reject|cancel|denied|declined/i.test(String(error));
+      const saved = current.current;
+      if (saved && saved.activity !== "Confirmed") {
+        await persist({
+          ...saved,
+          activity: rejected ? "Rejected" : "RecoveryRequired",
+        }).catch(() => {});
+      }
+      setNotice(
+        rejected
+          ? "Signature cancelled. Your actions are kept."
+          : `${error instanceof Error ? error.message : String(error)} Use Check status to try again.`,
+      );
+    } finally {
+      lock.current = false;
+      setBusy(false);
+    }
+  }
+  async function check() {
+    const c = chain();
+    await engine.loadEngine();
+    const connected = await c.account();
+    setAccount(connected);
+    const market = parseWorker(await c.view("get_worker", {}));
+    setWorker(market);
+    let saved = connected ? await readSession(connected) : null;
+    current.current = saved;
+    setSession(saved);
+    if (!connected) {
+      setNotice("Connect a testnet wallet to use your worker.");
+      return;
+    }
+    if (
+      !saved &&
+      market.job?.renter_id === connected &&
+      market.job.status === "active"
+    ) {
+      const job = market.job;
+      const opening = await openingState(
+        job,
+        await c.view("get_opening", { job_id: job.job_id }),
+      );
+      saved = {
+        contract: registryId,
+        account: connected,
+        config: job.config,
+        previous_job_id: null,
+        job,
+        log: opening.log,
+        activity: "Confirmed",
+        operation: "open",
+        tx: null,
+      };
+      await persist(saved);
+      setNotice(
+        "Your reservation is active. No saved moves were found on this browser.",
+      );
+      return;
+    }
+    if (!saved) {
+      setNotice(
+        market.token.owner_id === connected
+          ? "Rook is ready when you are."
+          : "Only Rook’s current owner can reserve this worker.",
+      );
+      return;
+    }
+    const jobId =
+      saved.job?.job_id ??
+      (market.job &&
+      market.job.job_id !== saved.previous_job_id &&
+      market.job.renter_id === connected
+        ? market.job.job_id
+        : null);
+    await persist({ ...saved, activity: "CheckingChain" });
+    if (jobId !== null) {
+      const job = parseJob(await c.view("get_job", { job_id: jobId }));
+      if (job.renter_id !== connected || !sameConfig(job.config, saved.config))
+        throw new Error("The reservation does not match this job");
+      const opening = await openingState(
+        job,
+        await c.view("get_opening", { job_id: jobId }),
+      );
+      const log = saved.log ?? opening.log;
+      if (!sameConfig(log.config, job.config))
+        throw new Error("Saved actions have a different setup");
+      engine.replay(log);
+      if (job.status === "saved") {
+        await verifyRecord(
+          job,
+          log,
+          await c.view("get_job_record", { job_id: jobId }),
+        );
+        await persist({
+          ...saved,
+          job,
+          log,
+          activity: "Confirmed",
+          operation: "save",
+        });
+        setNotice("Job saved");
+        return;
+      }
+      if (job.status === "expired") {
+        await persist({
+          ...saved,
+          job,
+          log,
+          activity: "Confirmed",
+          operation: "expire",
+        });
+        setNotice("Lease expired. No battle result was saved.");
+        return;
+      }
+      if (BigInt(market.block_height) >= BigInt(job.expires_at_block)) {
+        await persist({ ...saved, job, log, activity: "RecoveryRequired" });
+        setNotice(
+          "Lease expired. Release the worker to return unused storage funds.",
+        );
+        return;
+      }
+      if (saved.operation === "save" && saved.tx) {
+        const status = await c.resolve(saved.tx);
+        await persist({
+          ...saved,
+          job,
+          log,
+          activity: status === "failed" ? "Failed" : "Submitted",
+        });
+        setNotice(
+          status === "failed"
+            ? "Save failed. Your actions are kept. You can Retry."
+            : "Submitted. Waiting for the Registry to confirm.",
+        );
+        return;
+      }
+      await persist({ ...saved, job, log, activity: "Confirmed" });
+      setNotice("Reservation confirmed. Your job is ready.");
+      return;
+    }
+    if (saved.tx) {
+      const status = await c.resolve(saved.tx);
+      await persist({
+        ...saved,
+        activity: status === "failed" ? "Failed" : "Submitted",
+      });
+      setNotice(
+        status === "failed"
+          ? "Reservation failed. You can Retry."
+          : "Submitted. Waiting for the Registry to confirm.",
+      );
+    } else if (
+      [
+        "AwaitingSignature",
+        "RecoveryRequired",
+        "Submitted",
+        "CheckingChain",
+      ].includes(saved.activity)
+    ) {
+      await persist({ ...saved, activity: "RecoveryRequired" });
+      setNotice(
+        "No reservation is confirmed. Check your wallet activity before trying again.",
+      );
+    } else {
+      await persist(saved);
+      setNotice("Choose your next job.");
+    }
+  }
+  function show() {
+    setEnabled(true);
+    void run(check);
+  }
+  async function signer(expected: string) {
+    const actual = await chain().account();
+    setAccount(actual);
+    if (actual !== expected)
+      throw new Error(
+        `Connect ${expected} to sign this job. Your saved actions are kept.`,
+      );
+  }
+  function connect() {
+    void run(async () => {
+      await chain().connect();
+      await check();
+    });
+  }
+  function disconnect() {
+    void run(async () => {
+      await chain().disconnect();
+      setAccount(null);
+      current.current = null;
+      setSession(null);
+      setNotice("Wallet disconnected. Your saved actions are kept.");
+    });
+  }
+  function open(config: Configuration) {
+    void run(async () => {
+      if (!account) throw new Error("Connect a testnet wallet");
+      await signer(account);
+      const market = parseWorker(await chain().view("get_worker", {}));
+      setWorker(market);
+      if (market.token.owner_id !== account || market.status !== "idle")
+        throw new Error("Rook is unavailable. Check status.");
+      if (market.content_hash !== (await supportedContentHash()))
+        throw new Error(
+          "The game content changed. Update this app before reserving a worker.",
+        );
+      const saved = current.current;
+      if (
+        saved &&
+        [
+          "AwaitingSignature",
+          "Submitted",
+          "CheckingChain",
+          "RecoveryRequired",
+        ].includes(saved.activity)
+      )
+        throw new Error(
+          "Check the previous request before opening another job",
+        );
+      const next: Session = {
+        contract: registryId,
+        account,
+        config,
+        previous_job_id: market.job?.job_id ?? null,
+        job: null,
+        log: null,
+        activity: "AwaitingSignature",
+        operation: "open",
+        tx: null,
+      };
+      await persist({ ...next, activity: "Draft" });
+      await persist(next);
+      setNotice("Awaiting signature. Storage deposit only.");
+      const tx = await chain().change(
+        "open_owned_job",
+        {
+          token_id: "rook",
+          package_option: config.package_option,
+          placement: config.placement,
+          setup_id: config.setup_id,
+          expected_content_hash: market.content_hash,
+        },
+        BigInt(market.job_storage_deposit),
+      );
+      await persist({ ...next, activity: "Submitted", tx });
+      setNotice("Submitted. Checking the Registry.");
+      await check();
+    });
+  }
+  async function persistLog(log: ActionLog) {
+    const saved = current.current;
+    if (
+      !saved?.job ||
+      saved.job.status !== "active" ||
+      saved.activity !== "Confirmed" ||
+      saved.operation !== "open"
+    )
+      throw new Error("Check this Contract Job before making another move");
+    if (!sameConfig(saved.config, log.config))
+      throw new Error("Job configuration mismatch");
+    await persist({ ...saved, log });
+  }
+  function save() {
+    void run(async () => {
+      const saved = current.current;
+      if (!saved?.job || !saved.log || !engine.replay(saved.log).state.outcome)
+        throw new Error("Finish the job before saving");
+      if (!["Confirmed", "Rejected", "Failed"].includes(saved.activity))
+        throw new Error("Check the previous Save Job request first");
+      await signer(saved.account);
+      const job = parseJob(
+        await chain().view("get_job", { job_id: saved.job.job_id }),
+      );
+      if (job.status !== "active") {
+        await check();
+        return;
+      }
+      await persist({
+        ...saved,
+        activity: "AwaitingSignature",
+        operation: "save",
+        tx: null,
+      });
+      setNotice("Awaiting signature. Your local result is kept.");
+      const tx = await chain().change(
+        "settle",
+        { job_id: job.job_id, action_log: JSON.stringify(saved.log) },
+        0n,
+      );
+      await persist({ ...saved, activity: "Submitted", operation: "save", tx });
+      setNotice("Submitted. Checking the Registry.");
+      await check();
+    });
+  }
+  function expire() {
+    void run(async () => {
+      const saved = current.current;
+      if (!saved?.job) return;
+      await signer(saved.account);
+      await persist({
+        ...saved,
+        activity: "AwaitingSignature",
+        operation: "expire",
+        tx: null,
+      });
+      const tx = await chain().change(
+        "expire",
+        { job_id: saved.job.job_id },
+        0n,
+      );
+      await persist({
+        ...saved,
+        activity: "Submitted",
+        operation: "expire",
+        tx,
+      });
+      await check();
+    });
+  }
+  function retryRefund() {
+    void run(async () => {
+      const saved = current.current;
+      if (!saved?.job || saved.job.status === "active") return;
+      await signer(saved.account);
+      await chain().change(
+        "retry_storage_refund",
+        { job_id: saved.job.job_id },
+        0n,
+      );
+      await check();
+    });
+  }
+  async function resume(): Promise<State> {
+    await check();
+    const saved = current.current;
+    if (
+      !saved?.job ||
+      !saved.log ||
+      saved.job.status !== "active" ||
+      saved.activity !== "Confirmed"
+    )
+      throw new Error("No active job is ready to resume");
+    return engine.replay(saved.log).state;
+  }
+  return {
+    enabled,
+    session,
+    worker,
+    account,
+    busy,
+    notice,
+    show,
+    connect,
+    disconnect,
+    open,
+    save,
+    expire,
+    resume,
+    persistLog,
+    retryRefund,
+    check: () => void run(check),
+  };
+}
+export type ContractJobController = ReturnType<typeof useContractJob>;

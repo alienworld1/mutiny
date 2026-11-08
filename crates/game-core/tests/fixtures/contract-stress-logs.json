@@ -1,0 +1,947 @@
+[
+  {
+    "rules_version": 2,
+    "content_version": 2,
+    "config": {
+      "setup_id": "friday-again-overtime",
+      "placement": "escort",
+      "worker": 0,
+      "package_option": 0
+    },
+    "commands": [
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [],
+        "action": {
+          "kind": "certify",
+          "cell": 46
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [45, 38, 39],
+        "action": {
+          "kind": "smoke",
+          "cell": 45
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [33],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 24],
+        "action": {
+          "kind": "burn",
+          "cell": 10
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [40, 41],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [32],
+        "action": {
+          "kind": "shove",
+          "target": 4,
+          "cell": 18
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 38],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [34, 33],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [31, 30],
+        "action": {
+          "kind": "swap",
+          "target": 0
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 32],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [40, 39],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [45],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [32, 33, 26],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [38],
+        "action": {
+          "kind": "shove",
+          "target": 0,
+          "cell": 30
+        }
+      },
+      {
+        "kind": "end_phase"
+      }
+    ]
+  },
+  {
+    "rules_version": 2,
+    "content_version": 2,
+    "config": {
+      "setup_id": "friday-again-overtime",
+      "placement": "escort",
+      "worker": 0,
+      "package_option": 1
+    },
+    "commands": [
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [33, 34],
+        "action": {
+          "kind": "certify",
+          "cell": 20
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [45, 38],
+        "action": {
+          "kind": "swap",
+          "target": 2
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [31, 24],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [33],
+        "action": {
+          "kind": "burn",
+          "cell": 41
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [39, 32],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [31, 24],
+        "action": {
+          "kind": "swap",
+          "target": 1
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [34],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [17, 10, 11],
+        "action": {
+          "kind": "attack",
+          "target": 4
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [39, 46],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [27, 20],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [23, 30],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [31],
+        "action": {
+          "kind": "shove",
+          "target": 1,
+          "cell": 29
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [27, 34],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [22, 23],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [32],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "end_phase"
+      }
+    ]
+  },
+  {
+    "rules_version": 2,
+    "content_version": 2,
+    "config": {
+      "setup_id": "friday-again-overtime",
+      "placement": "infiltration",
+      "worker": 0,
+      "package_option": 0
+    },
+    "commands": [
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [25, 26],
+        "action": {
+          "kind": "certify",
+          "cell": 40
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [43],
+        "action": {
+          "kind": "smoke",
+          "cell": 37
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [39, 46],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [27],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [36, 35],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [47],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [],
+        "action": {
+          "kind": "burn",
+          "cell": 26
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [28, 29],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [34],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [22, 21, 14],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [33, 32],
+        "action": {
+          "kind": "shove",
+          "target": 4,
+          "cell": 26
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [33],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [21, 22, 29],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      }
+    ]
+  },
+  {
+    "rules_version": 2,
+    "content_version": 2,
+    "config": {
+      "setup_id": "friday-again-overtime",
+      "placement": "infiltration",
+      "worker": 0,
+      "package_option": 1
+    },
+    "commands": [
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [],
+        "action": {
+          "kind": "certify",
+          "cell": 46
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [45, 38, 39],
+        "action": {
+          "kind": "smoke",
+          "cell": 45
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [33],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 24],
+        "action": {
+          "kind": "burn",
+          "cell": 10
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [40, 41],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [32],
+        "action": {
+          "kind": "shove",
+          "target": 4,
+          "cell": 18
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 38],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [34, 33],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [31, 30],
+        "action": {
+          "kind": "swap",
+          "target": 0
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 32],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [40, 39],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [45],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [32, 33, 26],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [38],
+        "action": {
+          "kind": "shove",
+          "target": 0,
+          "cell": 30
+        }
+      },
+      {
+        "kind": "end_phase"
+      }
+    ]
+  },
+  {
+    "rules_version": 2,
+    "content_version": 2,
+    "config": {
+      "setup_id": "dock-fire-intro",
+      "placement": "escort",
+      "worker": 0,
+      "package_option": 0
+    },
+    "commands": [
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [],
+        "action": {
+          "kind": "burn",
+          "cell": 25
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [25],
+        "action": {
+          "kind": "borrow",
+          "target": 4
+        }
+      },
+      {
+        "kind": "borrowed_activate",
+        "unit": 4,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [32],
+        "action": {
+          "kind": "certify",
+          "cell": 39
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [45],
+        "action": {
+          "kind": "smoke",
+          "cell": 37
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [39],
+        "action": {
+          "kind": "shove",
+          "target": 0,
+          "cell": 33
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [34, 27],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [44, 43, 36],
+        "action": {
+          "kind": "push"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [38, 37],
+        "action": {
+          "kind": "shove",
+          "target": 1,
+          "cell": 29
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [22, 23],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [44],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      }
+    ]
+  },
+  {
+    "rules_version": 2,
+    "content_version": 2,
+    "config": {
+      "setup_id": "friday-again-overtime",
+      "placement": "escort",
+      "worker": 0,
+      "package_option": 0
+    },
+    "commands": [
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [],
+        "action": {
+          "kind": "relocate",
+          "target": 4
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [45, 38, 39],
+        "action": {
+          "kind": "smoke",
+          "cell": 45
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [33],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 24],
+        "action": {
+          "kind": "burn",
+          "cell": 10
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [40, 41],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [32],
+        "action": {
+          "kind": "shove",
+          "target": 4,
+          "cell": 18
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 38],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [34, 33],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [31, 30],
+        "action": {
+          "kind": "swap",
+          "target": 0
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31, 32],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [40, 39],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [45],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "end_phase"
+      },
+      {
+        "kind": "activate",
+        "unit": 0,
+        "path": [31],
+        "action": {
+          "kind": "guard"
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 1,
+        "path": [32, 33, 26],
+        "action": {
+          "kind": "attack",
+          "target": 5
+        }
+      },
+      {
+        "kind": "activate",
+        "unit": 2,
+        "path": [38],
+        "action": {
+          "kind": "shove",
+          "target": 0,
+          "cell": 30
+        }
+      },
+      {
+        "kind": "end_phase"
+      }
+    ]
+  }
+]

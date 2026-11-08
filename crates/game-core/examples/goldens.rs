@@ -13,6 +13,12 @@ fn main() {
         .into_iter()
         .map(|r| serde_json::from_value(r["log"].clone()).unwrap())
         .collect();
+    logs.extend(
+        serde_json::from_str::<Vec<ActionLog>>(include_str!(
+            "../tests/fixtures/contract-stress-logs.json"
+        ))
+        .unwrap(),
+    );
     let s = start();
     logs.push(s.log.clone());
     for commands in [

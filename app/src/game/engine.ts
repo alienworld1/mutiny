@@ -29,3 +29,5 @@ export const choices = (
 export const content = (): Setup[] => JSON.parse(wasm.content()).setups;
 export const configure = (config: Configuration): State =>
   JSON.parse(wasm.configure(JSON.stringify(config)));
+export const canonical = (log: ActionLog): Uint8Array =>
+  wasm.canonical(JSON.stringify(log));

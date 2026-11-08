@@ -24,6 +24,8 @@ import type {
 } from "./game/types";
 import { coordinate, outcomeText, actionText, packages } from "./game/types";
 import PixiStage from "./stage/PixiStage";
+import ContractJobs from "./near/ContractJobs";
+import { useContractJob } from "./near/useContractJob";
 
 const primary =
   "!border-primary !bg-primary !text-white hover:!bg-primary-hover";
@@ -42,6 +44,8 @@ function message(error: unknown) {
 }
 
 function App() {
+  const contract = useContractJob();
+  const [contractBattle, setContractBattle] = useState(false);
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
   const [selected, setSelected] = useState<number | null>(null);
   const [path, setPath] = useState<number[]>([]);
@@ -118,7 +122,25 @@ function App() {
     setPreview(null);
     setFocusedOrder(null);
   }
+  async function resumeContract() {
+    const id = ++requestId.current;
+    try {
+      const state = await contract.resume();
+      if (id !== requestId.current) return;
+      setContractBattle(true);
+      clearSelection();
+      setHistory([]);
+      setFeedback([]);
+      setNotice("");
+      setRestart(false);
+      if (state.borrow_pending !== null) setSelected(state.borrow_pending);
+      setScreen({ kind: "battle", state });
+    } catch (error) {
+      setStorageWarning(message(error));
+    }
+  }
   async function play(fresh = false, config?: Configuration) {
+    setContractBattle(false);
     const id = ++requestId.current;
     setScreen({ kind: "loading" });
     try {
@@ -219,12 +241,15 @@ function App() {
       setNotice(message(error));
     }
   }
-  function commit() {
+  async function commit() {
     if (!preview || !state || commitLock.current) return;
     commitLock.current = true;
+    const id = requestId.current;
     // Re-apply against current log, so a stale preview can never commit old state.
     try {
       const next = engine.apply(state.log, preview.command);
+      if (contractBattle) await contract.persistLog(next.state.log);
+      if (id !== requestId.current) return;
       setScreen({ kind: "battle", state: next.state });
       const actor =
         "unit" in preview.command
@@ -245,7 +270,7 @@ function App() {
       clearSelection();
       if (next.state.borrow_pending !== null)
         setSelected(next.state.borrow_pending);
-      persist(next.state);
+      if (!contractBattle) persist(next.state);
     } catch (error) {
       setNotice(message(error));
       setPreview(null);
@@ -379,6 +404,14 @@ function App() {
           </div>
         </section>
       )}
+      {(screen.kind === "home" || contractBattle) && (
+        <ContractJobs
+          controller={contract}
+          setups={setups}
+          inBattle={contractBattle && screen.kind === "battle"}
+          onResume={() => void resumeContract()}
+        />
+      )}
       {screen.kind === "home" && setups.length > 0 && (
         <JobBoard
           setups={setups}
@@ -406,7 +439,8 @@ function App() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[.16em] text-secondary">
-                Free Play · {state.setup.variant} · {state.log.config.placement}
+                {contractBattle ? "Contract Job" : "Free Play"} ·{" "}
+                {state.setup.variant} · {state.log.config.placement}
               </p>
               <h1 className="text-3xl">{state.setup.name}</h1>
             </div>
@@ -445,10 +479,14 @@ function App() {
               </div>
             </dl>
             <div className="flex gap-2">
-              <button onClick={() => setRestart(true)}>Restart</button>
+              {!contractBattle && (
+                <button onClick={() => setRestart(true)}>Restart</button>
+              )}
               <button
                 onClick={() => {
+                  requestId.current++;
                   clearSelection();
+                  setContractBattle(false);
                   setScreen({ kind: "home" });
                 }}
               >
@@ -563,7 +601,9 @@ function App() {
                   className="rounded-2xl border-2 border-primary bg-paper p-6"
                 >
                   <p className="text-xs uppercase tracking-[.16em] text-secondary">
-                    Free Play result
+                    {contractBattle
+                      ? "Contract Job result"
+                      : "Free Play result"}
                   </p>
                   <h2 className="my-2 text-4xl">
                     {outcomeText(state.outcome)}
@@ -594,19 +634,23 @@ function App() {
                       </li>
                     ))}
                   </ul>
-                  <div className="mb-4 space-y-3">
-                    <ResultLine
-                      label="Previous"
-                      result={progress.ledger[state.setup.id]?.previous}
-                    />
-                    <ResultLine
-                      label="Fastest clear"
-                      result={progress.ledger[state.setup.id]?.best}
-                    />
-                  </div>
-                  <button className={primary} onClick={() => void play(true)}>
-                    Play Again
-                  </button>
+                  {!contractBattle && (
+                    <div className="mb-4 space-y-3">
+                      <ResultLine
+                        label="Previous"
+                        result={progress.ledger[state.setup.id]?.previous}
+                      />
+                      <ResultLine
+                        label="Fastest clear"
+                        result={progress.ledger[state.setup.id]?.best}
+                      />
+                    </div>
+                  )}
+                  {!contractBattle && (
+                    <button className={primary} onClick={() => void play(true)}>
+                      Play Again
+                    </button>
+                  )}
                 </section>
               ) : (
                 <section
