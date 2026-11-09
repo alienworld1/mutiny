@@ -91,6 +91,7 @@ impl Registry {
         setup_id: String,
         expected_content_hash: Base64VecU8,
         expected_quote: U128,
+        commission: Option<Booking>,
     ) -> Job {
         require!(
             self.worker(&token_id).paid_enabled,
@@ -114,8 +115,12 @@ impl Registry {
             "Price changed; confirm the current price"
         );
         require!(
-            env::attached_deposit().as_yoctonear() == quote + JOB_BOND,
-            "Attach exact price plus storage deposit"
+            env::attached_deposit().as_yoctonear()
+                == quote
+                    .checked_sub(commission.as_ref().map_or(0, |c| c.company_contribution.0))
+                    .expect("Contribution exceeds fee")
+                    + JOB_BOND,
+            "Attach wallet share plus storage deposit"
         );
         let job = self.create_job(
             token_id,
@@ -124,6 +129,7 @@ impl Registry {
             setup_id,
             expected_content_hash,
             quote,
+            commission,
         );
         self.worker_call(
             &job.token_id,
@@ -268,9 +274,28 @@ impl Registry {
             amount == 0 || amount == Self::worker_share(job.accepted_fee.0),
             "Wrong returned credit"
         );
+        let before = env::storage_usage();
         job.status = "cancelled".into();
         job.credit_status = "reversed".into();
-        job.refund_owed = U128(job.accepted_fee.0 + job.bond.0);
+        let company_share = job
+            .employment
+            .as_ref()
+            .map_or(0, |e| e.company_contribution.0);
+        self.close_commission(&mut job, true);
+        self.jobs.insert(&job.job_id.0, &job);
+        let after = env::storage_usage();
+        job.storage_bytes = if after >= before {
+            job.storage_bytes + after - before
+        } else {
+            job.storage_bytes - (before - after)
+        };
+        // Company/dispatch records survive cancellation. Charge their actual storage,
+        // rather than consuming another project's budget or another company's funds.
+        let cost = u128::from(job.storage_bytes) * env::storage_byte_cost().as_yoctonear();
+        job.refund_owed = U128(
+            job.accepted_fee.0 - company_share + job.bond.0
+                - if job.employment.is_some() { cost } else { 0 },
+        );
         self.refund(&mut job);
     }
     /// Last-resort receipt attestation. Only the immutable deployment operator may resolve

@@ -117,6 +117,7 @@ export function createChainClient(contractId: string): ChainClient {
           "reconcile_payment",
           "cancel_pending_hire",
           "retry_credit_return",
+          "withdraw_company_funds",
         ].includes(method)
       )
         throw new Error("This action is unavailable");

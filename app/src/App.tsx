@@ -458,7 +458,7 @@ function App() {
                 className="!bg-paper/80"
                 onClick={() => openJobs("contract")}
               >
-                Hiring Hall
+                Run a company
               </button>
             </div>
             <p className="mt-4 text-sm text-secondary">

@@ -12,11 +12,14 @@ import {
   sameConfig,
   supportedContentHash,
   registryId,
+  legacyMarket,
   verifyRecord,
   writeSession,
   yoctoAmount,
 } from "./jobs";
 import type { Session, Worker, Earnings } from "./jobs";
+import { bookingAmounts, parseEconomy } from "./economy";
+import type { Economy } from "./economy";
 
 export function useContractJob() {
   const client = useRef<ChainClient | null>(null);
@@ -36,6 +39,11 @@ export function useContractJob() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [enabled, setEnabled] = useState(false);
+  const [economy, setEconomy] = useState<Economy | null>(null);
+  const [commissionId, setCommissionId] = useState<string | null>(null);
+  const [useCompanyFunds, setUseCompanyFunds] = useState(true);
+  const commission =
+    economy?.commissions.find((c) => c.commission_id === commissionId) ?? null;
   function chain() {
     return (client.current ??= createChainClient(registryId));
   }
@@ -76,11 +84,22 @@ export function useContractJob() {
     setAccount(connected);
     let all: Worker[];
     try {
-      all = (await c.view<unknown[]>("get_market", {})).map(parseWorker);
+      const [workers, company] = await Promise.all([
+        c.view<unknown[]>("get_market", {}),
+        legacyMarket
+          ? Promise.resolve(null)
+          : c.view<unknown>("get_economy", { account_id: connected }),
+      ]);
+      all = workers.map(parseWorker);
+      const nextEconomy = company === null ? null : parseEconomy(company);
+      if (nextEconomy?.company && nextEconomy.company.account_id !== connected)
+        throw Error("Company belongs to another account. Reconnect.");
+      setEconomy(nextEconomy);
     } catch (error) {
       setMarket([]);
       setWorker(null);
       setEarnings(null);
+      setEconomy(null);
       throw error;
     }
     setMarket(all);
@@ -332,6 +351,8 @@ export function useContractJob() {
       setAccount(null);
       current.current = null;
       setSession(null);
+      setEconomy(null);
+      setCommissionId(null);
       setNotice("Wallet disconnected. Your saved actions are kept.");
     });
   }
@@ -344,6 +365,32 @@ export function useContractJob() {
       );
       setWorker(market);
       const owned = market.token.owner_id === account;
+      const fee = owned ? "0" : (acceptedQuote ?? "0");
+      let booking;
+      const amounts = bookingAmounts(
+        fee,
+        economy?.company?.funds ?? "0",
+        !!economy && useCompanyFunds,
+        market.job_storage_deposit,
+      );
+      if (economy) {
+        if (
+          !commission?.available ||
+          !commission.setup_ids.includes(config.setup_id)
+        )
+          throw Error("Choose available work for this setup first.");
+        if (
+          economy.company?.active_job !== null &&
+          economy.company?.active_job !== undefined
+        )
+          throw Error("Finish the current company job first.");
+        booking = {
+          commission_id: commission.commission_id,
+          dispatch_id: commission.dispatch_id,
+          expected_terms: commission.terms_hash,
+          company_contribution: amounts.company,
+        };
+      }
       if (market.status !== "idle" || market.claim?.status === "pending")
         throw new Error("This worker is unavailable. Check status.");
       if (
@@ -400,9 +447,9 @@ export function useContractJob() {
           setup_id: config.setup_id,
           expected_content_hash: market.content_hash,
           ...(!owned ? { expected_quote: acceptedQuote } : {}),
+          ...(booking ? { commission: booking } : {}),
         },
-        BigInt(market.job_storage_deposit) +
-          (owned ? 0n : BigInt(acceptedQuote!)),
+        BigInt(amounts.wallet),
         account,
       );
       await persist({ ...next, activity: "Submitted", tx });
@@ -419,7 +466,8 @@ export function useContractJob() {
       | "reconcile_claim"
       | "reconcile_payment"
       | "cancel_pending_hire"
-      | "retry_credit_return",
+      | "retry_credit_return"
+      | "withdraw_company_funds",
     args: Record<string, unknown> = {},
   ) {
     void run(async () => {
@@ -571,6 +619,11 @@ export function useContractJob() {
     return engine.replay(saved.log).state;
   }
   return {
+    economy,
+    commission,
+    selectCommission: setCommissionId,
+    useCompanyFunds,
+    setUseCompanyFunds,
     market,
     selectWorker: (token: string) => {
       if (lock.current) return;

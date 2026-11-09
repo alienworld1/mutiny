@@ -3,7 +3,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { hashContract } from "near-workspaces";
 
 // Read-only release check. No wallet, keychain, signatures or transfers.
-const registry = process.env.MUTINY_REGISTRY_ID || "m5.mutiny-m5-2026.testnet";
+const registry =
+  process.env.MUTINY_REGISTRY_ID || "v3.mutiny-company-2026.testnet";
 assert.match(registry, /^[a-z0-9._-]+\.testnet$/);
 const endpoint =
   process.env.MUTINY_TESTNET_RPC_URL || "https://test.rpc.fastnear.com";
@@ -111,6 +112,16 @@ for (const worker of market) {
     })),
   });
 }
+const economy = await view(registry, "get_economy", { account_id: null });
+assert.equal(economy.version, 3);
+assert.equal(economy.enabled, true);
+assert.equal(economy.project.funded, true);
+assert.equal(
+  BigInt(economy.project.unreserved) +
+    BigInt(economy.project.reserved) +
+    BigInt(economy.project.paid),
+  500000000000000000000000n,
+);
 const evidence = {
   registry,
   block_height: block.height,
@@ -118,6 +129,7 @@ const evidence = {
   registry_code_hash: account.code_hash,
   registry_key_count: 0,
   workers,
+  economy,
 };
 if (process.env.MUTINY_AUDIT_EVIDENCE)
   await writeFile(

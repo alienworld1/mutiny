@@ -1,4 +1,6 @@
+mod economy;
 mod paid;
+use economy::{Booking, Company, Employment, Project};
 use game_core::{ActionLog, Configuration, Event};
 use near_contract_standards::non_fungible_token::{
     NonFungibleToken, Token, TokenId,
@@ -87,6 +89,7 @@ pub struct Job {
     pub refund_owed: U128,
     pub refund_in_flight: bool,
     pub credit_status: String,
+    pub employment: Option<Employment>,
 }
 
 #[near(serializers = [json])]
@@ -137,6 +140,9 @@ pub struct Registry {
     hall_earned: u128,
     next_claim: u64,
     deployment_owner: AccountId,
+    companies: LookupMap<AccountId, Company>,
+    project: Project,
+    economy_enabled: bool,
 }
 
 fn hash(value: &impl near_sdk::serde::Serialize) -> Base64VecU8 {
@@ -212,6 +218,9 @@ impl Registry {
             hall_earned: 0,
             next_claim: 0,
             deployment_owner: owner_id,
+            companies: LookupMap::new(b"c"),
+            project: Project::default(),
+            economy_enabled: false,
         }
     }
 
@@ -347,6 +356,7 @@ impl Registry {
         placement: String,
         setup_id: String,
         expected_content_hash: Base64VecU8,
+        commission: Option<Booking>,
     ) -> Job {
         self.owner(&token_id);
         require!(
@@ -360,6 +370,7 @@ impl Registry {
             setup_id,
             expected_content_hash,
             0,
+            commission,
         )
     }
 }
@@ -372,6 +383,7 @@ impl Registry {
         setup_id: String,
         expected_content_hash: Base64VecU8,
         fee: u128,
+        commission: Option<Booking>,
     ) -> Job {
         Self::worker_index(&token_id);
         require!(
@@ -408,6 +420,9 @@ impl Registry {
         let before = env::storage_usage();
         let id = self.next_job;
         self.next_job = id.checked_add(1).expect("Job limit");
+        let employment = commission
+            .as_ref()
+            .map(|booking| self.reserve_commission(booking, &config.setup_id, fee, U64(id)));
         let mut job = Job {
             job_id: U64(id),
             renter_id: env::predecessor_account_id(),
@@ -437,6 +452,7 @@ impl Registry {
             refund_owed: U128(0),
             refund_in_flight: false,
             credit_status: if fee == 0 { "none" } else { "unknown" }.into(),
+            employment,
         };
         self.jobs.insert(&id, &job);
         // Option<u64> in root state grows by eight bytes on the first reservation.
@@ -447,7 +463,7 @@ impl Registry {
                 0
             };
         require!(
-            u128::from(job.storage_bytes + 768) * env::storage_byte_cost().as_yoctonear()
+            u128::from(job.storage_bytes + 1024) * env::storage_byte_cost().as_yoctonear()
                 <= JOB_BOND,
             "Storage reserve too small"
         );
@@ -510,6 +526,7 @@ impl Registry {
         let before = env::storage_usage();
         job.record = Some(record.clone());
         job.status = "saved".into();
+        self.close_commission(&mut job, false);
         self.close(&mut job, before);
         record
     }
@@ -523,6 +540,7 @@ impl Registry {
         );
         let before = env::storage_usage();
         job.status = "expired".into(); // Abandonment has no battle result.
+        self.close_commission(&mut job, false);
         self.close(&mut job, before);
     }
 

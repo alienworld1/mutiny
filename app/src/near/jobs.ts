@@ -1,8 +1,13 @@
 import * as engine from "../game/engine";
 import type { ActionLog, Configuration, State } from "../game/types";
 
-export const registryId =
-  import.meta.env.VITE_REGISTRY_ID || "m5.mutiny-m5-2026.testnet";
+export const legacyRegistryId = "m5.mutiny-m5-2026.testnet";
+export const legacyMarket =
+  typeof location !== "undefined" &&
+  new URLSearchParams(location.search).get("market") === "legacy";
+export const registryId = legacyMarket
+  ? legacyRegistryId
+  : import.meta.env.VITE_REGISTRY_ID || "v3.mutiny-company-2026.testnet";
 export type Activity =
   | "Draft"
   | "AwaitingSignature"
@@ -51,6 +56,16 @@ export interface Job {
   storage_bytes: number;
   refund_owed: string;
   refund_in_flight: boolean;
+  employment?: {
+    commission_id: string;
+    dispatch_id: string;
+    leg: number;
+    objective: "routine" | "intact" | "express";
+    payment: string;
+    company_contribution: string;
+    earned: string;
+    closed: boolean;
+  } | null;
 }
 export interface Offer {
   package_option: number;
@@ -152,6 +167,23 @@ export function parseJob(value: unknown): Job {
   )
     throw new Error("Invalid job response. Check status again.");
   const job = value as unknown as Job;
+  if (value.employment !== undefined && value.employment !== null) {
+    const e = value.employment;
+    if (
+      !object(e) ||
+      !integerString(e.commission_id) ||
+      !integerString(e.dispatch_id) ||
+      typeof e.leg !== "number" ||
+      ![0, 1, 2].includes(Number(e.leg)) ||
+      !["routine", "intact", "express"].includes(String(e.objective)) ||
+      ![e.payment, e.company_contribution, e.earned].every(integerString) ||
+      BigInt(String(e.company_contribution)) > BigInt(job.accepted_fee) ||
+      !["0", e.payment].includes(String(e.earned)) ||
+      typeof e.closed !== "boolean" ||
+      (e.earned !== "0" && job.status !== "saved")
+    )
+      throw Error("Invalid commission record. Check status.");
+  }
   engine.configure(job.config);
   return job;
 }
@@ -350,7 +382,10 @@ export async function verifyRecord(
     record.commitment !== (await digest(combined)) ||
     record.final_hash !==
       (await digest(new TextEncoder().encode(JSON.stringify(state)))) ||
-    record.outcome !== state.outcome
+    record.outcome !== state.outcome ||
+    record.round !== state.round ||
+    record.cart_hp !== state.cart_hp ||
+    record.strikes !== state.strikes
   )
     throw new Error(
       "The saved result does not match these actions. Keep the local job and check status.",

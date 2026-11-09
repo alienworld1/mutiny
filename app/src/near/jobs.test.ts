@@ -85,6 +85,9 @@ describe("Contract Job trust boundaries", () => {
     const state = engine.replay(log).state;
     const record = {
       outcome: state.outcome,
+      round: state.round,
+      cart_hp: state.cart_hp,
+      strikes: state.strikes,
       commitment: await digest(combined),
       final_hash: await digest(new TextEncoder().encode(JSON.stringify(state))),
     };
@@ -96,9 +99,27 @@ describe("Contract Job trust boundaries", () => {
       verifyRecord(job, log, { ...record, final_hash: "invented" }),
     ).rejects.toThrow("does not match");
     await expect(verifyRecord(job, log, null)).rejects.toThrow("not confirmed");
+    await expect(
+      verifyRecord(job, log, { ...record, cart_hp: 99 }),
+    ).rejects.toThrow("does not match");
   });
   it("rejects untrusted job identities and unsupported worker configurations", () => {
     expect(parseJob(job)).toEqual(job);
+    expect(() =>
+      parseJob({
+        ...job,
+        employment: {
+          commission_id: "0",
+          dispatch_id: "0",
+          leg: 0,
+          objective: "routine",
+          payment: "50000000000000000000000",
+          company_contribution: "1",
+          earned: "0",
+          closed: false,
+        },
+      }),
+    ).toThrow("Invalid commission");
     expect(() => parseJob({ ...job, accepted_fee: "-1" })).toThrow(
       "Invalid job",
     );

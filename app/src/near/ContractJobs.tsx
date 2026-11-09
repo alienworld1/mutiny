@@ -1,10 +1,23 @@
 import WorkerPortrait from "./WorkerPortrait";
 import OwnerControls from "./OwnerControls";
+import CompanyHome from "./CompanyHome";
+import {
+  bookingAmounts,
+  commissionDifference,
+  objectiveName,
+  objectiveTerms,
+} from "./economy";
 import { useState } from "react";
 import * as engine from "../game/engine";
 import { packages } from "../game/types";
 import type { Configuration, Setup } from "../game/types";
-import { nearAmount, registryId, workerTokens, workerIndices } from "./jobs";
+import {
+  nearAmount,
+  registryId,
+  workerTokens,
+  workerIndices,
+  legacyMarket,
+} from "./jobs";
 import type { ContractJobController } from "./useContractJob";
 
 export default function ContractJobs({
@@ -23,7 +36,7 @@ export default function ContractJobs({
   onResume: () => void;
 }) {
   const [findPackage, setFindPackage] = useState("fire");
-  const [maximum, setMaximum] = useState("0.004");
+  const [maximum, setMaximum] = useState("0.02");
   if (!c.enabled) return <button onClick={c.show}>Contract Job</button>;
   const config = {
     ...draftConfig,
@@ -62,7 +75,18 @@ export default function ContractJobs({
     c.worker.claim?.status !== "pending" &&
     (c.worker.token.owner_id === c.account ||
       (c.worker.paid_enabled && !!offer)) &&
-    !unknown;
+    !unknown &&
+    (!c.economy ||
+      (!!c.commission?.available &&
+        c.commission.setup_ids.includes(config.setup_id) &&
+        !c.economy.company?.active_job));
+  const fee = c.worker?.token.owner_id === c.account ? "0" : (quote ?? "0");
+  const amounts = bookingAmounts(
+    fee,
+    c.economy?.company?.funds ?? "0",
+    !!c.economy && c.useCompanyFunds,
+    c.worker?.job_storage_deposit ?? "0",
+  );
   return (
     <section
       aria-label="Contract Job"
@@ -71,10 +95,18 @@ export default function ContractJobs({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[.16em] text-secondary">
-            {inBattle ? "Contract Job" : "One worker · One shift"}
+            {inBattle
+              ? "Contract Job"
+              : c.economy
+                ? "Choose work · Hire · Deliver"
+                : "One worker · One shift"}
           </p>
           <h2 className="text-2xl">
-            {inBattle ? "Shift record" : "Hiring Hall"}
+            {inBattle
+              ? "Shift record"
+              : c.economy
+                ? "Your company"
+                : "Hiring Hall"}
           </h2>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -129,6 +161,29 @@ export default function ContractJobs({
       )}
       {!inBattle && (
         <>
+          <p className="text-sm">
+            <a
+              className="underline"
+              href={legacyMarket ? "/" : "/?market=legacy"}
+            >
+              {legacyMarket
+                ? "Open the company economy"
+                : "Previous deployment: jobs and claims"}
+            </a>
+          </p>
+          {legacyMarket && (
+            <p className="rounded-xl bg-muted p-4 text-sm">
+              Previous testnet deployment. These workers and earnings stay here.
+              Company progress belongs to the replacement deployment.
+            </p>
+          )}
+          <CompanyHome
+            controller={c}
+            config={draftConfig}
+            setConfig={setConfig}
+            setups={setups}
+          />
+          {c.economy && <h3 className="pt-4 text-2xl">Hire your crew</h3>}
           <p className="text-sm text-secondary">
             Player-owned mercenaries. Hire one for this shift.
           </p>
@@ -485,6 +540,33 @@ export default function ContractJobs({
                 Round {job.record?.round}
               </p>
             )}
+          {job.employment &&
+            ["saved", "expired"].includes(job.status) &&
+            s?.activity === "Confirmed" && (
+              <div
+                className="rounded-xl border border-primary bg-muted p-4 text-sm"
+                aria-label="Confirmed company result"
+              >
+                <p className="font-semibold">
+                  {job.employment.earned !== "0"
+                    ? `Commission earned: ${nearAmount(job.employment.earned)} testnet NEAR`
+                    : "No commission earned."}
+                </p>
+                <p className="mt-1">
+                  {objectiveTerms[job.employment.objective]} Hire fee paid:{" "}
+                  {nearAmount(job.accepted_fee)} NEAR.
+                </p>
+                <p className="mt-1">
+                  Company funds: {nearAmount(c.economy?.company?.funds ?? "0")}{" "}
+                  NEAR · Dispatch leg {job.employment.leg + 1}/3 complete.
+                </p>
+                <p className="mt-1">
+                  {BigInt(c.economy?.company?.deliveries ?? "0") >= 2n
+                    ? "Chartered company. More route variants are open."
+                    : `${c.economy?.company?.deliveries ?? "0"}/2 deliveries toward your charter.`}
+                </p>
+              </div>
+            )}
           {["saved", "expired"].includes(job.status) && (
             <p className="text-sm text-secondary">
               Storage used:{" "}
@@ -502,6 +584,18 @@ export default function ContractJobs({
       {!inBattle && c.worker && preview && unit && (
         <div className="space-y-4 border-t border-border pt-4">
           <h3 className="text-xl">Your shift</h3>
+          {c.economy &&
+            (c.commission ? (
+              <p className="rounded-lg bg-muted p-3 text-sm">
+                <strong>{objectiveName[c.commission.objective]}</strong> ·{" "}
+                {objectiveTerms[c.commission.objective]} Payment:{" "}
+                {nearAmount(c.commission.payment)} testnet NEAR.
+              </p>
+            ) : (
+              <p className="text-sm font-semibold">
+                Choose funded work above before hiring.
+              </p>
+            ))}
           <p className="text-sm font-semibold">
             {preview.setup.name} · {preview.setup.variant}
           </p>
@@ -561,6 +655,38 @@ export default function ContractJobs({
               Storage deposit: {nearAmount(c.worker!.job_storage_deposit)}{" "}
               testnet NEAR, plus wallet gas.
             </p>
+            {c.economy && (
+              <div className="mt-3 space-y-2 border-t border-border pt-3 text-sm">
+                <label className="flex min-h-11 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={c.useCompanyFunds}
+                    disabled={c.busy}
+                    onChange={(event) =>
+                      c.setUseCompanyFunds(event.target.checked)
+                    }
+                  />
+                  Use company funds for this hire
+                </label>
+                <p>
+                  Company funds used: {nearAmount(amounts.company)} NEAR
+                  <br />
+                  Wallet payment: {nearAmount(amounts.wallet)} NEAR, including
+                  the storage deposit, plus gas.
+                </p>
+                {c.commission && (
+                  <p>
+                    Commission less hire fee:{" "}
+                    {commissionDifference(c.commission.payment, fee)} NEAR,
+                    before gas and retained storage.
+                  </p>
+                )}
+                <p className="text-secondary">
+                  No commission for a failed delivery or unmet terms. The worker
+                  keeps the fee.
+                </p>
+              </div>
+            )}
           </div>
           {c.worker!.token.owner_id !== c.account && (
             <p className="text-sm text-secondary">

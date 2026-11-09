@@ -30,42 +30,45 @@ pnpm test:e2e
 MUTINY_PREVIEW=1 pnpm test:e2e --grep "production offline"
 ```
 
-## Contract Jobs (NEAR testnet)
+## Companies (NEAR testnet)
 
-The Hiring Hall has six NFT workers: Rook, Mallow, Nix, Dot, Brisk, and Peebles. Each can advertise two independently priced fine-print packages, with one shared shift. Compare the current fees, floors, roles, and abilities, or use **Find Cheapest** for a package and maximum fee. Choose an Escort or Infiltration placement and review the actual crew before **Hire**. Prices come from chain blocks: an owner may set a discount every 120 idle blocks, capped at three discounts. Editing one option resets only its clock; returning from a shift and cooldown resets both.
+Start as a renter, choose funded work, hire a specialist, and run a three-job dispatch. Two verified commission deliveries earn a charter and open additional route variants. Any company can take intact-cart or express work. Your first delivery puts a sign on the office; the charter improves it. Company funds and dispatches persist onchain. Free Play and its local Ledger remain wallet-free.
 
-A paid hire sends 95% of its fee to that NFT's separate worker account; the Hall keeps 5%, with exact integer rounding. Each job also requires a **0.03 testnet NEAR storage deposit**, plus wallet gas. The owner can reserve an idle worker without a hire fee, including an unadvertised package. Self-use adds no rental income or paid-hire history. The profile shows the newest ten confirmed paid hires and their actual job records. These seeded test accounts demonstrate behavior, not organic demand.
+**Restore the Royal Supply Route** has nine shared delivery slots: three routine; two routine and one intact-cart; two routine and one express. Routine work pays 0.05 testnet NEAR; premium work pays 0.075. The developer sponsors each finite batch with 0.5 testnet NEAR. Booking reserves a delivery slot and one worker. Verified delivery credits withdrawable company funds; use them for another hire or withdraw to your wallet. Failure or expiry consumes the dispatch leg and releases the commission. The hire fee stays paid. New supply batches need fresh funding; there is no automatic money faucet or game token.
 
-After confirmed activation, play locally and **Save Job**. The Registry replays the shared Rust engine before accepting a result. Battle outcomes never change the fee or pay rewards. Saving or expiring a job charges actual retained job storage and returns the rest. Leases last 2,400 blocks from activation, followed by 20 blocks of rest. Both offers stay unavailable throughout the reservation and cooldown.
+Six replacement NFT workers offer two independently priced packages each. Choose Escort or Infiltration and inspect the actual crew. Hires send 95% to the worker's separate account and 5% to the Hall. Owners may use their idle workers without a hire fee. Every job also requires a **0.03 testnet NEAR storage deposit**, plus gas; actual retained storage is charged and unused storage returned. Before activation, cancellation restores the company and wallet hire portions to their original sources after worker-credit reversal. Company-job cancellation retains its actual record storage.
 
-Moves and pending requests survive refresh. Use **Check status**, **Check payment**, or **Check claim** to recover. Before activation, **Cancel hire** returns the full fee and storage deposit after the staged worker credit returns. An uncertain transfer stays locked; timeout never triggers a second payment. Owners can edit or withdraw idle offers and transfer NFT title. An active renter keeps the same job after transfer; only the current owner can initiate an earnings claim. Standard NFT approvals and transfer-call acceptance/rollback are supported. Pending claims and transfer-call resolution lock conflicting title or earnings operations.
+Battles run locally without per-move signatures. **Save Job** replays the Rust engine onchain before accepting a result, paying a commission, or advancing progress. Local battles can be rehearsed or automated; replay proves a valid delivery, not human effort or a single attempt. Seeded workers and sponsored testnet payments demonstrate mechanics, not organic demand or guaranteed returns.
 
-Registry: [`m5.mutiny-m5-2026.testnet`](https://testnet.nearblocks.io/address/m5.mutiny-m5-2026.testnet). Worker accounts are `rook.<registry>`, `mallow.<registry>`, `nix.<registry>`, `dot.<registry>`, `brisk.<registry>`, and `peebles.<registry>`. Seeded operator/Alice: `mutiny-m5-2026.testnet`; Bob: `mutiny-m5-bob-2026.testnet`; Carol: `mutiny-m5-carol-2026.testnet`. Set `VITE_REGISTRY_ID` to another compatible testnet Registry if needed.
+The replacement Registry is `v3.mutiny-company-2026.testnet`. Set `VITE_REGISTRY_ID` to a compatible company deployment; see [the public example](app/.env.example). The **Previous deployment** link opens `m5.mutiny-m5-2026.testnet` for its jobs and claims. Old NFTs, ownership, earnings, and history do not migrate to the replacement collection. Both deployments use six distinct worker subaccounts named after their tokens.
 
-Copy `app/.env.example` to `app/.env.local` to change the public Registry. After building contracts, `node scripts/audit-testnet.mjs` checks deployed code hashes, access keys, configuration and reserves without signing. Set `MUTINY_REGISTRY_ID` to audit another deployment. The source pins replay to 32 commands / 4 KiB; browser operations attach 200 Tgas. Advertised fees stay within 0.001–1 testnet NEAR.
+Verified on testnet: [express delivery and commission](https://testnet.nearblocks.io/txns/G5JafaJAGNk4ZDVr8vBQw5feaL4pziFGjSBMHLjyBzE2), [company withdrawal](https://testnet.nearblocks.io/txns/DDMeu2Zc4H9xnFyYWUCuLX9mBQFyqwnBowRLrA38s3PY). The nine-job verification exhausted the first batch; a separate sponsor transaction funded the next one.
 
-Verified live: [Escort saved after transfer](https://testnet.nearblocks.io/txns/6bU9AqJS6obiHU7qVQWE7gxJU7ePB5RjUwdBD6yK5p5x), [Infiltration saved after transfer](https://testnet.nearblocks.io/txns/8K14tLsaSRwo28XcWvZXetpXL9yVWNzuK1v9TGFjhzAu), [former-owner claim rejected](https://testnet.nearblocks.io/txns/GrPc3LrnE4nCUNKy9SF7KQcanSXyxvkJiLvbAxn7zYjW), and [current-owner claim paid](https://testnet.nearblocks.io/txns/Gy1TUrNzYCfQF3QNi83qYCqqubrCmKxMHwUcYS9DXgYV).
+Moves and pending requests survive refresh. **Check status**, **Check payment**, and **Check claim** recover interrupted operations. A pending withdrawal remains locked until its actual outcome is known; timeout never authorizes another transfer. Worker title can change during a shift without invalidating the renter's frozen rights. Only the current owner can initiate a worker earnings claim. Claims exclude staged credits, donations, and protected reserves.
 
-Registry and workers are keyless and immutable. Each worker starts with 3 independently funded testnet NEAR. Claims exclude staged credits, direct donations, and the protected storage/reserve floor shown in its profile. The original operator may enable payments after resource checks and attest a **FINAL** native-transfer receipt if its callback is lost. **This recovery authority is trusted:** falsely attesting failure can allow duplicate payment. It cannot change the original recipient or amount, withdraw arbitrary funds, or change NFT ownership. There is no treasury withdrawal method.
+Registry and worker accounts are keyless and immutable. The deployment operator may enable payments and attest FINAL native-transfer receipts when callbacks are lost. **This recovery authority is trusted:** falsely attesting failure can permit duplicate payment. Company recovery uses `repair_company_withdrawal` with the original account and withdrawal ID. Existing worker/refund recovery uses `repair_native_callback`. Verify FINAL receipts first; never attest failure for a pending transfer. There is no general project or Hall treasury withdrawal.
 
-For a missing native callback, inspect FINAL receipts and the matching job/claim ID first. The operator can call `repair_native_callback({token_id, job_id, succeeded, receipt_id})`, using a job ID for a refund or `null` for a claim. Then use **Check claim**, or retry a return only after confirmed transfer failure. Never attest failure while a transfer is pending. Ordinary credit lookup and reversal recovery require no operator privilege.
+## Contract verification and deployment
 
-Use the [NEAR CLI](https://docs.near.org/tools/cli) with three funded testnet accounts in its keychain.
+Build contracts before Rust workspace tests: Registry embeds Worker Wasm. Use the official [NEAR sandbox 2.14.0](https://github.com/near/nearcore/releases/tag/2.14.0) binary and [NEAR CLI](https://docs.near.org/tools/cli).
 
 ```sh
 pnpm contract:build
+cargo test --workspace --locked
 NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:sandbox
 NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:paid
 NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:market
-# Deploys a new immutable Registry and six workers.
-# Owner needs 32 testnet NEAR plus gas; Bob and Carol also need testnet gas/deposits.
+NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:company
+# Creates a new immutable Registry and six replacement workers; sponsors one batch.
+# Requires 36.5 testnet NEAR plus gas from the named owner.
 bash scripts/deploy-testnet.sh your-owner.testnet
+# Signs a nine-delivery demonstration and withdrawal using your three accounts.
 MUTINY_TESTNET_OWNER=your-owner.testnet MUTINY_TESTNET_RENTER=your-bob.testnet \
-  MUTINY_TESTNET_CAROL=your-carol.testnet MUTINY_ENABLE_PAID=1 \
-  node scripts/testnet-market.mjs
+  MUTINY_TESTNET_CAROL=your-carol.testnet MUTINY_ENABLE_COMPANY=1 \
+  node scripts/testnet-company.mjs
 ```
 
-Build contracts before workspace Rust tests: Registry embeds Worker Wasm. Sandbox tests use the official [NEAR sandbox 2.14.0](https://github.com/near/nearcore/releases/tag/2.14.0) binary; receiver fixtures and fault injection stay in local tests. Live integration verification uses CLI signing. Browser tests substitute only wallet/RPC, keeping the real Wasm game. Browser reads use the [documented FastNEAR testnet RPC](https://docs.near.org/api/rpc/providers).
+New company bookings start disabled. Measure settlement gas and storage with `test:company`, publish offers and run worker funding checks, then enable the tested deployment with `set_economy_enabled`. The browser attaches 200 Tgas and enforces 32 commands / 4 KiB per replay. Leases last 2,400 blocks after activation with 20 blocks of rest. Advertised hire fees remain within 0.001–1 testnet NEAR.
 
 Built with React, Vite, Tailwind CSS, PixiJS, wasm-bindgen, near-sdk and HOT Connect. Atkinson Hyperlegible Next and Fraunces are bundled under their included SIL Open Font Licenses.
 IBM Plex Mono uses the SIL Open Font License; Phosphor icons use MIT. Painted scenery, characters and props were generated with OpenAI imagegen and are bundled locally. Asset layout and generation briefs are in `app/public/assets/art/manifest.json`. The game has no audio dependency.
