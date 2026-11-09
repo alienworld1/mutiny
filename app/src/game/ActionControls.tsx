@@ -1,3 +1,4 @@
+import WorkerPortrait from "../near/WorkerPortrait";
 import type { Action, Choices, State, Unit } from "./types";
 import { coordinate, packages } from "./types";
 export type Mode = "move" | Action["kind"];
@@ -64,9 +65,16 @@ export default function ActionControls({
         : "clean_shot";
   return (
     <>
-      <div className="mb-4 flex items-baseline justify-between gap-2">
-        <h2 className="text-2xl">{unit.name}</h2>
-        <span className="text-sm capitalize text-secondary">{unit.role}</span>
+      <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-border pb-4">
+        <WorkerPortrait
+          token={unit.name.toLowerCase()}
+          className="w-14 shrink-0 rounded-xl bg-muted"
+        />
+        <div className="min-w-0 flex-1">
+          <h2 className="text-2xl">{unit.name}</h2>
+          <span className="text-sm capitalize text-secondary">{unit.role}</span>
+        </div>
+        <span className="text-sm font-semibold tabular-nums">{unit.hp} HP</span>
       </div>
       <div className="mb-3 flex items-center justify-between gap-2 text-sm">
         <button
@@ -85,7 +93,7 @@ export default function ActionControls({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,88px),1fr))] gap-2">
         <button
           className={`!px-2 ${options.actions.some((o) => o.action.kind === "push") ? "!border-primary !bg-primary !text-white" : ""}`}
           onClick={() => propose({ kind: "push" })}
@@ -166,14 +174,13 @@ export default function ActionControls({
         </p>
       )}
       {unit.package !== "none" && (
-        <details className="mt-3 text-sm text-secondary">
-          <summary className="min-h-11 cursor-pointer py-3">Fine print</summary>
+        <div className="mt-4 rounded-xl border-l-[3px] border-brass bg-muted p-3 text-sm text-secondary">
           <p>
             <strong>{packages[unit.package].name}</strong>
             <br />
             {packages[unit.package].clause}
           </p>
-        </details>
+        </div>
       )}
     </>
   );

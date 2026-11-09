@@ -139,6 +139,7 @@ test("a job opened from the lower board starts at its heading", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Job Board", exact: true }).click();
   await page.getByRole("button", { name: "Toll Gate", exact: true }).click();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(

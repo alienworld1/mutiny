@@ -80,6 +80,7 @@ for (const reference of refs.filter((r) => r.approach === "delivery")) {
   }) => {
     await page.route(/https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
     await page.goto("/");
+    await page.getByRole("button", { name: "Job Board", exact: true }).click();
     await page
       .getByRole("button", { name: setup.variant, exact: true })
       .click();
@@ -100,9 +101,13 @@ for (const reference of refs.filter((r) => r.approach === "delivery")) {
     await expect(ledger).toContainText("1 attempts · 1 clears");
     await expect(ledger).toContainText("Fastest clear");
     await page.reload();
+    await page.getByRole("button", { name: "Job Board", exact: true }).click();
     await expect(
       page.getByRole("region", { name: "Captain's Ledger" }),
     ).toContainText("1 attempts · 1 clears");
+    await page
+      .getByRole("button", { name: "Mutiny home", exact: true })
+      .click();
     await page.getByRole("button", { name: "Play Free", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Job Done", exact: true }),
@@ -157,6 +162,7 @@ test("Infiltration is enemy controlled and crew setup survives refresh", async (
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Job Board", exact: true }).click();
   await page.getByRole("button", { name: "Toll Gate", exact: true }).click();
   await page
     .getByRole("combobox", { name: "House worker", exact: true })
@@ -186,6 +192,7 @@ test("explicit friendly-fire self-refusal preview and commit", async ({
   page,
 }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Job Board", exact: true }).click();
   await page
     .getByRole("combobox", { name: "House worker", exact: true })
     .selectOption("2");
@@ -305,7 +312,7 @@ test("small home and battle layouts stay inside the viewport at 200 percent text
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await page.getByRole("button", { name: "Play", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Play Free", exact: true }).waitFor();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -317,10 +324,16 @@ test("small home and battle layouts stay inside the viewport at 200 percent text
   await page.getByRole("button", { name: "Play Free", exact: true }).click();
   await page.getByRole("button", { name: /^Captain / }).click();
   expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
+    await page.evaluate(() =>
+      [...document.querySelectorAll("main *")]
+        .filter((el) => el.getBoundingClientRect().right > innerWidth + 1)
+        .map((el) => ({
+          tag: el.tagName,
+          text: el.textContent?.slice(0, 80),
+          class: el.className,
+        })),
     ),
-  ).toBe(true);
+  ).toEqual([]);
 });
 test("Borrow explains range and becomes legal after clearing the captain's approach", async ({
   page,

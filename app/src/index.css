@@ -7,7 +7,10 @@
     @apply m-0 bg-chalk font-ui text-ink antialiased;
   }
   button {
-    @apply min-h-11 cursor-pointer rounded-[10px] border border-border bg-paper px-4 py-2 font-semibold transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
+    @apply min-h-11 cursor-pointer rounded-[10px] border border-border bg-paper px-4 py-2 font-semibold shadow-[0_2px_0_var(--color-border)] transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .battle-cell {
+    @apply shadow-none;
   }
   button:focus-visible,
   a:focus-visible,
@@ -15,6 +18,13 @@
   select:focus-visible,
   input:focus-visible {
     @apply outline-3 outline-offset-3 outline-focus;
+  }
+  summary {
+    @apply cursor-pointer;
+  }
+  select,
+  input {
+    @apply text-ink;
   }
   h1,
   h2,

@@ -48,6 +48,29 @@ function message(error: unknown) {
 function App() {
   const contract = useContractJob();
   const [contractBattle, setContractBattle] = useState(false);
+  const [menu, setMenu] = useState<"title" | "jobs">("title");
+  const [preparation, setPreparation] = useState<"free" | "contract">("free");
+  const [config, setConfig] = useState<Configuration>({
+    setup_id: "dock-fire-intro",
+    placement: "escort",
+    worker: 0,
+    package_option: 0,
+  });
+  function openJobs(mode: "free" | "contract" = "free") {
+    setMenu("jobs");
+    setPreparation(mode);
+    if (!setups.length)
+      void engine
+        .loadEngine()
+        .then(() => setSetups(engine.content()))
+        .catch(() =>
+          setScreen({
+            kind: "error",
+            message: "The job board could not load. Retry to open the game.",
+          }),
+        );
+    if (mode === "contract" && !contract.enabled) contract.show();
+  }
   const [screen, setScreen] = useState<Screen>({ kind: "home" });
   const battleHeading = useRef<HTMLHeadingElement>(null);
   const battleSetup = screen.kind === "battle" ? screen.state.setup.id : null;
@@ -367,7 +390,7 @@ function App() {
   }
   return (
     <main
-      className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8"
+      className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-5"
       onKeyDown={(event) => {
         if (event.key === "Escape" && preview) {
           setPreview(null);
@@ -375,86 +398,110 @@ function App() {
         }
       }}
     >
-      <header className="mb-6 flex items-baseline justify-between gap-4 border-b border-border pb-4">
-        <a href="./" className="font-display text-xl font-bold tracking-tight">
-          MUTINY{" "}
-          <span className="font-ui text-sm font-normal text-secondary">
+      <header className="mb-5 flex items-center justify-between gap-3 border-b border-border pb-3">
+        <button
+          className="!min-h-0 !rounded-none !border-0 !bg-transparent !p-0 !shadow-none text-left"
+          onClick={() => {
+            requestId.current++;
+            clearSelection();
+            setContractBattle(false);
+            setMenu("title");
+            setScreen({ kind: "home" });
+          }}
+          aria-label="Mutiny home"
+        >
+          <span className="font-display text-2xl font-bold tracking-tight">
+            MUTINY
+          </span>
+          <span className="ml-3 hidden text-sm font-normal text-secondary sm:inline">
             The Fine Print
           </span>
-        </a>
-        <span className="text-xs uppercase tracking-[.18em] text-secondary">
-          The Little Kingdom Theatre
+        </button>
+        <span className="text-xs font-semibold uppercase tracking-[.16em] text-secondary">
+          Royal Payroll Office
         </span>
       </header>
-      {screen.kind === "home" && (
-        <section className="mx-auto grid max-w-5xl items-center gap-8 py-8 md:grid-cols-[1fr_1.1fr] md:py-16">
-          <div>
-            <p className="mb-4 text-sm uppercase tracking-[.2em] text-secondary">
+      {screen.kind === "home" && menu === "title" && (
+        <section
+          aria-label="Welcome to Mutiny"
+          className="relative isolate min-h-[620px] overflow-hidden rounded-[18px] border border-border bg-muted shadow-panel sm:min-h-[680px]"
+        >
+          <img
+            src="/assets/art/dock.webp"
+            alt="A tiny harbor with timber warehouses and a winding quay"
+            fetchPriority="high"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-chalk via-chalk/90 to-chalk/0 max-md:bg-gradient-to-b max-md:from-chalk/95 max-md:via-chalk/85 max-md:to-transparent" />
+          <div className="relative z-10 max-w-xl px-6 py-10 sm:px-12 sm:py-16">
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[.24em] text-secondary">
               A small kingdom. A difficult shift.
             </p>
-            <h1 className="font-display text-5xl leading-[1.05] sm:text-6xl">
-              Orders are orders.
-              <br />
-              <em className="text-primary">Terms apply.</em>
+            <h1 className="font-display text-[clamp(42px,12vw,96px)] leading-[.95] tracking-tight">
+              MUTINY
+              <span className="mt-3 block text-3xl italic tracking-normal sm:text-4xl">
+                The Fine Print
+              </span>
             </h1>
-            <p className="my-6 max-w-md text-lg text-secondary">
-              Escort the payroll cart. Read the enemy's orders. Give their
-              workers a reason to object.
+            <p className="mt-7 max-w-xs text-lg text-secondary">
+              Deliver the payroll. Turn the enemy’s own fine print against them.
             </p>
-            <button
-              className={`${primary} min-w-40 !min-h-12`}
-              onClick={() => void play()}
-            >
-              Play Free
-            </button>
-            <p className="mt-3 text-sm text-secondary">
-              Dock Fire · 7 × 7 tactics · about 5 minutes
+            <div className="mt-8 grid max-w-64 gap-3">
+              <button
+                className={`${primary} !min-h-12 text-lg shadow-panel`}
+                onClick={() => void play()}
+              >
+                Play Free
+              </button>
+              <button onClick={() => openJobs()}>Job Board</button>
+              <button
+                className="!bg-paper/80"
+                onClick={() => openJobs("contract")}
+              >
+                Hiring Hall
+              </button>
+            </div>
+            <p className="mt-4 text-sm text-secondary">
+              One cart. Five rounds. About five minutes.
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-[18px] bg-muted shadow-sm">
-            <div aria-hidden="true" className="relative aspect-[4/3]">
-              <img
-                src="/assets/art/dock.webp"
-                alt=""
-                fetchPriority="high"
-                className="absolute h-full w-full object-cover"
-              />
-              <div className="absolute bottom-[10%] left-[6%] w-[29%] -rotate-6">
-                <WorkerPortrait token="captain" className="w-full" />
-              </div>
-              <div className="absolute bottom-[13%] left-[36%] w-[25%]">
-                <WorkerPortrait token="rook" className="w-full" />
-              </div>
-              <div className="absolute bottom-[10%] right-[5%] w-[31%] rotate-3">
-                <WorkerPortrait token="mallow" className="w-full" />
-              </div>
-            </div>
-            <div className="bg-paper p-5 sm:p-6">
-              <p className="text-xs uppercase tracking-[.2em] text-secondary">
-                Your first job
-              </p>
-              <h2 className="my-2 text-3xl">Dock Fire</h2>
-              <p className="max-w-sm text-secondary">
-                Three pushes to deliver the cart. Five rounds before the office
-                closes.
-              </p>
-            </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 right-0 flex w-[65%] items-end justify-end max-md:w-[55%]"
+          >
+            <WorkerPortrait token="rook" className="-mr-8 w-[40%] -rotate-3" />
+            <WorkerPortrait token="captain" className="-mr-7 w-[48%]" />
+            <WorkerPortrait token="mallow" className="w-[45%] rotate-3" />
           </div>
         </section>
       )}
-      {(screen.kind === "home" || contractBattle) && (
-        <ContractJobs
-          controller={contract}
-          setups={setups}
-          inBattle={contractBattle && screen.kind === "battle"}
-          onResume={() => void resumeContract()}
-        />
+      {screen.kind === "home" && menu === "jobs" && setups.length === 0 && (
+        <p role="status" className="py-16 text-center">
+          Opening the job board…
+        </p>
       )}
-      {screen.kind === "home" && setups.length > 0 && (
+      {screen.kind === "home" && menu === "jobs" && setups.length > 0 && (
         <JobBoard
           setups={setups}
           progress={progress}
-          onPlay={(config) => void play(true, config)}
+          config={config}
+          setConfig={setConfig}
+          preparation={preparation}
+          onPreparation={(mode) => {
+            setPreparation(mode);
+            if (mode === "contract" && !contract.enabled) contract.show();
+          }}
+          onPlay={(next) => void play(true, next)}
+          contractPanel={
+            <ContractJobs
+              controller={contract}
+              setups={setups}
+              config={config}
+              setConfig={setConfig}
+              inBattle={false}
+              onResume={() => void resumeContract()}
+            />
+          }
         />
       )}
       {screen.kind === "home" && storageWarning && (
@@ -474,7 +521,7 @@ function App() {
       )}
       {state && (
         <>
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-paper px-4 py-4 shadow-panel sm:px-6">
             <div>
               <p className="text-xs uppercase tracking-[.16em] text-secondary">
                 {contractBattle ? "Contract Job" : "Free Play"} ·{" "}
@@ -484,7 +531,7 @@ function App() {
                 {state.setup.name}
               </h1>
             </div>
-            <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm tabular-nums">
+            <dl className="flex flex-wrap gap-x-6 gap-y-2 border-l-2 border-brass pl-5 text-sm tabular-nums">
               <div>
                 <dt className="text-secondary">Round</dt>
                 <dd className="font-bold" data-testid="round">
@@ -539,6 +586,7 @@ function App() {
                   requestId.current++;
                   clearSelection();
                   setContractBattle(false);
+                  setMenu("jobs");
                   setScreen({ kind: "home" });
                 }}
               >
@@ -574,8 +622,16 @@ function App() {
               {storageWarning}
             </p>
           )}
-          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.75fr)_minmax(300px,1fr)]">
-            <div>
+          <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-paper p-2 shadow-panel sm:p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-2 text-sm">
+                <span className="font-semibold">
+                  Deliver the cart to the flag
+                </span>
+                <span className="text-secondary">
+                  3 pushes · Keep your captain alive
+                </span>
+              </div>
               {preview && (
                 <p className="rounded-t-xl bg-ink px-4 py-2 text-center text-sm font-bold text-white">
                   PREVIEW · Confirm to apply
@@ -664,7 +720,7 @@ function App() {
                 </details>
               )}
             </div>
-            <aside className="space-y-4">
+            <aside className="min-w-0 space-y-4">
               {state.outcome ? (
                 <section
                   aria-label="Job result"
@@ -725,7 +781,7 @@ function App() {
               ) : (
                 <section
                   aria-label="Crew actions"
-                  className="rounded-2xl border border-border bg-paper p-4 sm:p-5"
+                  className="rounded-2xl border border-border bg-paper p-4 shadow-panel sm:p-5"
                 >
                   <div className="mb-4 flex flex-wrap gap-2">
                     {state.setup.units
@@ -739,7 +795,7 @@ function App() {
                           disabled={u.hp === 0 || !!preview}
                           aria-pressed={selected === u.id}
                           onClick={() => select(u.id)}
-                          className="!px-3 text-sm"
+                          className="min-w-[88px] flex-1 !px-2 text-sm"
                         >
                           <span
                             aria-hidden="true"
@@ -866,11 +922,37 @@ function App() {
                   )}
                 </section>
               )}
+              {contractBattle &&
+                (state.outcome ? (
+                  <ContractJobs
+                    controller={contract}
+                    setups={setups}
+                    config={config}
+                    setConfig={setConfig}
+                    inBattle
+                    onResume={() => void resumeContract()}
+                  />
+                ) : (
+                  <details className="rounded-xl border border-border bg-paper px-4 py-2 text-sm">
+                    <summary className="min-h-11 cursor-pointer py-3 font-semibold">
+                      Contract Job ·{" "}
+                      {contract.worker?.character ?? "Hired worker"}
+                    </summary>
+                    <ContractJobs
+                      controller={contract}
+                      setups={setups}
+                      config={config}
+                      setConfig={setConfig}
+                      inBattle
+                      onResume={() => void resumeContract()}
+                    />
+                  </details>
+                ))}
               <section
                 aria-label="Posted enemy orders"
-                className="rounded-2xl bg-muted p-4 sm:p-5"
+                className="rounded-2xl border border-border border-t-[3px] border-t-oxblood bg-muted p-4 sm:p-5"
               >
-                <div className="mb-3 flex items-baseline justify-between gap-2">
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
                   <h2 className="text-2xl">Enemy orders</h2>
                   <span className="text-xs text-secondary">
                     Fixed this round
@@ -891,7 +973,7 @@ function App() {
                       <div key={order.unit} className="py-3 first:pt-0">
                         <button
                           aria-pressed={focusedOrder === u.id}
-                          className="!min-h-11 !w-full !rounded-lg !border-transparent !bg-transparent !px-2 text-left hover:!bg-paper/60"
+                          className="!min-h-11 !w-full !rounded-lg !border-transparent !bg-transparent !px-2 !shadow-none text-left hover:!bg-paper/60"
                           onClick={() =>
                             setFocusedOrder(focusedOrder === u.id ? null : u.id)
                           }
@@ -997,7 +1079,7 @@ function App() {
           </div>
         </>
       )}
-      <footer className="mt-8 border-t border-border pt-4 text-xs text-secondary">
+      <footer className="mt-6 flex justify-between border-t border-border pt-3 text-xs text-secondary">
         MUTINY: The Fine Print · A tactical employment dispute.
       </footer>
     </main>

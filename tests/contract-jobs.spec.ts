@@ -64,7 +64,7 @@ async function mockChain(page: Page, paid = false, six = false) {
 }
 async function openJob(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Reserve Rook", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Resume Job", exact: true }),
@@ -104,7 +104,7 @@ test("owner reserves, plays, refreshes and saves only after a verified record", 
     page.getByRole("button", { name: "Save Job", exact: true }),
   ).toBeEnabled();
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "View result", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Job Done" })).toBeVisible();
   await page.getByRole("button", { name: "Save Job", exact: true }).click();
@@ -127,7 +127,7 @@ test("submitted Save Job survives refresh without optimistic success or duplicat
     page.getByText("Submitted. Waiting for the Registry to confirm."),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await expect(
     page.getByText("Submitted. Waiting for the Registry to confirm."),
   ).toBeVisible();
@@ -152,7 +152,7 @@ test("wallet rejection keeps the job and RPC outage keeps Free Play available", 
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.evaluate(() => localStorage.setItem("test-cancel", "1"));
   await page.getByRole("button", { name: "Reserve Rook", exact: true }).click();
   await expect(
@@ -190,7 +190,7 @@ test("Infiltration freezes the enemy slot and restores a move after refresh", as
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
     .getByRole("combobox", { name: "Placement", exact: true })
@@ -208,7 +208,7 @@ test("Infiltration freezes the enemy slot and restores a move after refresh", as
   await confirm(page);
   await expect(page.getByTestId("pushes")).toHaveText("1 / 3");
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Resume Job", exact: true }).click();
   await expect(page.getByTestId("pushes")).toHaveText("1 / 3");
   expect(
@@ -245,7 +245,7 @@ test("unsupported chain content is rejected before a storage deposit is signed",
   await page.evaluate(() =>
     localStorage.setItem("test-bad-content", "unsupported"),
   );
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Reserve Rook", exact: true }).click();
   await expect(page.getByText(/The game content changed/)).toBeVisible();
   expect(
@@ -258,7 +258,7 @@ test("renter confirms exact fee, plays and saves the frozen paid job", async ({
 }) => {
   await mockChain(page, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await expect(
     page.getByText("Hire fee: 0.004000000000000000000001 testnet NEAR"),
   ).toBeVisible();
@@ -273,13 +273,13 @@ test("pending paid hire survives refresh and can activate or fully cancel withou
   await mockChain(page, true);
   await page.goto("/");
   await page.evaluate(() => localStorage.setItem("test-credit-pending", "1"));
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Resume Job", exact: true }),
   ).toHaveCount(0);
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Cancel hire", exact: true }).click();
   await expect(
     page.getByText("Hire cancelled. Fee and storage deposit returned."),
@@ -302,7 +302,7 @@ test("a changed price needs a new visible confirmation and rejected hire can ret
 }) => {
   await mockChain(page, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.evaluate(() =>
     localStorage.setItem("test-price", "5000000000000000000000"),
   );
@@ -334,14 +334,16 @@ test("owner claim stays pending across refresh until the worker confirms payment
   await page.evaluate(() =>
     localStorage.setItem("test-account", "owner.testnet"),
   );
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
+  await page.getByText("Owner tools", { exact: true }).click();
   await page.getByRole("button", { name: "Claim", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Check claim", exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await expect(page.getByText(/^Earnings claimed/)).toHaveCount(0);
+  await page.getByText("Owner tools", { exact: true }).click();
   await page.getByRole("button", { name: "Check claim", exact: true }).click();
   await expect(page.getByText(/^Earnings claimed ·/)).toBeVisible();
   expect(
@@ -356,7 +358,7 @@ test("reconnect restores a newer paid job opened in another browser", async ({
 }) => {
   await mockChain(page, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await win(page);
   await page.getByRole("button", { name: "Save Job", exact: true }).click();
@@ -383,7 +385,7 @@ test("six-worker hall compares both packages, signs the selected Infiltration an
 }) => {
   await mockChain(page, true, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   for (const name of ["Rook", "Mallow", "Nix", "Dot", "Brisk", "Peebles"])
     await expect(
       page.getByRole("button", { name: new RegExp(`^${name} ·`) }),
@@ -391,8 +393,8 @@ test("six-worker hall compares both packages, signs the selected Infiltration an
   await page.getByRole("button", { name: /^Peebles ·/ }).click();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
-    .getByRole("combobox", { name: /^Fine print/ })
-    .selectOption("1");
+    .getByRole("button", { name: /^Desk Swap/ })
+    .click();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
     .getByRole("combobox", { name: /^Placement/ })
@@ -418,13 +420,13 @@ test("six-worker hall compares both packages, signs the selected Infiltration an
   ).toBeDisabled();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
-    .getByRole("combobox", { name: /^Fine print/ })
-    .selectOption("0");
+    .getByRole("button", { name: /^Smoke Break/ })
+    .click();
   await expect(
     page.getByRole("button", { name: "Hire", exact: true }),
   ).toBeDisabled();
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Resume Job", exact: true }),
   ).toBeVisible();
@@ -435,7 +437,8 @@ test("Find Cheapest shows the selected live package without opening a shift", as
 }) => {
   await mockChain(page, true, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
+  await page.getByText("Find a lower fee", { exact: true }).click();
   await page.getByRole("combobox", { name: /^Package/ }).selectOption("fire");
   await page.getByLabel("Maximum fee (NEAR)").fill("0.005");
   await page
@@ -447,8 +450,8 @@ test("Find Cheapest shows the selected live package without opening a shift", as
   await expect(
     page
       .getByRole("region", { name: "Contract Job", exact: true })
-      .getByRole("combobox", { name: /^Fine print/ }),
-  ).toHaveValue("0");
+      .getByRole("button", { name: /^Smoke Break/ }),
+  ).toHaveAttribute("aria-pressed", "true");
   expect(
     await page.evaluate(() => localStorage.getItem("test-chain")),
   ).toBeNull();
@@ -466,7 +469,7 @@ test("owner transfer refreshes current title and keeps active renter rights", as
 }) => {
   await mockChain(page, true, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Resume Job", exact: true }),
@@ -475,6 +478,8 @@ test("owner transfer refreshes current title and keeps active renter rights", as
     localStorage.setItem("test-account", "owner.testnet"),
   );
   await page.getByRole("button", { name: "Check status", exact: true }).click();
+  await page.getByText("Owner tools", { exact: true }).click();
+  await page.getByText("Identity & hire details", { exact: true }).click();
   await page.getByLabel("New owner", { exact: true }).fill("carol.testnet");
   await page.getByRole("button", { name: "Transfer NFT", exact: true }).click();
   await expect(
@@ -501,7 +506,7 @@ test("switching workers keeps each active job's local moves", async ({
 }) => {
   await mockChain(page, true, true);
   await page.goto("/");
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Resume Job", exact: true }),
@@ -512,14 +517,14 @@ test("switching workers keeps each active job's local moves", async ({
   await confirm(page);
   await expect(page.getByRole("button", { name: /^Captain ✓/ })).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await page.getByRole("button", { name: /^Peebles ·/ }).click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
     page.getByText("Job 1 · escort", { exact: false }),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
   await expect(
     page.getByText("Job 1 · escort", { exact: false }),
   ).toBeVisible();
@@ -541,7 +546,8 @@ test("Hiring Hall and owner controls fit a narrow screen with enlarged text", as
     document.documentElement.style.fontSize = "200%";
     localStorage.setItem("test-account", "owner.testnet");
   });
-  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Hiring Hall", exact: true }).click();
+  await page.getByText("Owner tools", { exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Transfer NFT", exact: true }),
   ).toBeVisible();
@@ -563,4 +569,57 @@ test("Hiring Hall and owner controls fit a narrow screen with enlarged text", as
     JSON.stringify(overflow),
   ).toBe(true);
   await expect(page.getByRole("button", { name: /^Peebles ·/ })).toBeVisible();
+});
+
+test("job selection and house crew carry through the Hiring Hall", async ({
+  page,
+}) => {
+  await mockChain(page, true, true);
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "Connect Wallet", exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({ path: "/tmp/mutiny-ui-title.png" });
+  await page.getByRole("button", { name: "Job Board", exact: true }).click();
+  await page.getByRole("button", { name: "Toll Gate", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "House worker", exact: true })
+    .selectOption("2");
+  await page.getByRole("button", { name: "Contract Job", exact: true }).click();
+  await page.getByRole("button", { name: "Nix · mage", exact: true }).click();
+  await page.getByRole("button", { name: /^Clean Shot/ }).click();
+  await page
+    .getByRole("combobox", { name: "Placement", exact: true })
+    .selectOption("infiltration");
+  await expect(
+    page.getByText("Bridge Audit · Toll Gate", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Nix joins the enemy crew.", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Free Play", exact: true }).click();
+  await expect(
+    page.getByRole("combobox", { name: "House worker", exact: true }),
+  ).toHaveValue("2");
+  await expect(
+    page.getByRole("combobox", { name: "Placement", exact: true }),
+  ).toHaveValue("infiltration");
+  await expect(
+    page.getByRole("button", { name: "Toll Gate", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.screenshot({
+    path: "/tmp/mutiny-ui-preparation.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Bridge Audit", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("grid").getByRole("button", { name: /Wisp, enemy, mage/ }),
+  ).toBeVisible();
+  await page.screenshot({ path: "/tmp/mutiny-ui-battle.png", fullPage: true });
+  expect(
+    await page.evaluate(() => localStorage.getItem("test-calls")),
+  ).toBeNull();
 });
