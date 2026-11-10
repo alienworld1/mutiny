@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @mutiny/app dev",
-    "build": "pnpm --filter @mutiny/app build && node scripts/build-offline.mjs",
+    "build": "pnpm wasm:build && pnpm --filter @mutiny/app build && node scripts/build-offline.mjs",
     "lint": "pnpm --filter @mutiny/app lint",
     "test": "pnpm --filter @mutiny/app test",
     "format": "prettier --write .",
@@ -15,7 +15,6 @@
     "test:e2e": "playwright test",
     "wasm:build": "bash scripts/build-wasm.sh",
     "predev": "pnpm wasm:build",
-    "prebuild": "pnpm wasm:build",
     "test:parity": "node scripts/check-parity.mjs",
     "test:sandbox": "node scripts/sandbox-smoke.mjs",
     "contract:build": "cargo build --locked -p worker --target wasm32-unknown-unknown --release && cargo build --locked -p registry --target wasm32-unknown-unknown --release",

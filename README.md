@@ -16,6 +16,8 @@ pnpm dev
 
 `pnpm build` creates `app/dist`. Once its offline assets finish installing, Free Play supports offline refresh and resume. Clearing browser data loses local progress. Company records stay onchain.
 
+For Vercel, set **Root Directory** to `app` and enable **Include source files outside of the Root Directory in the Build Step**. The checked-in build configuration installs the pinned Rust/WASM tools, builds the shared game engine, and generates the offline assets. The first build needs extra time to compile the tools.
+
 ## The economy
 
 Six NFT workers each hold paid-hire earnings in a separate keyless NEAR account. Two package offers share one worker's availability. Owners may post automatic price policies: confirmed paid hires raise bounded demand pressure, while time and idle availability reduce the ask. Owners retain offer, claim, self-use, and transfer rights. Hiring sends 95% to the worker and 5% to the Hall.
