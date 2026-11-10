@@ -48,13 +48,22 @@ export function draw(
   const labelsLayer = new Container();
   for (const child of root.removeChildren()) child.destroy({ children: true });
   if (art.environment) {
-    const background = new Sprite(art.environment);
+    const background = new Sprite(art.layers?.backdrop ?? art.environment);
     background.width = 640;
-    background.height = HEIGHT;
+    background.height = art.layers ? 162 : HEIGHT;
     root.addChild(background);
   }
+  if (art.layers) {
+    const ground = new Sprite(art.layers.ground);
+    ground.position.set(0, ORIGIN_Y);
+    ground.width = 640;
+    ground.height = 448;
+    root.addChild(ground);
+  }
   const g = new Graphics();
-  root.addChild(g);
+  const world = new Container();
+  world.sortableChildren = true;
+  root.addChild(g, world);
   if (!art.environment)
     g.roundRect(0, 0, 640, HEIGHT, 22).fill(
       state.setup.policy === "dock"
@@ -89,17 +98,17 @@ export function draw(
             : c % 3 === 0
               ? C.stone
               : C.chalk,
-        alpha: art.environment ? 0.24 : 1,
+        alpha: art.environment ? 0.035 : 1,
       })
-      .stroke({ color: C.ink, alpha: 0.18, width: 1 });
+      .stroke({ color: C.ink, alpha: 0.12, width: 1 });
     if (!art.environment && state.setup.policy === "dock")
       for (let offset = -21; offset < 25; offset += 16)
         g.moveTo(x - 37, y + offset)
           .lineTo(x + 37, y + offset + (c % 2))
           .stroke({ color: C.clay, alpha: 0.45, width: 1 });
     if (state.setup.route.includes(c))
-      g.roundRect(x - 25, y - 20, 50, 40, 5)
-        .fill({ color: C.chalk, alpha: 0.65 })
+      g.ellipse(x, y + 2, 26, 16)
+        .fill({ color: C.chalk, alpha: 0.85 })
         .stroke({ color: C.brass, width: 2 });
     if (reachable.includes(c))
       g.roundRect(x - 32, y - 25, 64, 50, 5)
@@ -119,12 +128,13 @@ export function draw(
     }
     if (state.setup.cover.includes(c)) {
       if (art.props) {
-        const cover = new Sprite(art.props[2]);
-        cover.anchor.set(0.5, 0.85);
+        const cover = new Sprite(art.props[3]);
+        cover.anchor.set(0.5, 0.95);
         cover.width = 70;
         cover.height = 54;
         cover.position.set(x, y + 19);
-        root.addChild(cover);
+        cover.zIndex = y;
+        world.addChild(cover);
       } else {
         g.roundRect(x - 29, y - 8, 58, 25, 4)
           .fill(C.stone)
@@ -144,12 +154,13 @@ export function draw(
     }
     if (state.setup.walls.includes(c)) {
       if (art.props) {
-        const crate = new Sprite(art.props[1]);
-        crate.anchor.set(0.5, 0.85);
+        const crate = new Sprite(art.props[2]);
+        crate.anchor.set(0.5, 0.95);
         crate.width = 70;
         crate.height = 64;
         crate.position.set(x, y + 22);
-        root.addChild(crate);
+        crate.zIndex = y;
+        world.addChild(crate);
       } else {
         g.ellipse(x, y + 12, 32, 12).fill({ color: C.ink, alpha: 0.12 });
         g.poly([
@@ -201,26 +212,24 @@ export function draw(
       b.y - dy * 27 - dx * 5,
     ]).fill(C.dark);
   }
-  if (state.setup.policy === "dock" || state.setup.policy === "bridge") {
-    for (let i = 0; i < 8; i++) {
-      const ripple = new Graphics()
-        .moveTo(-12, 0)
-        .quadraticCurveTo(0, -3, 12, 0)
-        .stroke({ color: C.chalk, width: 1.4, alpha: 0.4 });
-      ripple.position.set(48 + i * 76, HEIGHT - 13 - (i % 3) * 5);
-      root.addChild(ripple);
-      hazards.push({ view: ripple, kind: "water", phase: i });
-    }
-  }
   const exit = cellToScreen(state.setup.route[3]!);
   g.moveTo(exit.x + 23, exit.y - 17)
     .lineTo(exit.x + 23, exit.y + 17)
     .stroke({ color: C.ink, width: 3 });
-  const flag = new Graphics().poly([0, 0, 19, 4, 0, 12]).fill(C.dark);
-  flag.position.set(exit.x + 24, exit.y - 17);
+  const flag = art.props?.[6]
+    ? new Sprite(art.props[6])
+    : new Graphics().poly([0, 0, 19, 4, 0, 12]).fill(C.dark);
+  if (flag instanceof Sprite) {
+    flag.anchor.set(0.5, 0.95);
+    flag.height = 54;
+    flag.scale.x = flag.scale.y;
+    flag.position.set(exit.x + 24, exit.y + 17);
+  } else flag.position.set(exit.x + 24, exit.y - 17);
   root.addChild(flag);
   hazards.push({ view: flag, kind: "flag", phase: 1 });
   label(root, "EXIT", exit.x - 4, exit.y + 19, 11);
+  const overlay = new Graphics();
+  root.addChild(overlay);
   // Posted paths and targets are projected directly from engine orders.
   for (const order of state.orders) {
     if (focusedOrder !== null && order.unit !== focusedOrder) continue;
@@ -229,7 +238,8 @@ export function draw(
       const a = points[i - 1]!,
         b = points[i]!;
       for (let n = 0; n < 6; n += 2)
-        g.moveTo(a.x + ((b.x - a.x) * n) / 6, a.y + ((b.y - a.y) * n) / 6)
+        overlay
+          .moveTo(a.x + ((b.x - a.x) * n) / 6, a.y + ((b.y - a.y) * n) / 6)
           .lineTo(
             a.x + ((b.x - a.x) * (n + 1)) / 6,
             a.y + ((b.y - a.y) * (n + 1)) / 6,
@@ -241,17 +251,18 @@ export function draw(
           });
     }
     const end = cellToScreen(order.endpoint);
-    g.circle(end.x, end.y, 7).stroke({ color: C.enemy, width: 2 });
+    overlay.circle(end.x, end.y, 7).stroke({ color: C.enemy, width: 2 });
     label(root, `${order.unit + 1}`, end.x + 12, end.y - 12, 11, C.enemy);
     for (const cell of order.affected) {
       const p = cellToScreen(cell);
-      g.rect(p.x - 34, p.y - 26, 68, 52).stroke({
+      overlay.rect(p.x - 34, p.y - 26, 68, 52).stroke({
         color: C.enemy,
         width: 2,
         alpha: focusedOrder === order.unit ? 0.8 : 0.32,
       });
       for (let offset = -24; offset <= 24; offset += 12)
-        g.moveTo(p.x + offset - 4, p.y - 21)
+        overlay
+          .moveTo(p.x + offset - 4, p.y - 21)
           .lineTo(p.x + offset + 4, p.y - 13)
           .stroke({ color: C.enemy, width: 1, alpha: 0.45 });
     }
@@ -260,11 +271,11 @@ export function draw(
     const points = [state.setup.units[selected]!.cell, ...path].map(
       cellToScreen,
     );
-    g.moveTo(points[0]!.x, points[0]!.y);
-    for (const p of points.slice(1)) g.lineTo(p.x, p.y);
-    g.stroke({ color: C.dark, width: 4 });
+    overlay.moveTo(points[0]!.x, points[0]!.y);
+    for (const p of points.slice(1)) overlay.lineTo(p.x, p.y);
+    overlay.stroke({ color: C.dark, width: 4 });
     const end = points.at(-1)!;
-    g.circle(end.x, end.y, 6).fill(C.dark);
+    overlay.circle(end.x, end.y, 6).fill(C.dark);
   }
   const objects = [
     ...state.setup.units.map((u) => ({ cell: u.cell, unit: u })),
@@ -276,8 +287,9 @@ export function draw(
     const entity = new Container();
     const hud = new Container();
     labelsLayer.addChild(hud);
-    root.addChild(entity);
-    const view: EntityView = { body: entity, labels: hud };
+    entity.zIndex = y;
+    world.addChild(entity);
+    const view: EntityView = { body: entity, labels: hud, depth: y };
     entities.set(u ? u.id : "cart", view);
     if (u && u.hp <= 0) {
       const fallen = new Graphics()
@@ -290,14 +302,15 @@ export function draw(
         .lineTo(x - 7, y + 20)
         .stroke({ color: C.ink, width: 2, alpha: 0.5 });
       entity.addChild(fallen);
-      const texture = art.characters?.[characterSlots[u.name] ?? 0];
+      const slot = characterSlots[u.name] ?? 0;
+      const texture = art.poses?.defeated[slot] ?? art.characters?.[slot];
       if (texture) {
         const figure = new Sprite(texture);
-        figure.anchor.set(0.5, 0.96);
+        figure.anchor.set(0.5, 0.95);
         figure.height = 70;
         figure.scale.x = figure.scale.y;
         figure.position.set(x, y + 15);
-        figure.rotation = -1.1;
+        figure.rotation = art.poses?.defeated[slot] ? 0 : -1.1;
         figure.alpha = 0.35;
         entity.addChild(figure);
         view.figure = figure;
@@ -310,10 +323,14 @@ export function draw(
     p.ellipse(x, y + 17, 26, 10).fill({ color: C.ink, alpha: 0.2 });
     if (!u) {
       if (art.props) {
-        const cart = new Sprite(art.props[0]);
-        cart.anchor.set(0.5, 0.85);
-        cart.width = 80;
-        cart.height = 80;
+        const cart = new Sprite(
+          art.props[
+            state.outcome === "delivered" ? 7 : state.cart_hp < 2 ? 1 : 0
+          ],
+        );
+        cart.anchor.set(0.5, 0.95);
+        cart.height = 90;
+        cart.scale.x = cart.scale.y;
         cart.position.set(x, y + 19);
         if (state.cart_hp === 0) {
           cart.tint = C.stone;
@@ -381,6 +398,8 @@ export function draw(
           walk: art.poses.walk[slot],
           action: art.poses.action[slot],
           refuse: art.poses.refuse[slot],
+          hit: art.poses.hit[slot],
+          defeated: art.poses.defeated[slot],
         }
       : undefined;
     const texture =
@@ -391,8 +410,8 @@ export function draw(
           : undefined) ?? art.characters?.[slot];
     if (texture) {
       const sprite = new Sprite(texture);
-      sprite.anchor.set(0.5, 0.96);
-      sprite.height = u.role === "captain" || u.role === "supervisor" ? 92 : 84;
+      sprite.anchor.set(0.5, 0.95);
+      sprite.height = u.role === "captain" || u.role === "supervisor" ? 92 : 86;
       sprite.scale.x = sprite.scale.y;
       sprite.position.set(x, y + 19);
       entity.addChild(sprite);
@@ -547,11 +566,13 @@ export function draw(
         .lineTo(x + 35, y + 14)
         .stroke({ color: C.ink, width: 1.5 });
     }
-    if (state.borrow_pending === u.id)
+    if (state.borrow_pending === u.id) {
+      label(hud, "ONE ACTION", x, y - 77, 10, C.dark);
       status
         .circle(x + 28, y + 12, 5)
         .circle(x + 34, y + 12, 5)
         .stroke({ color: C.dark, width: 2 });
+    }
     // Keep the center clear: a full name here covers the next row's figure.
     status
       .roundRect(x - 39, y + 8, 16, 18, 4)
@@ -574,42 +595,51 @@ export function draw(
     f.position.set(x, y + 12);
     hazards.push({ view: f, kind: "fire", phase: c });
     f.ellipse(x, y + 8, 23, 9).fill({ color: 0x8d3a45, alpha: 0.25 });
-    f.poly([
-      x - 16,
-      y + 6,
-      x - 18,
-      y - 10,
-      x - 8,
-      y - 4,
-      x - 2,
-      y - 29,
-      x + 8,
-      y - 14,
-      x + 12,
-      y - 21,
-      x + 19,
-      y + 6,
-      x + 10,
-      y + 13,
-      x - 6,
-      y + 14,
-    ])
-      .fill(0xb65d39)
-      .stroke({ color: 0x79502a, width: 1 });
-    f.poly([
-      x - 7,
-      y + 7,
-      x - 6,
-      y - 6,
-      x,
-      y - 1,
-      x + 6,
-      y - 15,
-      x + 11,
-      y + 7,
-      x + 3,
-      y + 12,
-    ]).fill(0xe9b762);
+    if (art.props?.[4]) {
+      const flame = new Sprite(art.props[4]);
+      flame.anchor.set(0.5, 0.95);
+      flame.height = 65;
+      flame.scale.x = flame.scale.y;
+      flame.position.set(x, y + 12);
+      f.addChild(flame);
+    } else
+      f.poly([
+        x - 16,
+        y + 6,
+        x - 18,
+        y - 10,
+        x - 8,
+        y - 4,
+        x - 2,
+        y - 29,
+        x + 8,
+        y - 14,
+        x + 12,
+        y - 21,
+        x + 19,
+        y + 6,
+        x + 10,
+        y + 13,
+        x - 6,
+        y + 14,
+      ])
+        .fill(0xb65d39)
+        .stroke({ color: 0x79502a, width: 1 });
+    if (!art.props?.[4])
+      f.poly([
+        x - 7,
+        y + 7,
+        x - 6,
+        y - 6,
+        x,
+        y - 1,
+        x + 6,
+        y - 15,
+        x + 11,
+        y + 7,
+        x + 3,
+        y + 12,
+      ]).fill(0xe9b762);
     for (let i = 0; i < 3; i++) {
       const ember = new Graphics().circle(0, 0, 1.4).fill(0xe9b762);
       ember.position.set(x + (i - 1) * 9, y - 10);
@@ -624,10 +654,19 @@ export function draw(
     cloud.pivot.set(x, y);
     cloud.position.set(x, y);
     hazards.push({ view: cloud, kind: "smoke", phase: c });
-    cloud
-      .ellipse(x, y - 4, 31, 18)
-      .fill({ color: C.stone, alpha: 0.88 })
-      .stroke({ color: C.ink, width: 1 });
+    if (art.props?.[5]) {
+      const puff = new Sprite(art.props[5]);
+      puff.anchor.set(0.5, 0.8);
+      puff.width = 68;
+      puff.height = 65;
+      puff.alpha = 0.72;
+      puff.position.set(x, y + 12);
+      cloud.addChild(puff);
+    } else
+      cloud
+        .ellipse(x, y - 4, 31, 18)
+        .fill({ color: C.stone, alpha: 0.88 })
+        .stroke({ color: C.ink, width: 1 });
     label(root, "SMOKE", x, y - 4, 10);
   }
   for (let n = 0; n < 7; n++) {
@@ -635,6 +674,24 @@ export function draw(
     g.roundRect(11, ORIGIN_Y + 23 + n * 64, 18, 18, 3).fill(C.chalk);
     label(root, "ABCDEFG"[n]!, 80 + n * 80, ORIGIN_Y - 12, 13);
     label(root, `${n + 1}`, 20, ORIGIN_Y + 32 + n * 64, 13);
+  }
+  if (art.layers) {
+    const foreground = new Sprite(art.layers.foreground);
+    foreground.position.set(0, 610);
+    foreground.width = 640;
+    foreground.height = 70;
+    root.addChild(foreground);
+  }
+  if (state.setup.policy === "dock" || state.setup.policy === "bridge") {
+    for (let i = 0; i < 8; i++) {
+      const ripple = new Graphics()
+        .moveTo(-12, 0)
+        .quadraticCurveTo(0, -3, 12, 0)
+        .stroke({ color: C.chalk, width: 1.4, alpha: 0.4 });
+      ripple.position.set(48 + i * 76, HEIGHT - 13 - (i % 3) * 5);
+      root.addChild(ripple);
+      hazards.push({ view: ripple, kind: "water", phase: i });
+    }
   }
   root.addChild(labelsLayer);
   return { entities, hazards };

@@ -11,6 +11,7 @@ export interface EntityView {
   figure?: Sprite;
   picket?: Container;
   selection?: Container;
+  depth?: number;
   busy?: boolean;
   defeated?: boolean;
   poses?: {
@@ -18,6 +19,8 @@ export interface EntityView {
     walk?: Texture;
     action?: Texture;
     refuse?: Texture;
+    hit?: Texture;
+    defeated?: Texture;
   };
 }
 export interface HazardView {
@@ -127,8 +130,8 @@ export function planPlayback({ before, events }: Playback) {
     } else if (event.kind === "protected") {
       at = impact ?? cursor;
       duration = 300;
-    } else if (event.kind === "strike") duration = 540;
-    else if (event.kind === "borrowed") duration = 420;
+    } else if (event.kind === "strike") duration = 600;
+    else if (event.kind === "borrowed") duration = 450;
     else if (event.kind === "ended") duration = 350;
     beats.push({ event, id, cell, origin, at, duration, damage });
     cursor = Math.max(cursor, at + duration);
@@ -201,14 +204,33 @@ function beatEffect(root: Container, beat: Beat, before: State) {
     shield(g);
     view.y -= 15;
   } else if (event.kind === "strike") {
-    caption(view, "!", C.enemy, 26).position.set(-22, -40);
+    caption(view, "!", C.enemy, 26).position.set(-22, -50);
+    const order = before.orders.find((o) => o.unit === event.unit);
+    if (order) {
+      const end = cellToScreen(order.endpoint);
+      const dx = end.x - p.x,
+        dy = end.y - p.y;
+      g.moveTo(dx - 12, dy - 12)
+        .lineTo(dx + 12, dy + 12)
+        .moveTo(dx + 12, dy - 12)
+        .lineTo(dx - 12, dy + 12)
+        .stroke({ color: C.enemy, width: 4 });
+    }
     for (let i = 0; i < 5; i++)
       g.rect(Math.cos(i * 1.7) * 24, Math.sin(i * 1.7) * 20, 5, 7).fill(
         i % 2 ? C.chalk : C.enemy,
       );
   } else if (event.kind === "borrowed") {
-    g.circle(0, 0, 30).stroke({ color: C.slate, width: 3 });
-    caption(view, "↔", C.dark, 24).y = -36;
+    const captain = cellToScreen(before.setup.units[0]!.cell);
+    const dx = captain.x - p.x,
+      dy = captain.y - p.y;
+    g.moveTo(dx, dy)
+      .quadraticCurveTo(dx / 2, dy / 2 - 20, 0, 0)
+      .stroke({ color: C.slate, width: 3 });
+    g.poly([-8, -5, 8, -5, 8, 5, -8, 5])
+      .fill(C.chalk)
+      .stroke({ color: C.dark, width: 2 });
+    caption(view, "ONE ACTION", C.dark, 12).y = -60;
   } else if (event.kind === "pushed") {
     for (let i = 0; i < 6; i++)
       g.circle((i - 2.5) * 7, 15 + (i % 2) * 5, 3 + (i % 3)).fill({
@@ -305,6 +327,7 @@ export function playEvents(
       view.body.position.set(0, 0);
       view.labels.position.set(0, 0);
       view.body.alpha = 1;
+      if (view.depth !== undefined) view.body.zIndex = view.depth;
       const pose = poses.get(id);
       if (view.figure && pose) {
         view.figure.position.set(pose.x, pose.y);
@@ -423,14 +446,18 @@ export function playEvents(
         pose = beat.id === null ? null : poses.get(beat.id);
       if (view?.figure && t < 1) {
         const texture =
-          event.kind === "strike" || event.kind === "refused"
-            ? view.poses?.refuse
-            : event.kind === "attacked" ||
-                (event.kind === "guarded" &&
-                  playback.before.setup.units[event.unit]?.role ===
-                    "shieldbearer")
-              ? view.poses?.action
-              : undefined;
+          event.kind === "damaged"
+            ? event.hp === 0
+              ? view.poses?.defeated
+              : view.poses?.hit
+            : event.kind === "strike" || event.kind === "refused"
+              ? view.poses?.refuse
+              : event.kind === "attacked" ||
+                  (event.kind === "guarded" &&
+                    playback.before.setup.units[event.unit]?.role ===
+                      "shieldbearer")
+                ? view.poses?.action
+                : undefined;
         setPose(view, texture);
       }
       if (event.kind === "attacked" && view && t < 1) {
@@ -461,8 +488,17 @@ export function playEvents(
           view.picket.alpha = Math.min(1, t * 4);
           view.picket.scale.set(1 + Math.sin(Math.min(1, t) * Math.PI) * 0.08);
         }
-      } else if (event.kind === "borrowed" && view && t < 1)
-        view.body.y -= weight * 9;
+      } else if (event.kind === "borrowed" && view && t < 1) {
+        const captain = entities.get(0);
+        if (t < 0.55 && captain) {
+          setPose(captain, captain.poses?.action);
+          if (captain.figure) captain.figure.rotation -= weight * 0.04;
+        }
+        if (t >= 0.35) {
+          setPose(view, view.poses?.action);
+          if (view.figure) view.figure.rotation += weight * 0.045;
+        }
+      }
     });
     // A new strike sign enters with the objection, never before its scheduled event.
     for (const beat of plan.beats)
@@ -474,6 +510,8 @@ export function playEvents(
         const sign = entities.get(beat.event.unit)?.picket;
         if (sign) sign.alpha = 0;
       }
+    for (const view of entities.values())
+      if (view.depth !== undefined) view.body.zIndex = view.depth + view.body.y;
     render();
     if (elapsed < plan.duration && !document.hidden)
       frame = requestAnimationFrame(tick);

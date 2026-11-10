@@ -1,5 +1,6 @@
 import type { Action, Choices, State, Unit } from "./types";
 import { coordinate, packages } from "./types";
+import WorkerPortrait from "../near/WorkerPortrait";
 import GameIcon, { type IconName } from "./GameIcon";
 export type Mode = "move" | Action["kind"];
 const hints: Partial<Record<Mode, string>> = {
@@ -26,6 +27,7 @@ interface Props {
   setMode: (mode: Mode) => void;
   propose: (action: Action) => void;
   clearMove: () => void;
+  highlighted?: Action["kind"];
 }
 export default function ActionControls({
   state,
@@ -36,6 +38,7 @@ export default function ActionControls({
   setMode,
   propose,
   clearMove,
+  highlighted,
 }: Props) {
   function ability(
     kind: Mode & IconName,
@@ -43,14 +46,16 @@ export default function ActionControls({
     detail: string,
     spent: boolean,
   ) {
+    if (highlighted && kind !== highlighted) return null;
     return (
       <button
+        data-guide={highlighted === kind || undefined}
         aria-label={name}
         aria-describedby={`ability-${kind}`}
         disabled={spent}
         aria-pressed={mode === kind}
         onClick={() => setMode(kind)}
-        className="flex min-w-0 flex-1 basis-28 items-center gap-2 !rounded-lg !border-brass/40 !bg-muted/50 !px-3 !py-2 text-left aria-pressed:!border-primary aria-pressed:!bg-primary aria-pressed:!text-white"
+        className="data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus flex min-w-0 flex-1 basis-28 items-center gap-2 !rounded-lg !border-brass/40 !bg-[#e8e3d5] !px-3 !py-2 text-left aria-pressed:!border-primary aria-pressed:!bg-primary aria-pressed:!text-white"
       >
         <GameIcon name={kind} className="h-6 w-6 shrink-0" />
         <span className="min-w-0">
@@ -75,13 +80,26 @@ export default function ActionControls({
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-xl">
-          {unit.name}{" "}
-          <span className="font-ui text-xs font-normal capitalize text-secondary">
-            {unit.name.toLowerCase() !== unit.role && <>{unit.role} · </>}
-            {unit.hp} HP
-          </span>
-        </h2>
+        <div className="flex items-center gap-3">
+          <WorkerPortrait
+            token={unit.name.toLowerCase()}
+            className="w-12 shrink-0 rounded-t-full lg:hidden bg-slate/15"
+          />
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-secondary">
+              {state.borrow_pending === unit.id
+                ? "One borrowed action"
+                : "Your order"}
+            </p>
+            <h2 className="text-xl">
+              {unit.name}{" "}
+              <span className="font-ui text-xs font-normal capitalize text-secondary">
+                {unit.name.toLowerCase() !== unit.role && <>{unit.role} · </>}
+                {unit.hp} HP
+              </span>
+            </h2>
+          </div>
+        </div>
         <span className="text-xs text-secondary">
           {path.length
             ? `Move to ${coordinate(path.at(-1)!)}`
@@ -96,38 +114,48 @@ export default function ActionControls({
           )}
         </span>
       </div>
-      <div className="grid min-w-0 gap-3 xl:grid-cols-2">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid min-w-0 gap-3">
+        <div
+          className={`grid grid-cols-2 gap-2 ${highlighted ? "" : "sm:grid-cols-4"}`}
+        >
           <button
             aria-pressed={mode === "move"}
             onClick={() => setMode("move")}
-            className="flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
+            className="data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
           >
             <GameIcon name="move" />
             Move
           </button>
-          <button
-            aria-pressed={mode === "attack"}
-            onClick={() => setMode("attack")}
-            className="flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
-          >
-            <GameIcon name="attack" />
-            Attack
-          </button>
-          <button
-            onClick={() => propose({ kind: "push" })}
-            className={`flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm ${pushAvailable ? "!border-primary !bg-primary !text-white" : ""}`}
-          >
-            <GameIcon name="push" />
-            Push Cart
-          </button>
-          <button
-            onClick={() => propose({ kind: "guard" })}
-            className="flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
-          >
-            <GameIcon name="guard" />
-            Guard
-          </button>
+          {(!highlighted || highlighted === "attack") && (
+            <button
+              data-guide={highlighted === "attack" || undefined}
+              aria-pressed={mode === "attack"}
+              onClick={() => setMode("attack")}
+              className="data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
+            >
+              <GameIcon name="attack" />
+              Attack
+            </button>
+          )}
+          {(!highlighted || highlighted === "push") && (
+            <button
+              data-guide={highlighted === "push" || undefined}
+              onClick={() => propose({ kind: "push" })}
+              className={`data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm ${pushAvailable ? "!border-primary !bg-primary !text-white" : ""}`}
+            >
+              <GameIcon name="push" />
+              Push Cart
+            </button>
+          )}
+          {!highlighted && (
+            <button
+              onClick={() => propose({ kind: "guard" })}
+              className="data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
+            >
+              <GameIcon name="guard" />
+              Guard
+            </button>
+          )}
         </div>
         <div className="flex min-w-0 flex-wrap gap-2">
           {unit.id === 0 ? (
@@ -165,7 +193,7 @@ export default function ActionControls({
           )}
           {unit.id === 0 &&
             options.actions.some((o) => o.action.kind === "borrow") &&
-            ability("borrow", "Borrow", "Command a striker", false)}
+            ability("borrow", "Borrow", "One action · Captain acts", false)}
         </div>
       </div>
       {unit.id === 0 &&

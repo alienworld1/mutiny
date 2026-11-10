@@ -218,8 +218,11 @@ export function createBattleSound() {
         tone(105, 0.16, 0.3, 0.21);
         break;
       case "borrow":
-        tone(330, 0.16, 0.2);
-        tone(440, 0.22, 0.2, 0.1);
+        // A quiet call and answer, aligned with captain then worker.
+        rustle(0.08, 900, 0.2);
+        tone(330, 0.12, 0.2);
+        tone(495, 0.16, 0.2, 0.19);
+        tone(660, 0.1, 0.08, 0.3);
         break;
       case "blocked":
         tone(130, 0.1, 0.15, 0, false, 100);

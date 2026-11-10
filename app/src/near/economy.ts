@@ -212,3 +212,17 @@ export function commissionDifference(payment: string, fee: string) {
   const difference = BigInt(payment) - BigInt(fee);
   return `${difference < 0n ? "−" : ""}${nearAmount((difference < 0n ? -difference : difference).toString())}`;
 }
+
+export function suggestedDelivery(
+  economy: KingdomEconomy,
+): Commission | undefined {
+  if (!economy.enabled) return undefined;
+  return economy.commissions
+    .filter((order) => order.available && order.objective === "routine")
+    .sort(
+      (a, b) =>
+        (economy.towns[a.town_id ?? -1]?.stock.supplies ?? 6) -
+          (economy.towns[b.town_id ?? -1]?.stock.supplies ?? 6) ||
+        (a.town_id ?? 0) - (b.town_id ?? 0),
+    )[0];
+}

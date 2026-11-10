@@ -7,6 +7,11 @@ const refs = JSON.parse(
 const setups = (
   JSON.parse(readFileSync("content/jobs.json", "utf8")) as { setups: Setup[] }
 ).setups;
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("mutiny-first-shift-v1", "skipped"),
+  );
+});
 async function confirm(page: Page) {
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
 }
@@ -85,7 +90,7 @@ for (const reference of refs.filter((r) => r.approach === "delivery")) {
       .getByRole("button", { name: setup.variant, exact: true })
       .click();
     await page
-      .getByRole("combobox", { name: "House worker", exact: true })
+      .getByRole("combobox", { name: "Mercenary", exact: true })
       .selectOption(String(reference.log.config.worker));
     await page
       .getByRole("combobox", { name: "Fine print", exact: true })
@@ -138,7 +143,7 @@ test("Borrow preview, pending refresh, temporary command and recovery", async ({
     }),
   ).toBeVisible();
   await confirm(page);
-  await expect(page.locator('[data-cell="32"]')).toHaveAccessibleName(
+  await expect(page.locator('[data-cell="25"]')).toHaveAccessibleName(
     /Captain, player/,
   );
   await page.reload();
@@ -165,13 +170,13 @@ test("Infiltration is enemy controlled and crew setup survives refresh", async (
   await page.getByRole("button", { name: "Job Board", exact: true }).click();
   await page.getByRole("button", { name: "Toll Gate", exact: true }).click();
   await page
-    .getByRole("combobox", { name: "House worker", exact: true })
+    .getByRole("combobox", { name: "Mercenary", exact: true })
     .selectOption("2");
   await page
     .getByRole("combobox", { name: "Placement", exact: true })
     .selectOption("infiltration");
   await expect(
-    page.getByText("The enemy commands Wisp.", { exact: false }),
+    page.getByText("Wisp joins the enemy.", { exact: false }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await expect(
@@ -194,7 +199,7 @@ test("explicit friendly-fire self-refusal preview and commit", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "Job Board", exact: true }).click();
   await page
-    .getByRole("combobox", { name: "House worker", exact: true })
+    .getByRole("combobox", { name: "Mercenary", exact: true })
     .selectOption("2");
   await page.getByRole("button", { name: "Play", exact: true }).click();
   await page.getByRole("button", { name: /^Wisp / }).click();

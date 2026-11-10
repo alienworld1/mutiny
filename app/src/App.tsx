@@ -37,6 +37,18 @@ import BattleHud from "./game/BattleHud";
 import CrewRoster from "./game/CrewRoster";
 import EnemyOrders from "./game/EnemyOrders";
 import SoundControls from "./game/SoundControls";
+import FirstShift from "./game/FirstShift";
+import FieldGuide from "./game/FieldGuide";
+import {
+  guideTarget,
+  firstShiftCommands,
+  firstShiftConfig,
+  firstShiftKey,
+  firstShiftStep,
+  readGuidePreference,
+  saveGuidePreference,
+  sameCommand,
+} from "./game/firstShift";
 import { createBattleSound } from "./game/sound";
 import ContractJobs from "./near/ContractJobs";
 import { useContractJob } from "./near/useContractJob";
@@ -120,6 +132,7 @@ function App() {
   const [storageWarning, setStorageWarning] = useState("");
   const [focusedOrder, setFocusedOrder] = useState<number | null>(null);
   const [restart, setRestart] = useState(false);
+  const [firstShift, setFirstShift] = useState(false);
   useEffect(() => {
     let cancelled = false;
     void engine
@@ -171,6 +184,14 @@ function App() {
     setPreview(null);
     setFocusedOrder(null);
   }
+  function viewCompany() {
+    requestId.current++;
+    clearSelection();
+    setFirstShift(false);
+    setContractBattle(false);
+    setScreen({ kind: "home" });
+    openJobs("contract");
+  }
   async function resumeContract() {
     sound.unlock();
     const id = ++requestId.current;
@@ -178,6 +199,7 @@ function App() {
       const state = await contract.resume();
       if (id !== requestId.current) return;
       setContractBattle(true);
+      setFirstShift(false);
       clearSelection();
       setHistory([]);
       setFeedback([]);
@@ -191,7 +213,7 @@ function App() {
       setStorageWarning(message(error));
     }
   }
-  async function play(fresh = false, config?: Configuration) {
+  async function play(fresh = false, config?: Configuration, lesson = false) {
     sound.unlock();
     setPlaybackBusy(false);
     setContractBattle(false);
@@ -206,6 +228,7 @@ function App() {
             ? screen.state.log.config
             : engine.start().log.config),
       );
+      let newPlayer = false;
       if (!fresh) {
         try {
           const saved = await readProgress();
@@ -214,13 +237,28 @@ function App() {
             nextId = saved.draft.id;
           }
           setProgress(saved);
+          newPlayer = saved.attempts.length === 0;
         } catch {
+          newPlayer = true;
           setStorageWarning(
             "Your previous job could not be opened. A new job is ready.",
           );
         }
       }
       if (requestId.current !== id) return;
+      const preference = readGuidePreference(firstShiftKey);
+      const guided =
+        lesson ||
+        (firstShiftStep(state) !== null &&
+          (preference === "pending" || (newPlayer && preference === "new")));
+      setFirstShift(guided);
+      if (guided)
+        saveGuidePreference(
+          firstShiftKey,
+          firstShiftStep(state) === firstShiftCommands.length
+            ? "complete"
+            : "pending",
+        );
       attemptId.current = nextId;
       clearSelection();
       if (state.borrow_pending !== null) setSelected(state.borrow_pending);
@@ -245,7 +283,30 @@ function App() {
     }
   }
   const state = screen.kind === "battle" ? screen.state : null;
+  const lessonStep = firstShift && state ? firstShiftStep(state) : null;
+  const guidedCommand =
+    lessonStep !== null ? firstShiftCommands[lessonStep] : undefined;
+  const highlightedCell =
+    state && lessonStep !== null && !preview
+      ? guideTarget(lessonStep, selected, path, mode, state)
+      : null;
   const inBattle = screen.kind === "battle";
+  useEffect(() => {
+    if (
+      lessonStep === null ||
+      playbackBusy ||
+      (lessonStep === 0 && selected === null)
+    )
+      return;
+    const frame = requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>("[data-guide=true]");
+      if (!target) return;
+      const bounds = target.getBoundingClientRect();
+      if (bounds.top < 0 || bounds.bottom > window.innerHeight)
+        target.scrollIntoView({ block: "center", behavior: "auto" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [lessonStep, selected, mode, highlightedCell, preview, playbackBusy]);
   useEffect(() => {
     const visibility = () => sound.setActive(inBattle && !document.hidden);
     visibility();
@@ -265,11 +326,22 @@ function App() {
       /* A spent or knocked-out unit has no commands. */
     }
   }
+  function borrow(id: number) {
+    const plannedPath = selected === 0 ? path : [];
+    clearSelection();
+    setSelected(0);
+    proposeCommand({
+      kind: "activate",
+      unit: 0,
+      path: plannedPath,
+      action: { kind: "borrow", target: id },
+    });
+  }
   function canBorrow(id: number) {
     if (!state) return false;
     try {
       return engine
-        .choices(state.log, 0, [])
+        .choices(state.log, 0, selected === 0 ? path : [])
         .actions.some(
           (o) => o.action.kind === "borrow" && o.action.target === id,
         );
@@ -289,6 +361,12 @@ function App() {
   }
   function proposeCommand(command: Command) {
     if (!state || playbackBusy) return;
+    if (guidedCommand && !sameCommand(command, guidedCommand)) {
+      setNotice(
+        "Follow the highlighted step, or skip the guide to choose your own plan.",
+      );
+      return;
+    }
     try {
       const result = engine.apply(state.log, command);
       const forecast =
@@ -315,6 +393,7 @@ function App() {
     // Re-apply against current log, so a stale preview can never commit old state.
     try {
       const next = engine.apply(state.log, preview.command);
+      if (guidedCommand && !sameCommand(preview.command, guidedCommand)) return;
       if (contractBattle) await contract.persistLog(next.state.log);
       if (id !== requestId.current) return;
       setScreen({ kind: "battle", state: next.state });
@@ -337,6 +416,12 @@ function App() {
       );
       setNotice("");
       clearSelection();
+      if (firstShift && firstShiftStep(next.state) === 1) setFocusedOrder(4);
+      if (
+        firstShift &&
+        firstShiftStep(next.state) === firstShiftCommands.length
+      )
+        saveGuidePreference(firstShiftKey, "complete");
       if (next.state.borrow_pending !== null)
         setSelected(next.state.borrow_pending);
       if (!contractBattle) persist(next.state);
@@ -426,7 +511,7 @@ function App() {
     <main
       className={
         state
-          ? "min-h-svh bg-theatre px-2 py-2 sm:px-5 sm:py-3"
+          ? "min-h-svh bg-ink px-2 py-2 sm:px-5 sm:py-3"
           : "mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-5"
       }
       onPointerDownCapture={() => {
@@ -471,13 +556,13 @@ function App() {
       {screen.kind === "home" && menu === "title" && (
         <section
           aria-label="Welcome to Mutiny"
-          className="relative isolate min-h-[620px] overflow-hidden rounded-[18px] border border-border bg-muted shadow-panel sm:min-h-[680px]"
+          className="relative isolate min-h-[620px] overflow-hidden rounded-[18px] border-b-8 border-brass bg-muted shadow-panel sm:min-h-[680px]"
         >
           <img
             src="/assets/art/dock.webp"
             alt="A tiny harbor with timber warehouses and a winding quay"
             fetchPriority="high"
-            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-top"
           />
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-chalk via-chalk/90 to-chalk/0 max-md:bg-gradient-to-b max-md:from-chalk/95 max-md:via-chalk/85 max-md:to-transparent" />
           <div className="relative z-10 max-w-xl px-6 py-10 sm:px-12 sm:py-16">
@@ -501,24 +586,44 @@ function App() {
                 Play Free
               </button>
               <button onClick={() => openJobs()}>Job Board</button>
-              <button
-                className="!bg-paper/80"
-                onClick={() => openJobs("contract")}
-              >
-                Run a company
-              </button>
+              <div className="mt-3 border-t border-border pt-4">
+                <button
+                  className="w-full !bg-paper/80"
+                  onClick={() => openJobs("contract")}
+                >
+                  Deliver supplies
+                </button>
+                <p className="mt-2 text-center text-xs text-secondary">
+                  Hire a crew. Restore the towns.
+                </p>
+                <p className="mt-1 text-center text-xs text-secondary">
+                  NEAR testnet
+                </p>
+              </div>
             </div>
             <p className="mt-4 text-sm text-secondary">
-              One cart. Five rounds. About five minutes.
+              5 rounds · About 5 minutes
             </p>
           </div>
           <div
             aria-hidden="true"
             className="pointer-events-none absolute bottom-0 right-0 flex w-[65%] items-end justify-end max-md:w-[55%]"
           >
-            <WorkerPortrait token="rook" className="-mr-8 w-[40%] -rotate-3" />
-            <WorkerPortrait token="captain" className="-mr-7 w-[48%]" />
-            <WorkerPortrait token="mallow" className="w-[45%] rotate-3" />
+            <WorkerPortrait
+              fullBody
+              token="rook"
+              className="-mr-8 w-[40%] -rotate-3"
+            />
+            <WorkerPortrait
+              fullBody
+              token="captain"
+              className="-mr-7 w-[48%]"
+            />
+            <WorkerPortrait
+              fullBody
+              token="mallow"
+              className="w-[45%] rotate-3"
+            />
           </div>
         </section>
       )}
@@ -547,6 +652,8 @@ function App() {
               setConfig={setConfig}
               inBattle={false}
               onResume={() => void resumeContract()}
+              onCompany={viewCompany}
+              onLearn={() => void play(true, firstShiftConfig, true)}
             />
           }
         />
@@ -567,7 +674,7 @@ function App() {
         </section>
       )}
       {state && (
-        <div className="mx-auto max-w-[900px]">
+        <div className="mx-auto max-w-[760px] lg:max-w-[min(1040px,max(800px,calc((100svh-220px)*640/680+356px)))]">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1 text-paper">
             <span className="font-display text-lg">
               MUTINY{" "}
@@ -621,311 +728,365 @@ function App() {
               {storageWarning}
             </p>
           )}
-          <div className="relative overflow-hidden rounded-t-2xl bg-chalk shadow-floating">
-            <div className="bg-chalk">
-              <BattleHud state={state} headingRef={battleHeading} />
-            </div>
-            <div className="relative bg-[radial-gradient(ellipse_at_top,var(--color-stage-floor),var(--color-theatre))]">
-              <div className="relative mx-auto w-full lg:max-w-[min(100%,max(500px,calc((100svh-460px)*640/624)))]">
-                {preview && (
-                  <p className="absolute inset-x-0 top-0 z-10 bg-ink px-3 py-1 text-center text-xs font-bold text-paper">
-                    PREVIEW · Confirm to apply
-                  </p>
-                )}
-                <Suspense
-                  fallback={
-                    <p
-                      role="status"
-                      className="flex aspect-square items-center justify-center rounded-2xl bg-muted"
-                    >
-                      Opening the stage…
-                    </p>
-                  }
-                >
-                  <PixiStage
-                    state={preview?.result.state ?? state}
-                    selected={selected}
-                    path={path}
-                    reachable={
-                      preview || mode !== "move"
-                        ? []
-                        : options.moves.map((m) => m.cell)
-                    }
-                    targets={
-                      preview
-                        ? []
-                        : options.actions
-                            .filter(
-                              (o) =>
-                                o.action.kind === mode &&
-                                (mode !== "shove" ||
-                                  shoveTarget === null ||
-                                  ("target" in o.action &&
-                                    o.action.target === shoveTarget)),
-                            )
-                            .flatMap((o) =>
-                              mode === "shove" &&
-                              shoveTarget === null &&
-                              "target" in o.action
-                                ? [state.setup.units[o.action.target]!.cell]
-                                : o.cells,
-                            )
-                    }
-                    focusedOrder={focusedOrder}
-                    playback={preview ? null : playback}
-                    onCell={cellClick}
-                    disabled={playbackBusy}
-                    sound={sound}
-                    onPlaybackDone={playbackDone}
-                  />
-                </Suspense>
-              </div>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-1">
-                <span className="rounded bg-ink/85 px-3 py-1 text-xs text-paper">
-                  Deliver the cart to the flag
-                </span>
-              </div>
-            </div>
-            <EnemyOrders
-              state={state}
-              focused={focusedOrder}
-              locked={playbackBusy || !!preview}
-              onFocus={setFocusedOrder}
-              canBorrow={canBorrow}
-              onBorrow={(id) => {
-                clearSelection();
-                setSelected(0);
-                proposeCommand({
-                  kind: "activate",
-                  unit: 0,
-                  path: [],
-                  action: { kind: "borrow", target: id },
-                });
+          {lessonStep !== null && !state.outcome && (
+            <FirstShift
+              step={lessonStep}
+              preview={!!preview}
+              busy={playbackBusy}
+              onSkip={() => {
+                saveGuidePreference(
+                  firstShiftKey,
+                  lessonStep >= firstShiftCommands.length
+                    ? "complete"
+                    : "skipped",
+                );
+                setFirstShift(false);
+                setNotice("");
               }}
             />
-          </div>
-          <div className="rounded-b-2xl border-t-4 border-brass bg-paper px-3 py-3 shadow-floating sm:px-5">
-            {state.outcome && !playbackBusy ? (
-              <section
-                aria-label="Job result"
-                className="result-stamp border-l-4 border-primary bg-paper p-5 sm:p-6"
-              >
-                <p className="text-xs uppercase tracking-[.16em] text-secondary">
-                  {contractBattle ? "Contract Job result" : "Free Play result"}
-                </p>
-                <h2 className="my-2 text-4xl">{outcomeText(state.outcome)}</h2>
-                <p className="text-secondary">
-                  {state.outcome === "delivered"
-                    ? "The wages arrived. Morale remains under review."
-                    : "The paperwork survived. Try another plan."}
-                </p>
-                <p className="my-5">
-                  Round {state.round} · Cart {state.cart_hp}/2 HP ·{" "}
-                  {state.strikes} {state.strikes === 1 ? "strike" : "strikes"} ·{" "}
-                  {state.setup.units.some((u) => u.borrowed)
-                    ? "Borrow"
-                    : "No Borrow"}
-                </p>
-                <ul className="mb-4 flex flex-wrap gap-2 text-sm">
-                  {goals(summarize(state)).map((earned, i) => (
-                    <li
-                      key={goalNames[i]}
-                      className={
-                        earned ? "font-bold text-primary" : "text-secondary"
-                      }
-                    >
-                      {earned ? "✓ " : "○ "}
-                      {goalNames[i]}
-                    </li>
-                  ))}
-                </ul>
-                {!contractBattle && (
-                  <div className="mb-4 space-y-3">
-                    <ResultLine
-                      label="Previous"
-                      result={progress.ledger[state.setup.id]?.previous}
-                    />
-                    <ResultLine
-                      label="Fastest clear"
-                      result={progress.ledger[state.setup.id]?.best}
-                    />
-                  </div>
-                )}
-                {!contractBattle && (
-                  <button className={primary} onClick={() => void play(true)}>
-                    Play Again
-                  </button>
-                )}
-              </section>
-            ) : (
-              <section aria-label="Crew actions" aria-busy={playbackBusy}>
-                <div className="flex flex-wrap items-stretch gap-3">
-                  <div className="min-w-0 flex-1 basis-64">
-                    <CrewRoster
-                      state={state}
-                      selected={selected}
-                      locked={!!preview || playbackBusy}
-                      onSelect={select}
-                    />
-                  </div>
-                  {!preview &&
-                    state.borrow_pending === null &&
-                    !state.outcome && (
-                      <button
-                        className={`${primary} min-w-28 self-stretch !border-b-4 !border-b-primary-hover !px-5 font-display text-lg`}
-                        disabled={playbackBusy}
-                        onClick={() => proposeCommand({ kind: "end_phase" })}
+          )}
+          <div className="grid items-start gap-0 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-3">
+            <div className="relative overflow-hidden rounded-t-xl border-x border-brass/40 bg-chalk shadow-floating lg:rounded-b-xl">
+              <div className="border-b-4 border-brass bg-paper px-2 py-1">
+                <BattleHud state={state} headingRef={battleHeading} />
+              </div>
+              <div className="relative bg-stage-floor">
+                <div className="relative mx-auto w-full">
+                  {preview && (
+                    <p className="absolute inset-x-0 top-0 z-10 bg-ink px-3 py-1 text-center text-xs font-bold text-paper">
+                      PREVIEW · Confirm to apply
+                    </p>
+                  )}
+                  <Suspense
+                    fallback={
+                      <p
+                        role="status"
+                        className="flex aspect-square items-center justify-center rounded-2xl bg-muted"
                       >
-                        End Phase
+                        Opening the stage…
+                      </p>
+                    }
+                  >
+                    <PixiStage
+                      state={preview?.result.state ?? state}
+                      selected={selected}
+                      path={path}
+                      reachable={
+                        preview || mode !== "move"
+                          ? []
+                          : options.moves.map((m) => m.cell)
+                      }
+                      targets={
+                        preview
+                          ? []
+                          : options.actions
+                              .filter(
+                                (o) =>
+                                  o.action.kind === mode &&
+                                  (mode !== "shove" ||
+                                    shoveTarget === null ||
+                                    ("target" in o.action &&
+                                      o.action.target === shoveTarget)),
+                              )
+                              .flatMap((o) =>
+                                mode === "shove" &&
+                                shoveTarget === null &&
+                                "target" in o.action
+                                  ? [state.setup.units[o.action.target]!.cell]
+                                  : o.cells,
+                              )
+                      }
+                      focusedOrder={focusedOrder}
+                      guideCell={highlightedCell}
+                      playback={preview ? null : playback}
+                      onCell={cellClick}
+                      canBorrow={(id) =>
+                        !preview && !state.outcome && canBorrow(id)
+                      }
+                      onBorrow={borrow}
+                      disabled={playbackBusy}
+                      sound={sound}
+                      onPlaybackDone={playbackDone}
+                    />
+                  </Suspense>
+                </div>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-1">
+                  <span className="rounded bg-ink/85 px-3 py-1 text-xs text-paper">
+                    Deliver the cart to the flag
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-b-xl border-x border-b-4 border-brass bg-paper px-3 py-3 shadow-floating sm:px-5 lg:rounded-t-xl lg:border-t-4 lg:px-3 lg:max-h-[calc(100svh-72px)] lg:overflow-y-auto">
+              <EnemyOrders
+                state={state}
+                focused={focusedOrder}
+                locked={playbackBusy || !!preview}
+                onFocus={setFocusedOrder}
+                canBorrow={canBorrow}
+                onBorrow={borrow}
+              />
+              {state.outcome && !playbackBusy ? (
+                <section
+                  aria-label="Job result"
+                  className={`result-stamp relative overflow-hidden border-l-4 ${state.outcome === "delivered" ? "border-primary" : "border-danger"} bg-paper p-5 sm:p-6`}
+                >
+                  <p className="text-xs uppercase tracking-[.16em] text-secondary">
+                    {contractBattle
+                      ? "Contract Job result"
+                      : "Free Play result"}
+                  </p>
+                  <div className="my-3 flex items-center gap-4">
+                    <WorkerPortrait
+                      token={
+                        state.outcome === "delivered" ? "rook" : "supervisor"
+                      }
+                      className="w-20 shrink-0 rounded-t-full bg-brass/15"
+                    />
+                    <h2
+                      className={`-rotate-2 border-y-2 px-3 py-1 text-3xl uppercase tracking-wide sm:text-4xl ${state.outcome === "delivered" ? "border-primary text-primary" : "border-danger text-danger"}`}
+                    >
+                      {outcomeText(state.outcome)}
+                    </h2>
+                  </div>
+                  <p className="text-secondary">
+                    {state.outcome === "delivered"
+                      ? "The wages arrived. Morale remains under review."
+                      : "The paperwork survived. Try another plan."}
+                  </p>
+                  <p className="my-5">
+                    Round {state.round} · Cart {state.cart_hp}/2 HP ·{" "}
+                    {state.strikes} {state.strikes === 1 ? "strike" : "strikes"}{" "}
+                    ·{" "}
+                    {state.setup.units.some((u) => u.borrowed)
+                      ? "Borrow"
+                      : "No Borrow"}
+                  </p>
+                  <ul className="mb-4 flex flex-wrap gap-2 text-sm">
+                    {goals(summarize(state)).map((earned, i) => (
+                      <li
+                        key={goalNames[i]}
+                        className={
+                          earned ? "font-bold text-primary" : "text-secondary"
+                        }
+                      >
+                        {earned ? "✓ " : "○ "}
+                        {goalNames[i]}
+                      </li>
+                    ))}
+                  </ul>
+                  {!contractBattle && (
+                    <div className="mb-4 space-y-3">
+                      <ResultLine
+                        label="Previous"
+                        result={progress.ledger[state.setup.id]?.previous}
+                      />
+                      <ResultLine
+                        label="Fastest clear"
+                        result={progress.ledger[state.setup.id]?.best}
+                      />
+                    </div>
+                  )}
+                  {!contractBattle && (
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        className={primary}
+                        onClick={() => void play(true)}
+                      >
+                        Play Again
+                      </button>
+                      <button
+                        onClick={() => {
+                          clearSelection();
+                          setMenu("jobs");
+                          setScreen({ kind: "home" });
+                        }}
+                      >
+                        Try Another Route
+                      </button>
+                      <button onClick={viewCompany}>Deliver supplies</button>
+                    </div>
+                  )}
+                </section>
+              ) : (
+                <section aria-label="Crew actions" aria-busy={playbackBusy}>
+                  <div className="flex flex-wrap items-stretch gap-3">
+                    <div className="min-w-0 flex-1 basis-64">
+                      <CrewRoster
+                        state={state}
+                        selected={selected}
+                        locked={!!preview || playbackBusy}
+                        highlighted={
+                          guidedCommand &&
+                          "unit" in guidedCommand &&
+                          selected !== guidedCommand.unit
+                            ? guidedCommand.unit
+                            : undefined
+                        }
+                        onSelect={select}
+                      />
+                    </div>
+                    {!preview &&
+                      state.borrow_pending === null &&
+                      !state.outcome && (
+                        <button
+                          className={`${primary} data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus min-w-28 self-stretch !border-b-4 !border-b-primary-hover !px-5 font-display text-lg`}
+                          disabled={playbackBusy}
+                          data-guide={
+                            guidedCommand?.kind === "end_phase" || undefined
+                          }
+                          onClick={() => proposeCommand({ kind: "end_phase" })}
+                        >
+                          End Phase
+                        </button>
+                      )}
+                  </div>
+                  <fieldset
+                    disabled={playbackBusy}
+                    className="mt-3 min-w-0 border-0 p-0"
+                  >
+                    {unit && !state.activated.includes(unit.id) && !preview ? (
+                      <ActionControls
+                        state={state}
+                        unit={unit}
+                        path={path}
+                        mode={mode}
+                        options={options}
+                        setMode={setMode}
+                        propose={propose}
+                        clearMove={() => setPath([])}
+                        highlighted={
+                          guidedCommand &&
+                          "action" in guidedCommand &&
+                          selected === guidedCommand.unit
+                            ? guidedCommand.action.kind
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      !preview && <h2 className="sr-only">Your orders</h2>
+                    )}
+                    {state.borrow_pending !== null && !preview && (
+                      <button
+                        className="mt-3"
+                        onClick={() =>
+                          proposeCommand({
+                            kind: "skip_borrow",
+                            unit: state.borrow_pending!,
+                          })
+                        }
+                      >
+                        Skip Borrow
                       </button>
                     )}
-                </div>
-                <fieldset
-                  disabled={playbackBusy}
-                  className="mt-3 min-w-0 border-0 p-0"
-                >
-                  {unit && !state.activated.includes(unit.id) && !preview ? (
-                    <ActionControls
-                      state={state}
-                      unit={unit}
-                      path={path}
-                      mode={mode}
-                      options={options}
-                      setMode={setMode}
-                      propose={propose}
-                      clearMove={() => setPath([])}
-                    />
-                  ) : (
-                    !preview && <h2 className="sr-only">Your orders</h2>
-                  )}
-                  {state.borrow_pending !== null && !preview && (
-                    <button
-                      className="mt-3"
-                      onClick={() =>
-                        proposeCommand({
-                          kind: "skip_borrow",
-                          unit: state.borrow_pending!,
-                        })
-                      }
-                    >
-                      Skip Borrow
-                    </button>
-                  )}
-                  {preview && (
-                    <div className="border-l-4 border-primary bg-muted/50 px-3 py-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="font-ui text-xs uppercase tracking-wide text-secondary">
-                            Preview
-                          </h3>
-                          <p className="font-display text-lg">
-                            {"action" in preview.command
-                              ? actionText(preview.command.action, state)
-                              : preview.command.kind === "end_phase"
-                                ? "Resolve enemy orders"
-                                : "Skip borrowed action"}
-                          </p>
+                    {preview && (
+                      <div className="border-l-4 border-primary bg-muted/50 px-3 py-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="font-ui text-xs uppercase tracking-wide text-secondary">
+                              Preview
+                            </h3>
+                            <p className="font-display text-lg">
+                              {"action" in preview.command
+                                ? actionText(preview.command.action, state)
+                                : preview.command.kind === "end_phase"
+                                  ? "Resolve enemy orders"
+                                  : "Skip borrowed action"}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              autoFocus
+                              data-guide={!!guidedCommand || undefined}
+                              className={`${primary} data-[guide=true]:outline-2 data-[guide=true]:outline-offset-2 data-[guide=true]:outline-focus`}
+                              onClick={commit}
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPreview(null);
+                                setNotice("Preview cancelled.");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            autoFocus
-                            className={primary}
-                            onClick={commit}
-                          >
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPreview(null);
-                              setNotice("Preview cancelled.");
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                      <BattleFeedback
-                        compact
-                        events={preview.result.events.filter(
-                          (e) =>
-                            ![
-                              "moved",
-                              "attacked",
-                              "recovering",
-                              "guarded",
-                            ].includes(e.kind),
+                        {"action" in preview.command &&
+                          preview.command.action.kind === "borrow" && (
+                            <p className="mt-2 text-sm font-semibold">
+                              One action. Uses your captain’s action.
+                            </p>
+                          )}
+                        <BattleFeedback
+                          compact
+                          events={preview.result.events.filter(
+                            (e) =>
+                              ![
+                                "moved",
+                                "attacked",
+                                "recovering",
+                                "guarded",
+                              ].includes(e.kind),
+                          )}
+                          state={preview.result.state}
+                        />
+                        {preview.forecast.length > 0 && (
+                          <div className="mt-2 border-l-2 border-oxblood pl-3">
+                            <h4 className="text-xs font-semibold text-secondary">
+                              If you end now
+                            </h4>
+                            <BattleFeedback
+                              compact
+                              events={preview.forecast}
+                              state={preview.result.state}
+                            />
+                          </div>
                         )}
-                        state={preview.result.state}
-                      />
-                      {preview.forecast.length > 0 && (
-                        <div className="mt-2 border-l-2 border-oxblood pl-3">
-                          <h4 className="text-xs font-semibold text-secondary">
-                            If you end now
-                          </h4>
-                          <BattleFeedback
-                            compact
-                            events={preview.forecast}
-                            state={preview.result.state}
-                          />
-                        </div>
-                      )}
-                      {preview.result.events.some(
-                        (e) => e.kind === "refused",
-                      ) && (
-                        <p className="mt-2 text-sm font-semibold text-danger">
-                          This command will be refused. Confirm to spend the
-                          activation with no effect.
-                        </p>
-                      )}
-                      {preview.command.kind === "end_phase" && (
-                        <p className="mt-2 text-xs text-secondary">
-                          Unused crew actions will be lost.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </fieldset>
-                <div
-                  role="status"
-                  aria-live="polite"
-                  aria-atomic="true"
-                  className="mt-2"
-                >
-                  {notice ? (
-                    <p className="text-sm text-secondary">{notice}</p>
-                  ) : !preview && !unit && feedback.length > 0 ? (
-                    <div className="border-l-2 border-brass pl-3">
-                      <h3 className="sr-only">Last action</h3>
-                      <BattleFeedback
-                        compact
-                        events={
-                          feedback.length > 1
-                            ? feedback.filter((e) => e.kind !== "guarded")
-                            : feedback
-                        }
-                        state={state}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-            )}
-            {contractBattle &&
-              (state.outcome ? (
-                <ContractJobs
-                  controller={contract}
-                  setups={setups}
-                  config={config}
-                  setConfig={setConfig}
-                  inBattle
-                  onResume={() => void resumeContract()}
-                />
-              ) : (
-                <details className="rounded-xl border border-border bg-paper px-4 py-2 text-sm">
-                  <summary className="min-h-11 cursor-pointer py-3 font-semibold">
-                    Contract Job ·{" "}
-                    {contract.worker?.character ?? "Hired worker"}
-                  </summary>
+                        {preview.result.events.some(
+                          (e) => e.kind === "refused",
+                        ) && (
+                          <p className="mt-2 text-sm font-semibold text-danger">
+                            This command will be refused. Confirm to spend the
+                            activation with no effect.
+                          </p>
+                        )}
+                        {preview.command.kind === "end_phase" && (
+                          <p className="mt-2 text-xs text-secondary">
+                            Unused crew actions will be lost.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </fieldset>
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                    className="mt-2"
+                  >
+                    {notice ? (
+                      <p className="text-sm text-secondary">{notice}</p>
+                    ) : !preview && !unit && feedback.length > 0 ? (
+                      <div className="border-l-2 border-brass pl-3">
+                        <h3 className="sr-only">Last action</h3>
+                        <BattleFeedback
+                          compact
+                          events={
+                            feedback.length > 1
+                              ? feedback.filter((e) => e.kind !== "guarded")
+                              : feedback
+                          }
+                          state={state}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              )}
+              {contractBattle &&
+                (state.outcome ? (
                   <ContractJobs
                     controller={contract}
                     setups={setups}
@@ -933,46 +1094,48 @@ function App() {
                     setConfig={setConfig}
                     inBattle
                     onResume={() => void resumeContract()}
+                    onCompany={viewCompany}
                   />
-                </details>
-              ))}
+                ) : (
+                  <details className="rounded-xl border border-border bg-paper px-4 py-2 text-sm">
+                    <summary className="min-h-11 cursor-pointer py-3 font-semibold">
+                      Contract Job ·{" "}
+                      {contract.worker?.character ?? "Hired worker"}
+                    </summary>
+                    <ContractJobs
+                      controller={contract}
+                      setups={setups}
+                      config={config}
+                      setConfig={setConfig}
+                      inBattle
+                      onResume={() => void resumeContract()}
+                      onCompany={viewCompany}
+                    />
+                  </details>
+                ))}
 
-            <div className="mt-3 flex flex-wrap gap-x-8 border-t border-border text-sm">
-              <details className="mt-4 border-t border-border pt-3">
-                <summary className="cursor-pointer py-2 font-semibold">
-                  How to play
-                </summary>
-                <p className="mt-2 text-sm text-secondary">
-                  Push the cart to the flag in five rounds. Keep the cart and
-                  captain alive. Each unit can move, then act once per round.
-                </p>
-                <p className="mt-2 text-sm text-secondary">
-                  Enemy orders are fixed for the round. A new breach of their
-                  fine print causes a strike. An ordinary blocked order does
-                  not.
-                </p>
-                <p className="mt-2 text-sm text-secondary">
-                  Guard blocks one hit this enemy phase. Arrow keys move board
-                  focus; Enter selects.
-                </p>
-              </details>
-              {history.length > 0 && (
-                <details className="mt-3 border-t border-border pt-3">
-                  <summary className="cursor-pointer py-2 text-sm text-secondary">
-                    Battle log
-                  </summary>
-                  <div className="max-h-80 space-y-5 overflow-y-auto py-3">
-                    {history.map((batch, i) => (
-                      <section key={i}>
-                        <h3 className="mb-2 !font-ui text-xs font-semibold uppercase tracking-wide text-secondary">
-                          {batch.label}
-                        </h3>
-                        <BattleFeedback events={batch.events} state={state} />
-                      </section>
-                    ))}
-                  </div>
-                </details>
-              )}
+              <div className="mt-3 flex flex-wrap gap-x-8 border-t border-border text-sm">
+                <FieldGuide
+                  onReplay={() => void play(true, firstShiftConfig, true)}
+                />
+                {history.length > 0 && (
+                  <details className="mt-3 border-t border-border pt-3">
+                    <summary className="cursor-pointer py-2 text-sm text-secondary">
+                      Battle log
+                    </summary>
+                    <div className="max-h-80 space-y-5 overflow-y-auto py-3">
+                      {history.map((batch, i) => (
+                        <section key={i}>
+                          <h3 className="mb-2 !font-ui text-xs font-semibold uppercase tracking-wide text-secondary">
+                            {batch.label}
+                          </h3>
+                          <BattleFeedback events={batch.events} state={state} />
+                        </section>
+                      ))}
+                    </div>
+                  </details>
+                )}
+              </div>
             </div>
           </div>
         </div>

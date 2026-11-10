@@ -4,6 +4,7 @@ async function open(page: Page) {
   await page.route(/https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
   await page.goto("/");
   await page.getByRole("button", { name: "Play Free", exact: true }).click();
+  await page.getByRole("button", { name: "Skip guide", exact: true }).click();
   await expect(page.locator('[data-art="ready"]')).toBeVisible();
 }
 async function confirm(page: Page) {

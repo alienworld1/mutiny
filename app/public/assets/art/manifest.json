@@ -1,64 +1,313 @@
 {
-  "source": "OpenAI built-in imagegen, November 2026",
-  "export": "Generate from the briefs below, inspect the alpha and cell boundaries, then export with ImageMagick: convert source.png -quality 88 output.webp. Scenery is resized to 1280px wide at quality 85. Runtime uses only these local WebP exports.",
-  "style_prompt": "Painterly gouache illustration for Mutiny: The Fine Print. A handcrafted miniature fantasy theatre, shallow orthographic three-quarter view, endearing adult characters, soft diffuse daylight, gentle contact shadows, tactile painted wood, fabric, plaster, stone and brass. Chalk, lichen, meadow, slate blue, oxblood, clay and brass palette. Crisp silhouettes and restrained brushed texture. No photorealism, pixel art, glossy 3D, text, letters, UI, grid or watermark.",
-  "scenery": {
-    "dock.webp": {
-      "brief": "A tiny patched wooden quay stage surrounded by blue-green water. Warehouse facade, ochre roofs, coiled rope, cargo and mooring posts only in outer margins. Painted theatre framing. Keep the central floor empty, evenly lit and flat, with subtle plank seams. No people, fire or smoke hazards.",
-      "size": [1280, 1120]
-    },
-    "bridge.webp": {
-      "brief": "A broad rectangular stone bridge checkpoint stage over a slate-blue canal. Tiny official gatehouses, moss, low parapets and banners only in outer margins. Keep the central warm grey paving empty and evenly lit. No people, fire, smoke or barriers inside the playing floor.",
-      "size": [1280, 1120]
-    },
-    "town.webp": {
-      "brief": "A crooked civic street crossing stage with plaster and timber buildings, terracotta roofs, lichen greenery and a notice board only in outer margins. Keep the central pale warm cobbled plaza empty and evenly lit. No people, hazards or markings inside the playing floor.",
-      "size": [1280, 1120]
-    }
+  "version": 2,
+  "source": "OpenAI built-in imagegen, 10 November 2026; locally exported WebP, no runtime generation",
+  "export": "Run node scripts/export-kingdom-art.mjs SOURCE_DIRECTORY | bash (dimensions.json maps source names to pixel sizes) with dock.png, bridge.png, town.png, characters.png, portraits.png, poses.png, poses2.png, responses.png and props.png. Export crops to the largest connected foreground figure (5% alpha threshold), excludes disconnected neighboring-cell pieces, fits visible standing bodies to 232x280, places feet at y=304 in 256x320 cells, then assembles and compresses local atlases. Defeated figures fit 180px height. Inspect each source cell before exporting. Wide Rook sword and Captain cape frames use wider source crops before connected-figure normalization.",
+  "production": {
+    "style": "Painterly gouache living miniature kingdom; shallow three-quarter orthographic view, simple strong adult silhouettes, expressive brows, warm diffuse daylight, restrained brush marks. Oxblood/slate/lichen/clay/chalk/brass. No theatre curtains, glossy 3D, bloom, baked text or grid.",
+    "locations": "Square backdrops, architecture and tiny background workers in top 24%, unobstructed low-detail rectangular playing floor x6-94% y24-90%, scenery only outside it. Dock: timber warehouse/crane/blue-green harbor. Bridge: stone checkpoint, clerk booth, bell and civic flags. Town: plaster/timber royal office, terracotta roofs, laundry and paperwork carriers.",
+    "characters": "4x2 atlas: Rook slate cap satchel/envelope; Mallow green round shield/lunchbox; Nix oxblood pointed hat, glasses, round staff; Dot ochre hood, feather, red scarf; Brisk grey-green armor, rectangular shield; Peebles weary plum bent hat, diamond staff; Captain blue bicorne brass feather cape sword; Supervisor oxblood tricorn folio baton. Transparent, complete boots/equipment, one identity per cell. Use characters.png as identity reference for every derived sheet.",
+    "portraits": "4x2 expressive chest-up busts in identity order, full hats, consistent face baseline, transparent. Fastidious Rook, protective Mallow, detached Nix, mischievous Dot, upright Brisk, exhausted Peebles, resourceful Captain, disapproving Supervisor.",
+    "poses": "First quartet: 4x6 sheet, walking in rows 1-2, action in rows 3-4, objection in rows 5-6; use rows 1/3/5. Second quartet: separate 4x3 sheet, walk/action/objection, explicitly exclude first quartet. Match reference identities. Walk lifted boot; action role-specific thrust/brace/cast/command; objection palm out, lowered weapon. Transparent, fixed feet.",
+    "responses": "4x4 sheet: hit/recoil first two rows, defeated seated or kneeling final two rows in identity order. No injuries/blood. Inspect identities; Use neutral textures plus procedural recoil for hits; generated hit rows clipped feet and failed identity QA. Optional responses-clean.png is the background-extracted assembled response sheet; only its defeated rows are used.",
+    "props": "4x2 transparent: payroll cart, damaged cart, crate, low stone cover; flame, smoke, delivery pennant, delivered cart with open chest. Match shallow projection and materials; no scenery or labels."
   },
-  "characters.webp": {
-    "brief": "Eight isolated full-body painted cutout characters in a strict four-column, two-row atlas. Equal cells, consistent viewpoint and scale, complete equipment and boots, transparent padding, no ground shadows or backdrops. Row 1: fastidious slate-capped courier Rook with satchel and envelope; broad green shieldbearer Mallow with round shield and lunchbox; tall oxblood-hatted mage Nix with spectacles and round staff finial; nimble ochre-hooded courier Dot with feather and red scarf. Row 2: upright grey-green armored shieldbearer Brisk with tall rectangular shield; weary plum-robed mage Peebles with bent hat and diamond staff finial; slate-blue Captain with bicorne, brass feather, cape and sheathed sword; stern oxblood Supervisor with tricorn, folio and baton. Keep distinct silhouettes at small scale.",
-    "alpha_refinement_prompt": "Remove all colored gradient and background around the figures. Preserve the original 1536x1024 canvas, every character's position, size, silhouette, costume, expression and equipment, and the exact four-by-two grid. No ground shadows, glow or aura. Empty space must have alpha zero; retain antialiased edges.",
-    "size": [1536, 1024],
-    "grid": [4, 2],
-    "order": [
-      "Rook",
-      "Mallow",
-      "Nix",
-      "Dot",
-      "Brisk",
-      "Peebles",
-      "Captain",
-      "Supervisor"
+  "frames": {
+    "idle": [
+      {
+        "rect": [0, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
     ],
-    "anchor": [0.5, 0.96],
-    "house_role_reuse": "House mage Wisp shares the mage art. House roles retain their engine-authored names, packages and allegiances. Solid rings and opposing chevrons show allegiance independently of clothing."
-  },
-  "props.webp": {
-    "brief": "Three isolated painterly miniature props, strict single row of three equal square cells, transparent background and generous padding, base near 85 percent of cell height. Same three-quarter viewpoint, warm diffuse light and ink contour. Left: small wooden payroll handcart with two iron wheels, brass straps, short handles and canvas-covered wage chest. Middle: squat shipping crate with diagonal braces and rope binding. Right: low wide barricade of three chipped pale stones. No text, scenery, glow or ground plane.",
-    "size": [2172, 724],
-    "grid": [3, 1],
-    "order": ["payroll cart", "impassable crate", "low stone cover"],
-    "anchor": [0.5, 0.85]
-  },
-  "runtime": "PixiJS projects all props, sprites, route steps, hazards, health, orders and event feedback from the Rust engine. Artwork never defines passability or game state. WebGL or image failure keeps semantic board controls available; reduced motion renders final state directly. No external image service is used at runtime.",
-  "character-poses.webp": {
-    "brief": "Match characters.webp identities and painterly gouache style. Transparent 4-column by 6-row atlas. Two rows of walking poses, two rows of action poses, two rows of indignant refusal poses. Each pair follows Rook, Mallow, Nix, Dot, Brisk, Peebles, Captain, Supervisor. Full body, complete boots and equipment, consistent scale, foot baseline at 94 percent of each cell. Walking: lifted boot and modest lean. Action: courier short-sword thrust, shieldbearer brace, mage staff cast, Captain sword extension, Supervisor baton point. Refusal: planted boots, palm out, weapon lowered, no sign. No scenery, shadows, text or grid.",
-    "size": [1024, 1536],
-    "grid": [4, 6],
-    "pose_order": ["walk", "action", "refuse"],
-    "identity_order": [
-      "Rook",
-      "Mallow",
-      "Nix",
-      "Dot",
-      "Brisk",
-      "Peebles",
-      "Captain",
-      "Supervisor"
+    "portraits": [
+      {
+        "rect": [0, 0, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [256, 0, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [512, 0, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [768, 0, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [0, 256, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [256, 256, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [512, 256, 256, 256],
+        "pivot": [0.5, 0.9375]
+      },
+      {
+        "rect": [768, 256, 256, 256],
+        "pivot": [0.5, 0.9375]
+      }
     ],
-    "source": "OpenAI built-in imagegen; identities referenced from characters.webp; WebP quality 88",
-    "anchor": [0.5, 0.96],
-    "generation_prompt": "Use case: identity-preserve. Asset type: production transparent sprite animation atlas for Mutiny: The Fine Print. The input is a reference for EXACT eight character identities, clothing, equipment, painted gouache rendering, palette and adult proportions. Create ONE new atlas on a portrait canvas, STRICT 4 columns by 6 rows, 24 evenly sized cells. Each cell contains ONE full-body figure, complete boots and equipment with generous transparent padding. Match original shallow three-quarter view, soft diffuse light, crisp readable silhouette, ink contour, restrained brush texture. No backgrounds, shadows, glow, labels, letters, borders or grid. Alpha-zero empty space. Columns and rows: Row 1 WALK poses: Rook slate-capped satchel courier, Mallow round-shield green shieldbearer with lunchbox, Nix oxblood tall pointed-hat mage with glasses and round-finial staff, Dot ochre hooded courier with feather and red scarf. Row 2 WALK poses: Brisk grey-green armor rectangular shield, Peebles weary plum mage diamond-finial staff, Captain blue bicorne gold feather/cape/sword, Supervisor red tricorn folio/baton. Walk poses have one lifted boot, bent knee, modest forward lean, gear moving, facing right. Row 3 ACTION poses: Rook quick short-sword thrust, Mallow bracing shield forward, Nix casting with staff held forward, Dot agile short-sword strike. Row 4 ACTION poses: Brisk bracing tall shield, Peebles casting with staff forward, Captain drawing and extending sword, Supervisor pointing baton sharply. Row 5 REFUSAL poses: same first four identities Rook, Mallow, Nix, Dot; boots planted, leaning back, indignant arms or palm out, weapons lowered. Row 6 REFUSAL poses: Brisk, Peebles, Captain, Supervisor; same indignant refusal. Refusal figures do NOT hold signs; signs are added by the game. Keep each identity's consistent apparent height, same foot baseline near 94 percent of its cell and same horizontal center across all 3 pose sets. Retain original costume colors and facial identities. Do not merge cells or crop extremities. Needs to read clearly at 90px tall."
-  }
+    "walk": [
+      {
+        "rect": [0, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
+    ],
+    "action": [
+      {
+        "rect": [0, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
+    ],
+    "refuse": [
+      {
+        "rect": [0, 1280, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 1280, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 1280, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 1280, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 1600, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 1600, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 1600, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 1600, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
+    ],
+    "hit": [
+      {
+        "rect": [0, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
+    ],
+    "defeated": [
+      {
+        "rect": [0, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 640, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 960, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
+    ],
+    "props": [
+      {
+        "rect": [0, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 0, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [0, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [256, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [512, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      },
+      {
+        "rect": [768, 320, 256, 320],
+        "pivot": [0.5, 0.95]
+      }
+    ]
+  },
+  "sceneLayers": {
+    "backdrop": [0, 0, 640, 162],
+    "ground": [0, 162, 640, 448],
+    "foreground": [0, 610, 640, 70]
+  },
+  "identityOrder": [
+    "Rook",
+    "Mallow",
+    "Nix",
+    "Dot",
+    "Brisk",
+    "Peebles",
+    "Captain",
+    "Supervisor"
+  ],
+  "propOrder": [
+    "cart",
+    "damaged cart",
+    "crate",
+    "low cover",
+    "fire",
+    "smoke",
+    "exit",
+    "delivered cart"
+  ]
 }

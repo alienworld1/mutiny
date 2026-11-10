@@ -26,8 +26,8 @@ async function mockChain(
     const put=(v)=>{localStorage.setItem('test-chain',JSON.stringify(v));const jobs=JSON.parse(localStorage.getItem('test-jobs')||'{}');jobs[v.job_id]=v;localStorage.setItem('test-jobs',JSON.stringify(jobs));};
     const height=()=>Number(localStorage.getItem('test-height')||'100');
     export function createChainClient(){return {
-      async account(){return activeAccount();},
-      async connect(){},async disconnect(){localStorage.setItem('test-account','other.testnet');},
+      async account(){return localStorage.getItem('test-signedout')?null:activeAccount();},
+      async connect(){localStorage.removeItem('test-signedout');},async disconnect(){localStorage.setItem('test-account','other.testnet');},
       async view(method,args){
         if(localStorage.getItem('test-outage')) throw Error('Testnet is unavailable.');
         const current=stored(),jobs=JSON.parse(localStorage.getItem('test-jobs')||'{}');if(current)jobs[current.job_id]=current;const index=Math.max(0,ids.indexOf(args.token_id||current?.token_id||'rook')),token=ids[index];const job=args.job_id!==undefined?jobs[args.job_id]:Object.values(jobs).filter(j=>j.token_id===token).sort((a,b)=>Number(b.job_id)-Number(a.job_id))[0]||null;
@@ -58,7 +58,7 @@ async function mockChain(
           const config={setup_id:args.setup_id,placement:args.placement,worker:indices[ids.indexOf(args.token_id)],package_option:args.package_option};
           const s=engine.configure(config);
           put({job_id:String(Number(stored()?.job_id??-1)+1),renter_id:activeAccount(),token_id:args.token_id,worker_account:args.token_id+'.registry.testnet',config,unit_slot:config.placement==='escort'?1:4,rules_version:s.log.rules_version,content_version:s.log.content_version,content_hash:localStorage.getItem('test-bad-content') || await supportedContentHash(),setup_hash:await digest(new TextEncoder().encode(JSON.stringify(s.setup))),accepted_fee:method==='hire_and_open'?(args.package_option===1?'5000000000000000000000':fee()):'0',credit_status:paid?'staged':'none',created_at_block:'100',expires_at_block:'2500',status:localStorage.getItem('test-credit-pending')?'payment_pending':'active',cooldown_until:'0',record:null,bond:String(deposit),storage_bytes:500,refund_owed:'0',refund_in_flight:false});
-          if(args.commission){const e=await this.view('get_economy',{}),j=stored();const order=e.commissions.find(c=>c.commission_id===args.commission.commission_id);j.employment={commission_id:order.commission_id,dispatch_id:order.dispatch_id,leg:e.company?.dispatch.completed||0,objective:order.objective,payment:order.payment,company_contribution:args.commission.company_contribution,earned:'0',closed:false};e.company??={account_id:activeAccount(),deliveries:'0',funds:'0',active_job:null,dispatch:{dispatch_id:'0',completed:0,fulfilled:0,jobs:[null,null,null]},withdrawal:{withdrawal_id:'0',amount:'0',status:'none'}};e.company.active_job=j.job_id;e.company.funds=String(BigInt(e.company.funds)-BigInt(args.commission.company_contribution));order.available=false;put(j);localStorage.setItem('test-economy',JSON.stringify(e));}
+          if(args.commission){const e=await this.view('get_economy',{}),j=stored();const order=e.commissions.find(c=>c.commission_id===args.commission.commission_id);j.employment={...(order.town_id!==undefined?{town_id:order.town_id}:{}),commission_id:order.commission_id,dispatch_id:order.dispatch_id,leg:e.company?.dispatch.completed||0,objective:order.objective,payment:order.payment,company_contribution:args.commission.company_contribution,earned:'0',closed:false};e.company??={account_id:activeAccount(),deliveries:'0',funds:'0',active_job:null,dispatch:{dispatch_id:'0',completed:0,fulfilled:0,jobs:[null,null,null]},withdrawal:{withdrawal_id:'0',amount:'0',status:'none'}};e.company.active_job=j.job_id;e.company.funds=String(BigInt(e.company.funds)-BigInt(args.commission.company_contribution));order.available=false;if(e.version===4){const t=e.towns[order.town_id];t.unreserved=String(BigInt(t.unreserved)-BigInt(order.payment));t.reserved=String(BigInt(t.reserved)+BigInt(order.payment));t.incoming[t.incoming.indexOf(null)]=j.job_id;}put(j);localStorage.setItem('test-economy',JSON.stringify(e));}
         } else if(method==='reconcile_payment'){const job=stored();job.status='active';job.credit_status='finalized';put(job);
         } else if(method==='cancel_pending_hire'){const job=stored();job.status='cancelled';job.credit_status='reversed';put(job);
         } else if(method==='nft_transfer'){if(deposit!==1n)throw Error('Need one yocto');localStorage.setItem('test-owner-'+args.token_id,args.receiver_id);
@@ -71,7 +71,7 @@ async function mockChain(
           const setup=Uint8Array.from(atob(job.setup_hash),c=>c.charCodeAt(0)),canonical=engine.canonical(log),combined=new Uint8Array(setup.length+canonical.length);combined.set(setup);combined.set(canonical,setup.length);
           job.record={outcome:state.outcome,round:state.round,cart_hp:state.cart_hp,strikes:state.strikes,borrows:0,clauses:[],commitment:await digest(combined),final_hash:await digest(new TextEncoder().encode(JSON.stringify(state))),confirmed_block:'110'};
           job.status='saved';job.storage_bytes=800;
-          if(job.employment){const e=await this.view('get_economy',{});job.employment.earned=state.outcome==='delivered'?job.employment.payment:'0';job.employment.closed=true;e.company.funds=String(BigInt(e.company.funds)+BigInt(job.employment.earned));e.company.deliveries=String(Number(e.company.deliveries)+Number(job.employment.earned!=='0'));e.company.active_job=null;e.company.dispatch.completed++;e.company.dispatch.jobs[job.employment.leg]=job.job_id;e.company.dispatch.fulfilled+=Number(job.employment.earned!=='0');localStorage.setItem('test-economy',JSON.stringify(e));}put(job);
+          if(job.employment){const e=await this.view('get_economy',{});job.employment.earned=state.outcome==='delivered'&&(job.employment.objective!=='express'||state.round<=4)&&(job.employment.objective!=='intact'||state.cart_hp===2)?job.employment.payment:'0';job.employment.closed=true;e.company.funds=String(BigInt(e.company.funds)+BigInt(job.employment.earned));e.company.deliveries=String(Number(e.company.deliveries)+Number(job.employment.earned!=='0'));e.company.active_job=null;e.company.dispatch.completed++;e.company.dispatch.jobs[job.employment.leg]=job.job_id;e.company.dispatch.fulfilled+=Number(job.employment.earned!=='0');if(e.version===4){const t=e.towns[job.employment.town_id],accepted=job.employment.earned!=='0';t.reserved=String(BigInt(t.reserved)-BigInt(job.employment.payment));if(accepted){t.stock.supplies=Math.min(6,t.stock.supplies+1);t.stock.deliveries++;t.paid=String(BigInt(t.paid)+BigInt(job.employment.payment));}else{t.unreserved=String(BigInt(t.unreserved)+BigInt(job.employment.payment));}t.incoming=t.incoming.map(id=>id===job.job_id?null:id);}localStorage.setItem('test-economy',JSON.stringify(e));}put(job);
         } else if(method==='withdraw_company_funds'){const e=await this.view('get_economy',{});e.company.funds=String(BigInt(e.company.funds)-BigInt(args.amount));e.company.withdrawal={withdrawal_id:'1',amount:args.amount,status:'paid'};localStorage.setItem('test-economy',JSON.stringify(e));} else if(method==='expire'){const job=stored();job.status='expired';put(job);}
         return {hash:'test-transaction',signer:accountId};
       }
@@ -83,7 +83,7 @@ async function mockChain(
 async function openJob(page: Page) {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Reserve Rook", exact: true }).click();
   await expect(
@@ -125,7 +125,7 @@ test("owner reserves, plays, refreshes and saves only after a verified record", 
   ).toBeEnabled();
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "View result", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Job Done" })).toBeVisible();
@@ -150,7 +150,7 @@ test("submitted Save Job survives refresh without optimistic success or duplicat
   ).toBeVisible();
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByText("Submitted. Waiting for the Registry to confirm."),
@@ -177,7 +177,7 @@ test("wallet rejection keeps the job and RPC outage keeps Free Play available", 
 }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.evaluate(() => localStorage.setItem("test-cancel", "1"));
   await page.getByRole("button", { name: "Reserve Rook", exact: true }).click();
@@ -217,7 +217,7 @@ test("Infiltration freezes the enemy slot and restores a move after refresh", as
 }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
@@ -237,7 +237,7 @@ test("Infiltration freezes the enemy slot and restores a move after refresh", as
   await expect(page.getByTestId("pushes")).toHaveText("1 / 3");
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Resume Job", exact: true }).click();
   await expect(page.getByTestId("pushes")).toHaveText("1 / 3");
@@ -276,7 +276,7 @@ test("unsupported chain content is rejected before a storage deposit is signed",
     localStorage.setItem("test-bad-content", "unsupported"),
   );
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Reserve Rook", exact: true }).click();
   await expect(page.getByText(/The game content changed/)).toBeVisible();
@@ -291,11 +291,12 @@ test("renter confirms exact fee, plays and saves the frozen paid job", async ({
   await mockChain(page, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
-  await expect(
-    page.getByText("Hire fee: 0.004000000000000000000001 testnet NEAR"),
-  ).toBeVisible();
+  const fees = page
+    .locator("dl")
+    .filter({ has: page.getByText("Hire fee", { exact: true }) });
+  await expect(fees).toContainText("0.004000000000000000000001 testnet NEAR");
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await win(page);
   await page.getByRole("button", { name: "Save Job", exact: true }).click();
@@ -308,7 +309,7 @@ test("pending paid hire survives refresh and can activate or fully cancel withou
   await page.goto("/");
   await page.evaluate(() => localStorage.setItem("test-credit-pending", "1"));
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
@@ -316,7 +317,7 @@ test("pending paid hire survives refresh and can activate or fully cancel withou
   ).toHaveCount(0);
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Cancel hire", exact: true }).click();
   await expect(
@@ -341,7 +342,7 @@ test("a changed price needs a new visible confirmation and rejected hire can ret
   await mockChain(page, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.evaluate(() =>
     localStorage.setItem("test-price", "5000000000000000000000"),
@@ -375,7 +376,7 @@ test("owner claim stays pending across refresh until the worker confirms payment
     localStorage.setItem("test-account", "owner.testnet"),
   );
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByText("Owner tools", { exact: true }).click();
   await page.getByRole("button", { name: "Claim", exact: true }).click();
@@ -384,7 +385,7 @@ test("owner claim stays pending across refresh until the worker confirms payment
   ).toBeVisible();
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(page.getByText(/^Earnings claimed/)).toHaveCount(0);
   await page.getByText("Owner tools", { exact: true }).click();
@@ -403,7 +404,7 @@ test("reconnect restores a newer paid job opened in another browser", async ({
   await mockChain(page, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await win(page);
@@ -432,7 +433,7 @@ test("six-worker hall compares both packages, signs the selected Infiltration an
   await mockChain(page, true, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   for (const name of ["Rook", "Mallow", "Nix", "Dot", "Brisk", "Peebles"])
     await expect(
@@ -441,14 +442,14 @@ test("six-worker hall compares both packages, signs the selected Infiltration an
   await page.getByRole("button", { name: /^Peebles ·/ }).click();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
-    .getByRole("button", { name: /^Desk Swap/ })
+    .getByRole("button", { name: /Desk Swap/ })
     .click();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
     .getByRole("combobox", { name: /^Placement/ })
     .selectOption("infiltration");
   await expect(
-    page.getByText("Peebles joins the enemy crew.", { exact: false }),
+    page.getByText("Peebles follows enemy orders.", { exact: false }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
@@ -468,14 +469,14 @@ test("six-worker hall compares both packages, signs the selected Infiltration an
   ).toBeDisabled();
   await page
     .getByRole("region", { name: "Contract Job", exact: true })
-    .getByRole("button", { name: /^Smoke Break/ })
+    .getByRole("button", { name: /Smoke Break/ })
     .click();
   await expect(
     page.getByRole("button", { name: "Hire", exact: true }),
   ).toBeDisabled();
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Resume Job", exact: true }),
@@ -488,7 +489,7 @@ test("Find Cheapest shows the selected live package without opening a shift", as
   await mockChain(page, true, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByText("Find a lower fee", { exact: true }).click();
   await page.getByRole("combobox", { name: /^Package/ }).selectOption("fire");
@@ -502,7 +503,7 @@ test("Find Cheapest shows the selected live package without opening a shift", as
   await expect(
     page
       .getByRole("region", { name: "Contract Job", exact: true })
-      .getByRole("button", { name: /^Smoke Break/ }),
+      .getByRole("button", { name: /Smoke Break/ }),
   ).toHaveAttribute("aria-pressed", "true");
   expect(
     await page.evaluate(() => localStorage.getItem("test-chain")),
@@ -522,7 +523,7 @@ test("owner transfer refreshes current title and keeps active renter rights", as
   await mockChain(page, true, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
@@ -561,7 +562,7 @@ test("switching workers keeps each active job's local moves", async ({
   await mockChain(page, true, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
   await expect(
@@ -576,7 +577,7 @@ test("switching workers keeps each active job's local moves", async ({
   ).toBeVisible();
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByRole("button", { name: /^Peebles ·/ }).click();
   await page.getByRole("button", { name: "Hire", exact: true }).click();
@@ -585,7 +586,7 @@ test("switching workers keeps each active job's local moves", async ({
   ).toBeVisible();
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByText("Job 1 · escort", { exact: false }),
@@ -611,7 +612,7 @@ test("Hiring Hall and owner controls fit a narrow screen with enlarged text", as
     localStorage.setItem("test-account", "owner.testnet");
   });
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await page.getByText("Owner tools", { exact: true }).click();
   await expect(
@@ -649,11 +650,11 @@ test("job selection and house crew carry through the Hiring Hall", async ({
   await page.getByRole("button", { name: "Job Board", exact: true }).click();
   await page.getByRole("button", { name: "Toll Gate", exact: true }).click();
   await page
-    .getByRole("combobox", { name: "House worker", exact: true })
+    .getByRole("combobox", { name: "Mercenary", exact: true })
     .selectOption("2");
   await page.getByRole("button", { name: "Contract Job", exact: true }).click();
   await page.getByRole("button", { name: "Nix · mage", exact: true }).click();
-  await page.getByRole("button", { name: /^Clean Shot/ }).click();
+  await page.getByRole("button", { name: /Clean Shot/ }).click();
   await page
     .getByRole("combobox", { name: "Placement", exact: true })
     .selectOption("infiltration");
@@ -661,11 +662,11 @@ test("job selection and house crew carry through the Hiring Hall", async ({
     page.getByText("Bridge Audit · Toll Gate", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Nix joins the enemy crew.", { exact: false }),
+    page.getByText("Nix follows enemy orders.", { exact: false }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Free Play", exact: true }).click();
   await expect(
-    page.getByRole("combobox", { name: "House worker", exact: true }),
+    page.getByRole("combobox", { name: "Mercenary", exact: true }),
   ).toHaveValue("2");
   await expect(
     page.getByRole("combobox", { name: "Placement", exact: true }),
@@ -696,7 +697,7 @@ test("company chooses funded work, earns confirmed funds and recovers its dispat
   await mockChain(page, true, true, true);
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Your company", exact: true }),
@@ -718,11 +719,11 @@ test("company chooses funded work, earns confirmed funds and recovers its dispat
   await expect(page.getByLabel("Confirmed company result")).toHaveCount(0);
   await page.getByRole("button", { name: "Save Job", exact: true }).click();
   await expect(page.getByLabel("Confirmed company result")).toContainText(
-    "Commission earned: 0.05 testnet NEAR",
+    "0.05 testnet NEAR",
   );
   await page.reload();
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Your company has a name on the door." }),
@@ -777,7 +778,7 @@ test("depleted project keeps earned funds and shows no payable work", async ({
     ),
   );
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(page.getByText(/^No funded work\./)).toBeVisible();
   await expect(
@@ -793,7 +794,7 @@ test("company remains readable on a narrow screen with enlarged text", async ({
   await page.goto("/");
   await page.addStyleTag({ content: "html {font-size: 200%}" });
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Your company", exact: true }),
@@ -821,8 +822,11 @@ test("kingdom connects shortages, selected routes, funding and an isolated forec
 }) => {
   await mockChain(page, true, true, true, true);
   await page.goto("/");
+  await page.evaluate(() =>
+    localStorage.setItem("mutiny-delivery-guide-v1", "skipped"),
+  );
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "The kingdom runs on deliveries." }),
@@ -866,10 +870,13 @@ test("kingdom handles an empty treasury and mobile enlarged text", async ({
   await mockChain(page, true, true, true, true);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await page.evaluate(() =>
+    localStorage.setItem("mutiny-delivery-guide-v1", "skipped"),
+  );
   await page.evaluate(() => localStorage.setItem("test-empty-treasury", "1"));
   await page.addStyleTag({ content: "html{font-size:200%}" });
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("article", { name: "Crossing", exact: true }),
@@ -905,8 +912,11 @@ test("kingdom refreshes shared opportunities without another wallet action", asy
 }) => {
   await mockChain(page, true, true, true, true);
   await page.goto("/");
+  await page.evaluate(() =>
+    localStorage.setItem("mutiny-delivery-guide-v1", "skipped"),
+  );
   await page
-    .getByRole("button", { name: "Run a company", exact: true })
+    .getByRole("button", { name: "Deliver supplies", exact: true })
     .click();
   await expect(
     page.getByRole("article", { name: "Docks", exact: true }),
@@ -920,4 +930,150 @@ test("kingdom refreshes shared opportunities without another wallet action", asy
   expect(
     await page.evaluate(() => localStorage.getItem("test-calls")),
   ).toBeNull();
+});
+
+test("first delivery explains the goal before connecting and guides a confirmed town delivery", async ({
+  page,
+}) => {
+  await mockChain(page, true, true, true, true);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("test-signedout", "1"));
+  await page
+    .getByRole("button", { name: "Deliver supplies", exact: true })
+    .click();
+  const guide = page.getByRole("region", { name: "First delivery guide" });
+  await expect(guide).toContainText(
+    "Hire a mercenary. Deliver a cart. Save Job",
+  );
+  await expect(
+    page.getByRole("button", { name: "Connect Wallet", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Hire your crew", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Choose crew", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("article", { name: "Docks", exact: true })
+    .getByRole("button", { name: /Routine delivery/ })
+    .click();
+  await page.getByRole("button", { name: "Choose crew", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Hire your crew", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("article", { name: "Docks", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Review delivery", exact: true })
+    .click();
+  await expect(
+    page.getByText("You command Rook.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Hire", exact: true }),
+  ).toBeDisabled();
+  expect(
+    await page.evaluate(() => localStorage.getItem("test-calls")),
+  ).toBeNull();
+  await page
+    .getByRole("button", { name: "Connect Wallet", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Hire", exact: true }),
+  ).toBeEnabled();
+  await page.screenshot({
+    path: "/tmp/mutiny-delivery-review.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Hire", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Resume Job", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Hire your crew", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Resume Job", exact: true }).click();
+  for (const [index, cell] of [39, 32, 31].entries()) {
+    await page.getByRole("button", { name: /^Captain \d/ }).click();
+    await page.locator(`[data-cell="${cell}"]`).click();
+    await page.getByRole("button", { name: "Push Cart", exact: true }).click();
+    await confirm(page);
+    if (index < 2) {
+      await page
+        .getByRole("button", { name: "End Phase", exact: true })
+        .click();
+      await confirm(page);
+    }
+  }
+  await expect(
+    page.getByRole("heading", { name: "Job Done", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Confirmed company result")).toHaveCount(0);
+  await page.evaluate(() => localStorage.setItem("test-pending", "1"));
+  await page.getByRole("button", { name: "Save Job", exact: true }).click();
+  await expect(page.getByLabel("Confirmed company result")).toHaveCount(0);
+  await page.evaluate(() => {
+    localStorage.removeItem("test-pending");
+    localStorage.setItem("test-tx-failed", "1");
+  });
+  await page.getByRole("button", { name: "Check status", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Retry Save Job", exact: true })
+    .click();
+  const receipt = page.getByLabel("Confirmed company result");
+  await expect(receipt).toContainText("Delivery accepted");
+  await expect(receipt).toContainText("+1 supply");
+  await expect(receipt).toContainText("0.05 testnet NEAR");
+  await expect(receipt).toContainText("Current supplies 2/6");
+  await page.getByRole("button", { name: "View company", exact: true }).click();
+  await expect(guide).toHaveCount(0);
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Company ledger/ })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Withdraw 0.05 NEAR", exact: true }),
+  ).toBeVisible();
+});
+
+test("first delivery keeps unavailable work readable and lets the player leave guidance", async ({
+  page,
+}) => {
+  await mockChain(page, true, true, true, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("test-empty-treasury", "1"));
+  await page.addStyleTag({ content: "html {font-size:200%}" });
+  await page
+    .getByRole("button", { name: "Deliver supplies", exact: true })
+    .click();
+  await expect(
+    page.getByText("No funded work. A contribution can reopen deliveries.", {
+      exact: true,
+    }),
+  ).toHaveCount(3);
+  await expect(
+    page.getByRole("button", { name: "Choose crew", exact: true }),
+  ).toBeDisabled();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/mutiny-delivery-guide-mobile.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Skip guide", exact: true }).click();
+  await expect(page.getByText("Support a town", { exact: true })).toBeVisible();
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Deliver supplies", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "First delivery guide" }),
+  ).toHaveCount(0);
 });

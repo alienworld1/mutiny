@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import CrewPreview from "./CrewPreview";
 import WorkerPortrait from "../near/WorkerPortrait";
 import * as engine from "./engine";
 import { packages, outcomeText } from "./types";
@@ -55,81 +56,105 @@ export default function JobBoard({
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-[.2em] text-secondary">
-            Royal Payroll Office
+            Choose a shift
           </p>
           <h1 ref={heading} tabIndex={-1} className="text-4xl">
-            Choose your shift
+            Job Board
           </h1>
         </div>
         {preparation === "contract" && (
           <button onClick={() => onPlay(config)}>Play Free</button>
         )}
-        <a
-          href="#ledger"
-          className="py-3 text-sm underline decoration-border underline-offset-4"
-        >
-          Captain's Ledger
-        </a>
+        {preparation === "free" && (
+          <a
+            href="#ledger"
+            className="py-3 text-sm underline decoration-border underline-offset-4"
+          >
+            Captain's Ledger
+          </a>
+        )}
       </div>
-      <div className="grid items-start gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <nav aria-label="Jobs" className="space-y-3">
-          {["Dock Fire", "Bridge Audit", "Friday, Again"].map((name, i) => (
-            <article
-              key={name}
-              className={`overflow-hidden rounded-2xl border bg-paper ${assembled.setup.name === name ? "border-primary shadow-panel" : "border-border"}`}
-            >
-              <div className="relative h-24 overflow-hidden">
+      <div
+        className={`grid items-start gap-5 ${preparation === "free" ? "lg:grid-cols-[280px_minmax(0,1fr)]" : ""}`}
+      >
+        {preparation === "free" && (
+          <nav
+            aria-label="Jobs"
+            className="flex snap-x gap-3 overflow-x-auto pb-2 lg:block lg:space-y-3 lg:overflow-visible lg:pb-0"
+          >
+            {["Dock Fire", "Bridge Audit", "Friday, Again"].map((name, i) => (
+              <article
+                key={name}
+                className={`w-64 shrink-0 snap-start overflow-hidden rounded-2xl border-b-4 bg-paper lg:w-auto ${assembled.setup.name === name ? "border-primary shadow-panel" : "border-border"}`}
+              >
+                <div className="relative h-36 overflow-hidden">
+                  <img
+                    src={`/assets/art/${["dock", "bridge", "town"][i]}.webp`}
+                    alt=""
+                    className="h-full w-full object-cover object-top"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink/80 to-transparent" />
+                  <h2 className="absolute bottom-3 left-4 text-2xl text-white">
+                    {name}
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-1 p-3">
+                  {setups
+                    .filter((s) => s.name === name)
+                    .map((s) => (
+                      <button
+                        key={s.id}
+                        className="!min-h-10 !flex-1 !px-2 !py-2 text-sm"
+                        aria-pressed={config.setup_id === s.id}
+                        onClick={() => setConfig({ ...config, setup_id: s.id })}
+                      >
+                        {s.variant}
+                        {progress.ledger[s.id]?.completions ? " ✓" : ""}
+                      </button>
+                    ))}
+                </div>
+              </article>
+            ))}
+          </nav>
+        )}
+        <div className="min-w-0 overflow-hidden rounded-xl border-x border-b-4 border-brass bg-paper shadow-panel">
+          {preparation === "free" && (
+            <>
+              <div className="relative h-48 overflow-hidden sm:h-60">
                 <img
-                  src={`/assets/art/${["dock", "bridge", "town"][i]}.webp`}
+                  src={`/assets/art/${assembled.setup.name === "Dock Fire" ? "dock" : assembled.setup.name === "Bridge Audit" ? "bridge" : "town"}.webp`}
                   alt=""
                   className="h-full w-full object-cover object-top"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink/80 to-transparent" />
-                <h2 className="absolute bottom-3 left-4 text-2xl text-white">
-                  {name}
-                </h2>
+                <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
+                <div className="absolute bottom-5 left-5 right-5 text-white">
+                  <p className="mb-1 text-xs uppercase tracking-[.2em]">
+                    {assembled.setup.name}
+                  </p>
+                  <h2 className="text-3xl">{assembled.setup.variant}</h2>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1 p-3">
-                {setups
-                  .filter((s) => s.name === name)
-                  .map((s) => (
-                    <button
-                      key={s.id}
-                      className="!min-h-10 !flex-1 !px-2 !py-2 text-sm"
-                      aria-pressed={config.setup_id === s.id}
-                      onClick={() => setConfig({ ...config, setup_id: s.id })}
-                    >
-                      {s.variant}
-                      {progress.ledger[s.id]?.completions ? " ✓" : ""}
-                    </button>
-                  ))}
+              <div className="border-b border-border px-5 py-4">
+                <p>{assembled.setup.description}</p>
+                <dl className="mt-4 flex gap-6 border-t border-border pt-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-secondary">Goal</dt>
+                    <dd className="font-semibold">Deliver the cart</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-secondary">Route</dt>
+                    <dd className="font-semibold">3 pushes</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-secondary">Time</dt>
+                    <dd className="font-semibold">5 rounds</dd>
+                  </div>
+                </dl>
               </div>
-            </article>
-          ))}
-        </nav>
-        <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-paper shadow-panel">
-          <div className="relative h-40 overflow-hidden sm:h-48">
-            <img
-              src={`/assets/art/${assembled.setup.name === "Dock Fire" ? "dock" : assembled.setup.name === "Bridge Audit" ? "bridge" : "town"}.webp`}
-              alt=""
-              className="h-full w-full object-cover object-top"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
-            <div className="absolute bottom-5 left-5 right-5 text-white">
-              <p className="mb-1 text-xs uppercase tracking-[.2em]">
-                {assembled.setup.name}
-              </p>
-              <h2 className="text-3xl">{assembled.setup.variant}</h2>
-            </div>
-          </div>
-          <div className="border-b border-border px-5 py-4">
-            <p>{assembled.setup.description}</p>
-            <p className="mt-1 text-sm text-secondary">
-              Deliver in 3 pushes. You have 5 rounds.
-            </p>
-          </div>
+            </>
+          )}
           <div
-            className="grid grid-cols-2 gap-2 border-b border-border bg-muted p-3"
+            className="grid grid-cols-2 gap-2 border-b-4 border-brass bg-stage-floor p-3"
             aria-label="Job type"
           >
             <button
@@ -161,21 +186,18 @@ export default function JobBoard({
                 <div className="flex items-center gap-4 border-b border-border pb-4">
                   <WorkerPortrait
                     token={specialist.name.toLowerCase()}
-                    className="w-16 shrink-0 rounded-xl bg-muted"
+                    className="w-20 shrink-0 rounded-t-full bg-brass/15"
                   />
                   <div>
                     <p className="text-xs uppercase tracking-wider text-secondary">
                       House crew
                     </p>
                     <h3 className="text-2xl">Prepare your crew</h3>
-                    <p className="text-sm text-secondary">
-                      Choose who serves, and on which side.
-                    </p>
                   </div>
                 </div>
                 <div className="my-5 grid gap-3 sm:grid-cols-3">
                   <label className="grid min-w-0 w-full max-w-full gap-1 text-sm sm:w-auto">
-                    House worker
+                    Mercenary
                     <select
                       className="min-h-11 min-w-0 w-full max-w-full rounded-lg border border-border bg-paper px-3"
                       value={config.worker}
@@ -236,8 +258,11 @@ export default function JobBoard({
                   </label>
                 </div>
                 <div className="rounded-xl border-l-[3px] border-brass bg-muted p-4">
-                  <p className="font-semibold">
-                    {specialist.name}: {packages[specialist.package].special}
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-secondary">
+                    {packages[specialist.package].name}
+                  </p>
+                  <p className="font-display text-xl">
+                    {packages[specialist.package].special}
                   </p>
                   <p className="text-sm text-secondary">
                     {packages[specialist.package].clause}
@@ -245,31 +270,15 @@ export default function JobBoard({
                 </div>
                 {config.placement === "infiltration" && (
                   <p className="mt-2 text-sm text-danger">
-                    The enemy commands {specialist.name}. Borrow is possible
-                    only after a real strike.
+                    {specialist.name} joins the enemy. Cause a strike to earn
+                    Borrow.
                   </p>
                 )}
-                <div className="my-4 grid gap-3 sm:grid-cols-2">
-                  {["player", "enemy"].map((side) => (
-                    <div key={side}>
-                      <h4 className="font-semibold">
-                        {side === "player" ? "Your crew" : "Opposing crew"}
-                      </h4>
-                      {assembled.setup.units
-                        .filter((u) => u.side === side)
-                        .map((u) => (
-                          <p key={u.id} className="text-sm">
-                            {u.name} · {u.role} · {u.hp} HP
-                            {u.package !== "none"
-                              ? ` · ${packages[u.package].special}`
-                              : ""}
-                          </p>
-                        ))}
-                    </div>
-                  ))}
+                <div className="mt-5">
+                  <CrewPreview units={assembled.setup.units} />
                 </div>
                 <button
-                  className="!border-primary !bg-primary !text-white"
+                  className="mt-5 w-full !min-h-12 !border-primary !bg-primary !text-white hover:!bg-primary-hover"
                   onClick={() => onPlay(config)}
                 >
                   Play
@@ -279,52 +288,56 @@ export default function JobBoard({
           )}
         </div>
       </div>
-      <section
-        id="ledger"
-        aria-label="Captain's Ledger"
-        className="mt-8 border-t border-border pt-6"
-      >
-        <h2 className="text-3xl">Captain's Ledger</h2>
-        <p className="my-2 text-sm text-secondary">Saved in this browser.</p>
-        {Object.keys(progress.ledger).length === 0 ? (
-          <p className="my-5 text-secondary">A clean ledger. How suspicious.</p>
-        ) : (
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {setups
-              .filter((s) => progress.ledger[s.id])
-              .map((s) => {
-                const e = progress.ledger[s.id]!;
-                return (
-                  <article
-                    className="space-y-3 rounded-xl border border-border bg-paper p-4"
-                    key={s.id}
-                  >
-                    <h3 className="text-xl">
-                      {s.name} · {s.variant}
-                    </h3>
-                    <p className="text-sm">
-                      {e.attempts} attempts · {e.completions} clears
-                    </p>
-                    <ul className="flex flex-wrap gap-2 text-xs">
-                      {goalNames.map((goal, i) => (
-                        <li
-                          key={goal}
-                          className={`rounded border px-2 py-1 ${e.goals[i] ? "border-primary font-bold text-primary" : "border-border text-secondary"}`}
-                        >
-                          {e.goals[i] ? "✓ " : "○ "}
-                          {goal}
-                        </li>
-                      ))}
-                    </ul>
-                    <ResultLine label="Latest" result={e.latest} />
-                    <ResultLine label="Previous" result={e.previous} />
-                    <ResultLine label="Fastest clear" result={e.best} />
-                  </article>
-                );
-              })}
-          </div>
-        )}
-      </section>
+      {preparation === "free" && (
+        <section
+          id="ledger"
+          aria-label="Captain's Ledger"
+          className="mt-8 border-t border-border pt-6"
+        >
+          <h2 className="text-3xl">Captain's Ledger</h2>
+          <p className="my-2 text-sm text-secondary">Saved in this browser.</p>
+          {Object.keys(progress.ledger).length === 0 ? (
+            <p className="my-5 text-secondary">
+              A clean ledger. How suspicious.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {setups
+                .filter((s) => progress.ledger[s.id])
+                .map((s) => {
+                  const e = progress.ledger[s.id]!;
+                  return (
+                    <article
+                      className="space-y-3 rounded-xl border border-border bg-paper p-4"
+                      key={s.id}
+                    >
+                      <h3 className="text-xl">
+                        {s.name} · {s.variant}
+                      </h3>
+                      <p className="text-sm">
+                        {e.attempts} attempts · {e.completions} clears
+                      </p>
+                      <ul className="flex flex-wrap gap-2 text-xs">
+                        {goalNames.map((goal, i) => (
+                          <li
+                            key={goal}
+                            className={`rounded border px-2 py-1 ${e.goals[i] ? "border-primary font-bold text-primary" : "border-border text-secondary"}`}
+                          >
+                            {e.goals[i] ? "✓ " : "○ "}
+                            {goal}
+                          </li>
+                        ))}
+                      </ul>
+                      <ResultLine label="Latest" result={e.latest} />
+                      <ResultLine label="Previous" result={e.previous} />
+                      <ResultLine label="Fastest clear" result={e.best} />
+                    </article>
+                  );
+                })}
+            </div>
+          )}
+        </section>
+      )}
     </section>
   );
 }

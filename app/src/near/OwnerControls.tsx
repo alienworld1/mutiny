@@ -139,10 +139,12 @@ export default function OwnerControls({
         </p>
       )}
       <p className="text-sm text-secondary">
-        Prices in testnet NEAR. Automatic offers rise after paid hires and fall
-        with idle time. Pressure decays every 30 minutes. Your floor and ceiling
-        apply. Manual offers keep their idle discounts.
+        Prices in testnet NEAR. Automatic fees rise with paid hires and fall
+        with idle time, within your limits.
       </p>
+      <h3 className="border-t border-border pt-4 text-xl">
+        Transfer ownership
+      </h3>
       <form
         className="flex flex-wrap items-end gap-3"
         onSubmit={(event) => {
@@ -188,17 +190,34 @@ export default function OwnerControls({
         </p>
       </form>
       {e && (
-        <div className="space-y-2 break-words text-sm">
+        <section
+          className="space-y-3 border-t border-border pt-4 break-words text-sm"
+          aria-label="Worker earnings"
+        >
+          <h3 className="text-xl">Earnings</h3>
           <p>
             Available earnings:{" "}
             <strong>{nearAmount(e.claimable)} testnet NEAR</strong>
           </p>
-          <p className="text-secondary">
-            Held: {nearAmount(e.balance)} · Protected reserve:{" "}
-            {nearAmount(e.reserve)} · Pending credit: {nearAmount(e.staged)} ·
-            Recognized earnings: {nearAmount(e.recognized)} · Paid:{" "}
-            {nearAmount(e.paid)}
-          </p>
+          <details className="text-secondary">
+            <summary className="py-2">Balance details · testnet NEAR</summary>
+            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 tabular-nums">
+              {(
+                [
+                  ["Held", e.balance],
+                  ["Protected reserve", e.reserve],
+                  ["Pending credit", e.staged],
+                  ["Recognized earnings", e.recognized],
+                  ["Paid", e.paid],
+                ] as const
+              ).map(([label, amount]) => (
+                <div key={label}>
+                  <dt className="text-xs">{label}</dt>
+                  <dd className="text-ink">{nearAmount(amount)}</dd>
+                </div>
+              ))}
+            </dl>
+          </details>
           {w.claim?.status === "pending" ? (
             <>
               <p>Claim pending · {nearAmount(w.claim.amount)} testnet NEAR</p>
@@ -232,7 +251,7 @@ export default function OwnerControls({
           {w.claim?.status === "failed" && (
             <p>Claim failed. Check available earnings, then Retry.</p>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

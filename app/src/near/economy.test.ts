@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { bookingAmounts, commissionDifference, parseEconomy } from "./economy";
+import {
+  bookingAmounts,
+  commissionDifference,
+  parseEconomy,
+  suggestedDelivery,
+} from "./economy";
+import type { KingdomEconomy } from "./economy";
 const project = {
   batch: "0",
   funded: true,
@@ -83,6 +89,31 @@ const kingdom = {
   })),
 };
 describe("kingdom boundaries", () => {
+  it("suggests available ordinary work at the lowest-stock town without changing the offers", () => {
+    const e = parseEconomy(kingdom) as KingdomEconomy;
+    e.towns[0]!.stock.supplies = 3;
+    e.towns[1]!.stock.supplies = 1;
+    e.commissions = [0, 1, 2].map((town_id) => ({
+      town_id,
+      commission_id: String(town_id),
+      dispatch_id: "0",
+      objective: "routine",
+      payment: "10",
+      setup_ids: ["dock-fire-intro"],
+      terms_hash: "terms",
+      available: true,
+    }));
+    expect(suggestedDelivery(e)?.town_id).toBe(1);
+    expect(e.commissions.map((c) => c.town_id)).toEqual([0, 1, 2]);
+    e.commissions[1]!.available = false;
+    e.commissions[2]!.objective = "express";
+    expect(suggestedDelivery(e)?.town_id).toBe(0);
+    e.commissions[0]!.available = false;
+    expect(suggestedDelivery(e)).toBeUndefined();
+    e.commissions[0]!.available = true;
+    e.enabled = false;
+    expect(suggestedDelivery(e)).toBeUndefined();
+  });
   it("accepts separate backed town budgets", () =>
     expect(parseEconomy(kingdom)).toEqual(kingdom));
   it("rejects unbacked money, impossible stocks and duplicate destinations", () => {

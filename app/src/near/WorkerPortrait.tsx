@@ -10,26 +10,29 @@ const colors: Record<string, string> = {
 export default function WorkerPortrait({
   token,
   className = "w-24 shrink-0",
+  fullBody = false,
 }: {
   token: string;
   className?: string;
+  fullBody?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const name = token[0]?.toUpperCase() + token.slice(1);
   const slot = characterSlots[name];
+  const atlas = fullBody ? characterAtlas : "/assets/art/portraits.webp";
   if (!failed && slot !== undefined)
     return (
       <div
         aria-hidden="true"
-        className={`relative aspect-[3/4] overflow-hidden bg-no-repeat ${className}`}
+        className={`relative ${fullBody ? "aspect-[4/5]" : "aspect-square"} overflow-hidden bg-no-repeat ${className}`}
         style={{
-          backgroundImage: `url(${characterAtlas})`,
+          backgroundImage: `url(${atlas})`,
           backgroundSize: "400% 200%",
           backgroundPosition: `${((slot % 4) / 3) * 100}% ${Math.floor(slot / 4) * 100}%`,
         }}
       >
         <img
-          src={characterAtlas}
+          src={atlas}
           alt=""
           onError={() => setFailed(true)}
           className="hidden"

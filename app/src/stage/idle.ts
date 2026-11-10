@@ -14,6 +14,9 @@ export function startIdle(scene: StageView, render: () => void) {
     x: h.view.x,
     y: h.view.y,
     rotation: h.view.rotation,
+    scaleX: h.view.scale.x,
+    scaleY: h.view.scale.y,
+    alpha: h.view.alpha,
   }));
   let frame = 0,
     last = 0;
@@ -21,24 +24,30 @@ export function startIdle(scene: StageView, render: () => void) {
   const tick = (time: number) => {
     if (time - last >= 1000 / 30) {
       last = time;
-      for (const { id, entity, figure, scaleY, rotation } of figures) {
+      for (const { id, entity, figure, rotation } of figures) {
         entity.selection?.scale.set(1 + Math.exp(-(time - began) / 65) * 0.2);
         if (!figure || id === "cart" || entity.busy || entity.defeated)
           continue;
-        figure.scale.y = scaleY * (1 + Math.sin(time / 950 + id * 1.7) * 0.009);
-        figure.rotation = rotation + Math.sin(time / 1600 + id * 1.3) * 0.009;
+        // One short posture adjustment per character, separated by quiet beats.
+        const cycle = (time - began + id * 1700) % 14000;
+        const gesture =
+          cycle > 3000 && cycle < 3700
+            ? Math.sin(((cycle - 3000) / 700) * Math.PI)
+            : 0;
+        figure.rotation = rotation + gesture * (id % 2 ? -0.025 : 0.025);
       }
       for (const h of hazards) {
         if (h.kind === "fire") {
           h.view.scale.set(
-            1 + Math.sin(time / 180 + h.phase) * 0.035,
-            1 + Math.sin(time / 130 + h.phase) * 0.065,
+            h.scaleX * (1 + Math.sin(time / 180 + h.phase) * 0.035),
+            h.scaleY * (1 + Math.sin(time / 130 + h.phase) * 0.065),
           );
         } else if (h.kind === "smoke") {
           h.view.x = h.x + Math.sin(time / 1100 + h.phase) * 2;
           h.view.y = h.y + Math.sin(time / 900 + h.phase) * 1.5;
         } else if (h.kind === "flag") {
-          h.view.scale.y = 1 + Math.sin(time / 600 + h.phase) * 0.08;
+          h.view.scale.y =
+            h.scaleY * (1 + Math.sin(time / 600 + h.phase) * 0.08);
           h.view.rotation = h.rotation + Math.sin(time / 1200) * 0.035;
         } else if (h.kind === "water") {
           h.view.x = h.x + Math.sin(time / 1600 + h.phase) * 5;
@@ -68,8 +77,8 @@ export function startIdle(scene: StageView, render: () => void) {
     }
     for (const h of hazards) {
       h.view.position.set(h.x, h.y);
-      h.view.scale.set(1);
-      h.view.alpha = 1;
+      h.view.scale.set(h.scaleX, h.scaleY);
+      h.view.alpha = h.alpha;
       h.view.rotation = h.rotation;
     }
   };

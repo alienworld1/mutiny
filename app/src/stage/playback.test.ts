@@ -74,6 +74,19 @@ describe("committed event playback", () => {
       }).moves.length,
     ).toBe(0);
   });
+  it("gives the objection and Borrow exchange bounded, distinct beats", () => {
+    const plan = planPlayback({
+      before: engine.start(),
+      events: [
+        { kind: "strike", unit: 4, cell: 25, reason: "Fire" },
+        { kind: "borrowed", unit: 4 },
+      ],
+    });
+    expect(plan.beats.map((beat) => [beat.at, beat.duration])).toEqual([
+      [0, 600],
+      [600, 450],
+    ]);
+  });
   it("cancels an interrupted frame and restores sprites and labels without another game action", () => {
     const before = engine.start();
     const frozen = JSON.stringify(before);
@@ -93,16 +106,18 @@ describe("committed event playback", () => {
     try {
       const stop = playEvents(
         root,
-        new Map([[0, { body, labels }]]),
+        new Map([[0, { body, labels, depth: 482 }]]),
         { before, events: [{ kind: "moved", unit: 0, path: [31, 38] }] },
         vi.fn(),
       );
       frame!(150);
       expect(body.y).toBe(-64);
+      expect(body.zIndex).toBe(418);
       expect(labels.y).toBe(body.y);
       stop();
       expect(cancel).toHaveBeenCalledWith(1);
       expect([body.x, body.y, labels.x, labels.y]).toEqual([0, 0, 0, 0]);
+      expect(body.zIndex).toBe(482);
       expect(root.children).toHaveLength(2);
       expect(JSON.stringify(before)).toBe(frozen);
     } finally {

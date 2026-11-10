@@ -22,8 +22,11 @@ interface Props {
   reachable: number[];
   targets: number[];
   focusedOrder: number | null;
+  guideCell?: number | null;
   playback: Playback | null;
   onCell: (cell: number) => void;
+  canBorrow: (id: number) => boolean;
+  onBorrow: (id: number) => void;
   disabled: boolean;
   sound: BattleSound;
   onPlaybackDone: () => void;
@@ -37,6 +40,7 @@ export default function PixiStage(props: Props) {
     name: string;
     detail: string;
     token: string;
+    kind: "strike" | "borrowed";
   } | null>(null);
   const [fallback, setFallback] = useState(false);
   const [ready, setReady] = useState(false);
@@ -102,8 +106,9 @@ export default function PixiStage(props: Props) {
           detail:
             event.kind === "strike"
               ? event.reason.split(": ").at(-1)!
-              : "Your captain's action is spent.",
+              : "One action. Make it count.",
           token: actor.name.toLowerCase(),
+          kind: event.kind,
         });
       }
     }
@@ -327,7 +332,8 @@ export default function PixiStage(props: Props) {
                       }
                     }}
                     onClick={() => props.onCell(cell)}
-                    className={`battle-cell absolute !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 hover:!bg-white/15 focus-visible:!outline-offset-[-4px] ${textBoard ? "!border !border-border !bg-muted !text-[10px] !leading-tight" : "text-transparent"}`}
+                    data-guide={props.guideCell === cell || undefined}
+                    className={`data-[guide=true]:!border-2 data-[guide=true]:!border-dashed data-[guide=true]:!border-focus data-[guide=true]:!bg-paper/20 battle-cell absolute !min-h-0 !rounded-none !border-0 !bg-transparent !p-0 hover:!bg-white/15 focus-visible:!outline-offset-[-4px] ${textBoard ? "!border !border-border !bg-muted !text-[10px] !leading-tight" : "text-transparent"}`}
                     style={{
                       left: `${((p.x - TILE_WIDTH / 2) / WIDTH) * 100}%`,
                       top: `${((p.y - TILE_HEIGHT / 2) / HEIGHT) * 100}%`,
@@ -345,19 +351,58 @@ export default function PixiStage(props: Props) {
           </div>
         ))}
       </div>
+      {!props.disabled &&
+        state.setup.units
+          .filter(
+            (u) =>
+              u.hp > 0 &&
+              u.side === "enemy" &&
+              u.status === "striking" &&
+              !props.targets.includes(u.cell) &&
+              !u.borrowed &&
+              props.canBorrow(u.id),
+          )
+          .map((u) => {
+            const at = cellToScreen(u.cell);
+            return (
+              <button
+                key={u.id}
+                aria-label={`Borrow ${u.name} on battlefield`}
+                onClick={() => props.onBorrow(u.id)}
+                className="absolute z-10 !min-h-8 -translate-x-1/2 -translate-y-1/2 !rounded !border-brass !bg-primary !px-2 !py-1 text-xs !text-white shadow-panel"
+                style={{
+                  left: `${(at.x / WIDTH) * 100}%`,
+                  top: `${((at.y + 8) / HEIGHT) * 100}%`,
+                }}
+              >
+                Borrow
+              </button>
+            );
+          })}
       {props.playback && announcement && (
-        <div className="pointer-events-none absolute inset-x-10 top-2 z-20 mx-auto flex max-w-xs items-center gap-2 rounded-lg border-b-4 border-oxblood bg-paper/95 px-3 py-2 shadow-floating motion-safe:animate-[stamp_220ms_ease-out]">
+        <div
+          className={`pointer-events-none absolute inset-x-5 top-2 z-20 mx-auto flex max-w-sm items-center gap-3 rounded-lg border-b-4 ${announcement.kind === "strike" ? "border-oxblood" : "border-slate"} bg-paper/95 px-3 py-2 shadow-floating motion-safe:animate-[stamp_220ms_ease-out]`}
+        >
           <WorkerPortrait
             token={announcement.token}
-            className="hidden w-9 shrink-0 sm:block"
+            className="w-10 shrink-0 rounded-t-full bg-brass/15 sm:w-14"
           />
+          {announcement.kind === "borrowed" && (
+            <WorkerPortrait
+              token="captain"
+              className="hidden w-12 shrink-0 rounded-t-full bg-slate/15 sm:block"
+            />
+          )}
           <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-secondary">
+              {announcement.kind === "strike"
+                ? "Fine print enforced"
+                : "Captain’s orders · One action"}
+            </p>
             <p className="font-display text-sm font-bold sm:text-lg">
               {announcement.name}
             </p>
-            <p className="hidden text-xs text-secondary sm:block">
-              {announcement.detail}
-            </p>
+            <p className="text-xs text-secondary">{announcement.detail}</p>
           </div>
         </div>
       )}

@@ -1,9 +1,9 @@
 export const WIDTH = 640,
-  HEIGHT = 624;
+  HEIGHT = 680;
 export const TILE_WIDTH = 80,
   TILE_HEIGHT = 64;
 export const ORIGIN_X = 40,
-  ORIGIN_Y = 120;
+  ORIGIN_Y = 162;
 export const cellToScreen = (cell: number) => ({
   x: ORIGIN_X + ((cell % 7) + 0.5) * TILE_WIDTH,
   y: ORIGIN_Y + (Math.floor(cell / 7) + 0.5) * TILE_HEIGHT,
