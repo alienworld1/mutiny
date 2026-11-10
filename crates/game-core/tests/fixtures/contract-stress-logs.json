@@ -1,7 +1,7 @@
 [
   {
     "rules_version": 2,
-    "content_version": 2,
+    "content_version": 3,
     "config": {
       "setup_id": "friday-again-overtime",
       "placement": "escort",
@@ -159,7 +159,7 @@
   },
   {
     "rules_version": 2,
-    "content_version": 2,
+    "content_version": 3,
     "config": {
       "setup_id": "friday-again-overtime",
       "placement": "escort",
@@ -314,7 +314,7 @@
   },
   {
     "rules_version": 2,
-    "content_version": 2,
+    "content_version": 3,
     "config": {
       "setup_id": "friday-again-overtime",
       "placement": "infiltration",
@@ -466,7 +466,7 @@
   },
   {
     "rules_version": 2,
-    "content_version": 2,
+    "content_version": 3,
     "config": {
       "setup_id": "friday-again-overtime",
       "placement": "infiltration",
@@ -624,7 +624,7 @@
   },
   {
     "rules_version": 2,
-    "content_version": 2,
+    "content_version": 3,
     "config": {
       "setup_id": "dock-fire-intro",
       "placement": "escort",
@@ -788,7 +788,7 @@
   },
   {
     "rules_version": 2,
-    "content_version": 2,
+    "content_version": 3,
     "config": {
       "setup_id": "friday-again-overtime",
       "placement": "escort",

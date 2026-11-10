@@ -1,6 +1,7 @@
 import { nearAmount } from "./jobs";
 export type Objective = "routine" | "intact" | "express";
 export interface Commission {
+  town_id?: number;
   commission_id: string;
   dispatch_id: string;
   objective: Objective;
@@ -26,7 +27,7 @@ export interface Company {
     status: "none" | "pending" | "paid" | "failed";
   };
 }
-export interface Economy {
+export interface LegacyEconomy {
   version: 3;
   company: Company | null;
   project: {
@@ -44,6 +45,26 @@ export interface Economy {
   sponsor: string;
   enabled: boolean;
 }
+export interface Town {
+  town_id: number;
+  name: string;
+  stock: { supplies: number; updated_at: number; deliveries: number };
+  incoming: (string | null)[];
+  unreserved: string;
+  reserved: string;
+  paid: string;
+  contributed: string;
+}
+export interface KingdomEconomy {
+  version: 4;
+  company: Company | null;
+  towns: Town[];
+  commissions: Commission[];
+  sponsor: string;
+  enabled: boolean;
+  timestamp: string;
+}
+export type Economy = LegacyEconomy | KingdomEconomy;
 const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
 const amount = (v: unknown): v is string =>
@@ -53,33 +74,69 @@ const optionalId = (v: unknown) => v === null || id(v);
 export function parseEconomy(value: unknown): Economy {
   if (
     !object(value) ||
-    value.version !== 3 ||
+    (value.version !== 3 && value.version !== 4) ||
     typeof value.enabled !== "boolean" ||
     typeof value.sponsor !== "string" ||
-    !object(value.project) ||
-    typeof value.stage !== "number" ||
-    ![0, 1, 2, 3].includes(Number(value.stage)) ||
     !Array.isArray(value.commissions) ||
-    value.commissions.length > 3
+    value.commissions.length > 6
   )
     throw Error("Company records could not be read. Check status.");
-  const p = value.project;
-  if (
-    !id(p.batch) ||
-    typeof p.funded !== "boolean" ||
-    typeof p.restored !== "boolean" ||
-    ![p.unreserved, p.reserved, p.paid].every(amount) ||
-    !Array.isArray(p.slots) ||
-    p.slots.length !== 9 ||
-    !p.slots.every((s) => [0, 1, 2].includes(s)) ||
-    !Array.isArray(p.reservations) ||
-    p.reservations.length !== 9 ||
-    !p.reservations.every(optionalId)
-  )
-    throw Error("Invalid project funding record.");
+  if (value.version === 3) {
+    const p = value.project;
+    if (!object(p) || ![0, 1, 2, 3].includes(Number(value.stage)))
+      throw Error("Invalid project funding record.");
+    if (
+      !id(p.batch) ||
+      typeof p.funded !== "boolean" ||
+      typeof p.restored !== "boolean" ||
+      ![p.unreserved, p.reserved, p.paid].every(amount) ||
+      !Array.isArray(p.slots) ||
+      p.slots.length !== 9 ||
+      !p.slots.every((s) => [0, 1, 2].includes(s)) ||
+      !Array.isArray(p.reservations) ||
+      p.reservations.length !== 9 ||
+      !p.reservations.every(optionalId)
+    )
+      throw Error("Invalid project funding record.");
+  } else {
+    if (
+      !id(value.timestamp) ||
+      !Array.isArray(value.towns) ||
+      value.towns.length !== 3
+    )
+      throw Error("Invalid kingdom record.");
+    value.towns.forEach((t, i) => {
+      if (
+        !object(t) ||
+        t.town_id !== i ||
+        typeof t.name !== "string" ||
+        !object(t.stock) ||
+        !Number.isInteger(t.stock.supplies) ||
+        Number(t.stock.supplies) < 0 ||
+        Number(t.stock.supplies) > 6 ||
+        !Number.isSafeInteger(t.stock.updated_at) ||
+        Number(t.stock.updated_at) < 0 ||
+        !Number.isSafeInteger(t.stock.deliveries) ||
+        Number(t.stock.deliveries) < 0 ||
+        !Array.isArray(t.incoming) ||
+        t.incoming.length !== 2 ||
+        !t.incoming.every(optionalId) ||
+        ![t.unreserved, t.reserved, t.paid, t.contributed].every(amount) ||
+        BigInt(String(t.unreserved)) +
+          BigInt(String(t.reserved)) +
+          BigInt(String(t.paid)) !==
+          BigInt(String(t.contributed))
+      )
+        throw Error("Invalid town funding or supply record.");
+    });
+  }
   for (const c of value.commissions) {
     if (
       !object(c) ||
+      (value.version === 4 &&
+        (!Number.isInteger(c.town_id) ||
+          Number(c.town_id) < 0 ||
+          Number(c.town_id) > 2)) ||
       !id(c.commission_id) ||
       !id(c.dispatch_id) ||
       !["routine", "intact", "express"].includes(String(c.objective)) ||

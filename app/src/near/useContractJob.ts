@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as engine from "../game/engine";
 import type { ActionLog, Configuration, State } from "../game/types";
 import { createChainClient } from "./chain";
@@ -25,6 +25,7 @@ export function useContractJob() {
   const client = useRef<ChainClient | null>(null);
   const current = useRef<Session | null>(null);
   const lock = useRef(false);
+  const viewRevision = useRef(0);
   const [session, setSession] = useState<Session | null>(null);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [financeTx, setFinanceTx] = useState<{
@@ -47,6 +48,63 @@ export function useContractJob() {
   function chain() {
     return (client.current ??= createChainClient(registryId));
   }
+  // Refresh shared opportunities without touching the player's transcript or
+  // payment state machine. Wallet prompts and recovery stay explicit actions.
+  useEffect(() => {
+    if (!enabled) return;
+    let disposed = false;
+    let inFlight = false;
+    async function refreshMarket() {
+      if (lock.current || document.hidden || inFlight) return;
+      inFlight = true;
+      const revision = viewRevision.current;
+      const requestedAccount = checkedAccount.current;
+      try {
+        const [workers, company] = await Promise.all([
+          chain().view<unknown[]>("get_market", {}),
+          legacyMarket
+            ? Promise.resolve(null)
+            : chain().view<unknown>("get_economy", {
+                account_id: requestedAccount,
+              }),
+        ]);
+        if (
+          disposed ||
+          revision !== viewRevision.current ||
+          lock.current ||
+          requestedAccount !== checkedAccount.current
+        )
+          return;
+        const nextMarket = workers.map(parseWorker);
+        const nextEconomy = company === null ? null : parseEconomy(company);
+        if (
+          nextEconomy?.company &&
+          nextEconomy.company.account_id !== requestedAccount
+        )
+          throw Error("Company belongs to another account.");
+        setMarket(nextMarket);
+        setWorker(
+          nextMarket.find((w) => w.token.token_id === selected.current) ?? null,
+        );
+        setEconomy(nextEconomy);
+      } catch {
+        if (!disposed && !lock.current && revision === viewRevision.current)
+          setNotice("The kingdom could not refresh. Use Check status.");
+      } finally {
+        inFlight = false;
+      }
+    }
+    const timer = window.setInterval(() => void refreshMarket(), 15_000);
+    const visible = () => {
+      if (!document.hidden) void refreshMarket();
+    };
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [enabled]);
   async function persist(next: Session) {
     await writeSession(next);
     current.current = next;
@@ -55,6 +113,7 @@ export function useContractJob() {
   async function run(action: () => Promise<void>) {
     if (lock.current) return;
     lock.current = true;
+    viewRevision.current += 1;
     setBusy(true);
     try {
       await action();
@@ -460,6 +519,9 @@ export function useContractJob() {
   function moneyAction(
     method:
       | "nft_transfer"
+      | "set_auto_offer"
+      | "fund_town"
+      | "expire"
       | "set_offer"
       | "withdraw_offer"
       | "request_claim"
@@ -469,6 +531,7 @@ export function useContractJob() {
       | "retry_credit_return"
       | "withdraw_company_funds",
     args: Record<string, unknown> = {},
+    deposit = 0n,
   ) {
     void run(async () => {
       if (!account) throw new Error("Connect a testnet wallet");
@@ -476,7 +539,7 @@ export function useContractJob() {
       const tx = await chain().change(
         method,
         { token_id: selected.current, ...args },
-        method === "nft_transfer" ? 1n : 0n,
+        method === "nft_transfer" ? 1n : deposit,
         account,
       );
       localStorage.setItem(
@@ -489,7 +552,16 @@ export function useContractJob() {
         await chain().view("get_worker", { token_id: selected.current }),
       );
       setWorker(market);
-      if (method === "request_claim" || method === "reconcile_claim")
+      if (method === "fund_town") {
+        const status = await chain().resolve(tx);
+        setNotice(
+          status === "confirmed"
+            ? "Contribution confirmed."
+            : status === "failed"
+              ? "Contribution failed. Check status."
+              : "Contribution submitted. Check status before contributing again.",
+        );
+      } else if (method === "request_claim" || method === "reconcile_claim")
         setNotice(
           market.claim?.status === "paid"
             ? "Earnings claimed"
@@ -506,11 +578,15 @@ export function useContractJob() {
               ? "Transfer not completed. Check status."
               : "Transfer pending. Check status.",
         );
-      } else if (method === "set_offer" || method === "withdraw_offer") {
+      } else if (
+        method === "set_offer" ||
+        method === "set_auto_offer" ||
+        method === "withdraw_offer"
+      ) {
         const status = await chain().resolve(tx);
         setNotice(
           status === "confirmed"
-            ? method === "set_offer"
+            ? method !== "withdraw_offer"
               ? "Offer posted"
               : "Offer withdrawn"
             : status === "failed"

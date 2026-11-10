@@ -13,6 +13,17 @@ fn main() {
         .into_iter()
         .map(|r| serde_json::from_value(r["log"].clone()).unwrap())
         .collect();
+    for file in [
+        include_str!("../tests/fixtures/kingdom-logs.json"),
+        include_str!("../tests/fixtures/legacy-winning-logs.json"),
+    ] {
+        let cases: Vec<serde_json::Value> = serde_json::from_str(file).unwrap();
+        logs.extend(
+            cases
+                .into_iter()
+                .map(|r| serde_json::from_value::<ActionLog>(r["log"].clone()).unwrap()),
+        );
+    }
     logs.extend(
         serde_json::from_str::<Vec<ActionLog>>(include_str!(
             "../tests/fixtures/contract-stress-logs.json"

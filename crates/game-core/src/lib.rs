@@ -1,9 +1,10 @@
+pub mod economy;
 use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
 pub const RULES_VERSION: u16 = 2;
-pub const CONTENT_VERSION: u16 = 2;
+pub const CONTENT_VERSION: u16 = 3;
 pub const MAX_COMMANDS: usize = 32;
 const CONTENT: &str = include_str!("../../../content/jobs.json");
 
@@ -210,6 +211,16 @@ pub struct Choices {
 pub fn bundle() -> Bundle {
     serde_json::from_str(CONTENT).expect("validated embedded content")
 }
+pub fn bundle_version(version: u16) -> Result<Bundle, String> {
+    match version {
+        2 => Ok(
+            serde_json::from_str(include_str!("../../../content/jobs-v2.json"))
+                .expect("frozen legacy content"),
+        ),
+        CONTENT_VERSION => Ok(bundle()),
+        _ => Err("Unsupported content version".into()),
+    }
+}
 pub fn setup() -> Setup {
     bundle().setups.remove(0)
 }
@@ -224,7 +235,7 @@ fn passable(s: &Setup, c: u8) -> bool {
 }
 pub fn validate_setup(s: &Setup) -> Result<(), String> {
     if s.rules_version != RULES_VERSION
-        || s.content_version != CONTENT_VERSION
+        || ![2, CONTENT_VERSION].contains(&s.content_version)
         || s.route.len() != 4
         || s.units.len() != 6
         || s.blast.iter().any(|id| !(3..6).contains(id))
@@ -326,6 +337,9 @@ pub fn worker_identity(worker: u8) -> Option<(&'static str, &'static str, u8, u8
 }
 
 pub fn start_config(config: &Configuration) -> Result<State, String> {
+    start_config_version(config, CONTENT_VERSION)
+}
+pub fn start_config_version(config: &Configuration, version: u16) -> Result<State, String> {
     if config.setup_id.len() > 64
         || config.worker > 6
         || config.package_option > 1
@@ -333,7 +347,7 @@ pub fn start_config(config: &Configuration) -> Result<State, String> {
     {
         return Err("Choose an approved house arrangement".into());
     }
-    let mut setup = bundle()
+    let mut setup = bundle_version(version)?
         .setups
         .into_iter()
         .find(|s| s.id == config.setup_id)
@@ -381,7 +395,7 @@ pub fn start_config(config: &Configuration) -> Result<State, String> {
         strikes: 0,
         log: ActionLog {
             rules_version: RULES_VERSION,
-            content_version: CONTENT_VERSION,
+            content_version: version,
             config: config.clone(),
             commands: vec![],
         },
@@ -1200,7 +1214,7 @@ pub fn apply(s: &State, command: &Command) -> Result<Transition, String> {
 pub fn replay(log: &ActionLog) -> Result<Transition, String> {
     canonical(log)?;
     let mut result = Transition {
-        state: start_config(&log.config)?,
+        state: start_config_version(&log.config, log.content_version)?,
         events: vec![],
     };
     for command in &log.commands {
@@ -1216,7 +1230,7 @@ pub fn canonical(log: &ActionLog) -> Result<Vec<u8>, String> {
         _ => false,
     });
     if log.rules_version != RULES_VERSION
-        || log.content_version != CONTENT_VERSION
+        || ![2, CONTENT_VERSION].contains(&log.content_version)
         || log.config.setup_id.len() > 64
         || log.commands.len() > MAX_COMMANDS
         || oversized_path

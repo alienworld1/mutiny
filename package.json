@@ -21,7 +21,8 @@
     "contract:build": "cargo build --locked -p worker --target wasm32-unknown-unknown --release && cargo build --locked -p registry --target wasm32-unknown-unknown --release",
     "test:market": "node scripts/sandbox-market.mjs",
     "test:company": "node scripts/sandbox-company.mjs && node scripts/sandbox-company.mjs --owned",
-    "test:paid": "node scripts/sandbox-paid.mjs && node scripts/sandbox-paid.mjs --recovery"
+    "test:paid": "node scripts/sandbox-paid.mjs && node scripts/sandbox-paid.mjs --recovery",
+    "test:kingdom": "node scripts/check-kingdom.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.0.0",

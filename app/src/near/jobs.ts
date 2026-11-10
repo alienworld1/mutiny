@@ -5,9 +5,19 @@ export const legacyRegistryId = "m5.mutiny-m5-2026.testnet";
 export const legacyMarket =
   typeof location !== "undefined" &&
   new URLSearchParams(location.search).get("market") === "legacy";
-export const registryId = legacyMarket
-  ? legacyRegistryId
-  : import.meta.env.VITE_REGISTRY_ID || "v3.mutiny-company-2026.testnet";
+export const previousCompany =
+  typeof location !== "undefined" &&
+  new URLSearchParams(location.search).get("market") === "company-v3";
+export const previousKingdom =
+  typeof location !== "undefined" &&
+  new URLSearchParams(location.search).get("market") === "company-v4";
+export const registryId = previousKingdom
+  ? "v4.mutiny-company-2026.testnet"
+  : previousCompany
+    ? "v3.mutiny-company-2026.testnet"
+    : legacyMarket
+      ? legacyRegistryId
+      : import.meta.env.VITE_REGISTRY_ID || "v4r1.mutiny-company-2026.testnet";
 export type Activity =
   | "Draft"
   | "AwaitingSignature"
@@ -57,6 +67,7 @@ export interface Job {
   refund_owed: string;
   refund_in_flight: boolean;
   employment?: {
+    town_id?: number;
     commission_id: string;
     dispatch_id: string;
     leg: number;
@@ -73,6 +84,7 @@ export interface Offer {
   floor_ask: string;
   discount_step: string;
   available_since: string;
+  automatic?: { ceiling: string; pressure: number; updated_at: string } | null;
 }
 export interface Earnings {
   reserve: string;
@@ -110,6 +122,7 @@ export interface Worker {
   status: string;
   job: Job | null;
   block_height: string;
+  timestamp?: string;
   job_storage_deposit: string;
   lease_blocks: string;
   cooldown_blocks: string;
@@ -171,6 +184,10 @@ export function parseJob(value: unknown): Job {
     const e = value.employment;
     if (
       !object(e) ||
+      (e.town_id !== undefined &&
+        (!Number.isInteger(e.town_id) ||
+          Number(e.town_id) < 0 ||
+          Number(e.town_id) > 2)) ||
       !integerString(e.commission_id) ||
       !integerString(e.dispatch_id) ||
       typeof e.leg !== "number" ||
@@ -266,6 +283,20 @@ export function parseWorker(value: unknown): Worker {
     )
       throw new Error("Invalid market offers");
     value.offers.forEach((offer, i) => {
+      if (object(offer) && offer.automatic != null) {
+        const p = offer.automatic;
+        if (
+          !object(p) ||
+          !integerString(p.ceiling) ||
+          !integerString(p.updated_at) ||
+          !Number.isInteger(p.pressure) ||
+          Number(p.pressure) < 0 ||
+          Number(p.pressure) > 4 ||
+          !integerString(offer.starting_ask) ||
+          BigInt(p.ceiling) < BigInt(String(offer.starting_ask))
+        )
+          throw Error("Invalid automatic price policy");
+      }
       if (
         offer &&
         (!object(offer) ||

@@ -1,34 +1,15 @@
 use super::*;
 
-pub const ROUTINE_PAY: u128 = 50_000_000_000_000_000_000_000;
-pub const PREMIUM_PAY: u128 = 75_000_000_000_000_000_000_000;
-pub const PROJECT_BUDGET: u128 = 500_000_000_000_000_000_000_000;
+pub use game_core::economy::Objective;
+use game_core::economy::{CAPACITY, MAX_INCOMING, Stock};
 
-#[near(serializers = [json, borsh])]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum Objective {
-    Routine,
-    Intact,
-    Express,
+fn now() -> u64 {
+    env::block_timestamp() / 1_000_000_000
 }
-impl Objective {
-    pub fn payment(self) -> u128 {
-        if self == Self::Routine {
-            ROUTINE_PAY
-        } else {
-            PREMIUM_PAY
-        }
-    }
-    pub fn met(self, record: &JobRecord) -> bool {
-        record.outcome == "delivered"
-            && match self {
-                Self::Routine => true,
-                Self::Intact => record.cart_hp == 2,
-                Self::Express => record.round <= 4,
-            }
-    }
+fn objective_met(objective: Objective, record: &JobRecord) -> bool {
+    objective.met(&record.outcome, record.cart_hp, record.round)
 }
+
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
 pub struct Booking {
@@ -40,6 +21,7 @@ pub struct Booking {
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
 pub struct Commission {
+    pub town_id: u8,
     pub commission_id: U64,
     pub dispatch_id: U64,
     pub objective: Objective,
@@ -51,6 +33,7 @@ pub struct Commission {
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
 pub struct Employment {
+    pub town_id: u8,
     pub commission_id: U64,
     pub dispatch_id: U64,
     pub leg: u8,
@@ -120,155 +103,102 @@ impl Company {
 }
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
-pub struct Project {
-    pub batch: U64,
-    pub funded: bool,
-    pub restored: bool,
-    pub slots: [u8; 9], // 0 open, 1 reserved, 2 fulfilled
-    pub reservations: [Option<U64>; 9],
+pub struct Town {
+    pub town_id: u8,
+    pub name: String,
+    pub stock: Stock,
+    pub incoming: [Option<U64>; 2],
     pub unreserved: U128,
     pub reserved: U128,
     pub paid: U128,
+    pub contributed: U128,
 }
-impl Default for Project {
-    fn default() -> Self {
-        Self {
-            batch: U64(0),
-            funded: false,
-            restored: false,
-            slots: [0; 9],
-            reservations: [None; 9],
-            unreserved: U128(0),
-            reserved: U128(0),
-            paid: U128(0),
-        }
+impl Town {
+    fn count(&self) -> usize {
+        self.incoming.iter().flatten().count()
     }
-}
-impl Project {
-    pub fn stage(&self) -> u8 {
-        (0..3)
-            .find(|&stage| self.slots[stage * 3..stage * 3 + 3].iter().any(|&s| s != 2))
-            .unwrap_or(3) as u8
-    }
-    fn objective(slot: usize) -> Objective {
-        match slot {
-            5 => Objective::Intact,
-            8 => Objective::Express,
-            _ => Objective::Routine,
-        }
-    }
-    fn setups(slot: usize) -> Vec<String> {
-        let family = ["Dock Fire", "Bridge Audit", "Friday, Again"][slot % 3];
-        game_core::bundle()
-            .setups
-            .into_iter()
-            .filter(|s| {
-                s.name == family
-                    && (Self::objective(slot) == Objective::Routine
-                        || matches!(
-                            s.id.as_str(),
-                            "friday-again-overtime" | "friday-again-crossed"
-                        ))
-            })
-            .map(|s| s.id)
-            .collect()
-    }
-    fn company_setups(slot: usize, deliveries: u64) -> Vec<String> {
-        let mut setups = Self::setups(slot);
-        if deliveries < 2 {
-            setups.truncate(1);
-        }
-        setups
-    }
-    fn terms(&self, slot: usize) -> Base64VecU8 {
-        hash(&(
-            3u8,
-            self.batch,
-            slot,
-            Self::objective(slot),
-            Self::objective(slot).payment(),
-            Self::setups(slot),
-            content_hash(),
-        ))
-    }
-    fn reserve(&mut self, slot: usize, job_id: U64) {
-        require!(
-            self.funded && slot / 3 == usize::from(self.stage()) && self.slots[slot] == 0,
-            "Commission is unavailable"
-        );
-        let payment = Self::objective(slot).payment();
-        require!(self.unreserved.0 >= payment, "Project has no funds");
-        self.slots[slot] = 1;
-        self.reservations[slot] = Some(job_id);
-        self.unreserved.0 -= payment;
-        self.reserved.0 += payment;
-    }
-    fn close(&mut self, slot: usize, job_id: U64, fulfilled: bool) {
-        require!(
-            self.reservations[slot] == Some(job_id) && self.slots[slot] == 1,
-            "Commission reservation mismatch"
-        );
-        let payment = Self::objective(slot).payment();
-        self.reservations[slot] = None;
-        self.reserved.0 -= payment;
-        self.slots[slot] = if fulfilled { 2 } else { 0 };
-        if fulfilled {
-            self.paid.0 += payment;
-        } else {
-            self.unreserved.0 += payment;
-        }
-        if self.stage() == 3 {
-            self.restored = true;
-        }
+    fn available(&self, payment: u128) -> bool {
+        self.count() < MAX_INCOMING
+            && usize::from(self.stock.supplies) + self.count() < usize::from(CAPACITY)
+            && self.unreserved.0 >= payment
     }
 }
 #[near(serializers = [json])]
 pub struct EconomyView {
     pub version: u8,
     pub company: Option<Company>,
-    pub project: Project,
-    pub stage: u8,
+    pub towns: [Town; 3],
     pub commissions: Vec<Commission>,
     pub sponsor: AccountId,
     pub enabled: bool,
+    pub timestamp: U64,
 }
-
+impl Registry {
+    fn projected_towns(&self) -> [Town; 3] {
+        let mut towns = self.towns.clone();
+        for town in &mut towns {
+            town.stock.advance(now());
+        }
+        towns
+    }
+    fn commission(
+        &self,
+        town: &Town,
+        objective: Objective,
+        dispatch_id: U64,
+    ) -> Option<Commission> {
+        let payment = town.stock.payment(objective)?;
+        let setup_ids = vec![town.stock.setup_id(usize::from(town.town_id)).to_string()];
+        let commission_id = U64(u64::from(town.town_id) * 3
+            + match objective {
+                Objective::Routine => 0,
+                Objective::Intact => 1,
+                Objective::Express => 2,
+            });
+        let terms_hash = hash(&(
+            4u8,
+            commission_id,
+            objective,
+            U128(payment),
+            &setup_ids,
+            content_hash(),
+        ));
+        Some(Commission {
+            town_id: town.town_id,
+            commission_id,
+            dispatch_id,
+            objective,
+            payment: U128(payment),
+            setup_ids,
+            terms_hash,
+            available: self.economy_enabled && town.available(payment),
+        })
+    }
+}
 #[near]
 impl Registry {
     pub fn get_economy(&self, account_id: Option<AccountId>) -> EconomyView {
         let company = account_id.and_then(|id| self.companies.get(&id));
         let dispatch_id = U64(company.as_ref().map_or(0, Company::next_dispatch));
-        let commissions = (0..9)
-            .filter(|&slot| slot / 3 == usize::from(self.project.stage()))
-            .map(|slot| {
-                let objective = Project::objective(slot);
-                Commission {
-                    commission_id: U64(self.project.batch.0 * 9 + slot as u64),
-                    dispatch_id,
-                    objective,
-                    payment: U128(objective.payment()),
-                    setup_ids: Project::company_setups(
-                        slot,
-                        company.as_ref().map_or(0, |c| c.deliveries.0),
-                    ),
-                    terms_hash: self.project.terms(slot),
-                    available: self.economy_enabled
-                        && self.project.funded
-                        && self.project.slots[slot] == 0,
-                }
+        let towns = self.projected_towns();
+        let commissions = towns
+            .iter()
+            .flat_map(|town| {
+                [Objective::Routine, Objective::Intact, Objective::Express]
+                    .into_iter()
+                    .filter_map(|objective| self.commission(town, objective, dispatch_id))
             })
             .collect();
         EconomyView {
-            version: 3,
+            version: 4,
             company,
-            project: self.project.clone(),
-            stage: self.project.stage(),
+            towns,
             commissions,
             sponsor: self.deployment_owner.clone(),
             enabled: self.economy_enabled,
+            timestamp: U64(now()),
         }
     }
-    /// Enable only after measuring the additional settlement and storage work.
     pub fn set_economy_enabled(&mut self, enabled: bool) {
         require!(
             env::predecessor_account_id() == self.deployment_owner,
@@ -277,29 +207,31 @@ impl Registry {
         self.economy_enabled = enabled;
     }
     #[payable]
-    pub fn fund_project(&mut self) {
+    pub fn fund_town(&mut self, town_id: u8, expected_contributed: U128) {
+        require!(town_id < 3, "Unknown destination");
+        let amount = env::attached_deposit().as_yoctonear();
+        require!(amount > 0, "Attach a contribution");
+        self.towns = self.projected_towns();
+        let town = &mut self.towns[usize::from(town_id)];
         require!(
-            env::predecessor_account_id() == self.deployment_owner,
-            "Only project sponsor"
+            town.contributed == expected_contributed,
+            "Treasury changed; check contribution status before retrying"
         );
-        require!(
-            env::attached_deposit().as_yoctonear() == PROJECT_BUDGET,
-            "Attach exactly 0.5 testnet NEAR; deployment storage is separately funded"
+        town.unreserved.0 = town
+            .unreserved
+            .0
+            .checked_add(amount)
+            .expect("Treasury limit");
+        town.contributed.0 = town
+            .contributed
+            .0
+            .checked_add(amount)
+            .expect("Treasury limit");
+        env::log_str(
+            &near_sdk::serde_json::json!({"event":"town_funded","town_id":town_id,
+            "contributor":env::predecessor_account_id(),"amount":U128(amount)})
+            .to_string(),
         );
-        require!(
-            !self.project.funded || self.project.stage() == 3,
-            "Current project is still funded"
-        );
-        if self.project.funded {
-            self.project.batch.0 = self.project.batch.0.checked_add(1).expect("Batch limit");
-        }
-        require!(self.project.batch.0 <= u64::MAX / 9 - 1, "Commission limit");
-        self.project.funded = true;
-        self.project.slots = [0; 9];
-        self.project.reservations = [None; 9];
-        self.project.unreserved = U128(PROJECT_BUDGET);
-        self.project.reserved = U128(0);
-        self.project.paid = U128(0);
     }
     pub fn withdraw_company_funds(&mut self, amount: U128) -> CompanyWithdrawal {
         let account = env::predecessor_account_id();
@@ -359,118 +291,6 @@ impl Registry {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn charter_opens_routes_without_locking_a_commission_type() {
-        for slot in 0..9 {
-            assert_eq!(Project::company_setups(slot, 0).len(), 1);
-            assert!(Project::company_setups(slot, 2).len() >= 2);
-        }
-        let mut record = JobRecord {
-            outcome: "delivered".into(),
-            round: 5,
-            cart_hp: 1,
-            strikes: 0,
-            borrows: 0,
-            clauses: vec![],
-            commitment: vec![].into(),
-            final_hash: vec![].into(),
-            confirmed_block: U64(0),
-        };
-        assert!(Objective::Routine.met(&record));
-        assert!(!Objective::Intact.met(&record));
-        assert!(!Objective::Express.met(&record));
-        record.round = 4;
-        record.cart_hp = 2;
-        assert!(Objective::Intact.met(&record));
-        assert!(Objective::Express.met(&record));
-        record.outcome = "cart_lost".into();
-        assert!(!Objective::Routine.met(&record));
-        assert!(!Objective::Intact.met(&record));
-        assert!(!Objective::Express.met(&record));
-    }
-    #[test]
-    fn project_capacity_and_money_follow_confirmed_deliveries() {
-        let mut project = Project {
-            funded: true,
-            unreserved: U128(PROJECT_BUDGET),
-            ..Project::default()
-        };
-        for slot in 0..9 {
-            let id = U64(slot as u64);
-            assert_eq!(project.stage(), (slot / 3) as u8);
-            project.reserve(slot, id);
-            assert_eq!(
-                project.unreserved.0 + project.reserved.0 + project.paid.0,
-                PROJECT_BUDGET
-            );
-            let before = project.unreserved.0;
-            project.close(slot, id, false);
-            assert_eq!(
-                project.unreserved.0,
-                before + Project::objective(slot).payment()
-            );
-            project.reserve(slot, id);
-            project.close(slot, id, true);
-            assert_eq!(
-                project.unreserved.0 + project.reserved.0 + project.paid.0,
-                PROJECT_BUDGET
-            );
-        }
-        assert_eq!(project.stage(), 3);
-        assert!(project.restored);
-        assert_eq!(project.paid.0, PROJECT_BUDGET);
-        assert_eq!(project.unreserved.0, 0);
-        assert_eq!(project.reserved.0, 0);
-    }
-    #[test]
-    fn all_advertised_premium_setups_have_wins_for_every_nft_arrangement() {
-        let refs: Vec<near_sdk::serde_json::Value> = near_sdk::serde_json::from_str(include_str!(
-            "../../game-core/tests/fixtures/winning-logs.json"
-        ))
-        .unwrap();
-        for slot in [5, 8] {
-            for setup_id in Project::setups(slot) {
-                for worker in [0, 1, 3, 4, 5, 6] {
-                    for placement in ["escort", "infiltration"] {
-                        for package_option in 0..2 {
-                            let config = Configuration {
-                                setup_id: setup_id.clone(),
-                                worker,
-                                placement: placement.into(),
-                                package_option,
-                            };
-                            let wins = refs.iter().any(|reference| {
-                                let mut log: ActionLog =
-                                    near_sdk::serde_json::from_value(reference["log"].clone())
-                                        .unwrap();
-                                if log.config.setup_id != setup_id {
-                                    return false;
-                                }
-                                log.config = config.clone();
-                                game_core::replay(&log).is_ok_and(|r| {
-                                    r.state.outcome.as_deref() == Some("delivered")
-                                        && match Project::objective(slot) {
-                                            Objective::Intact => r.state.cart_hp == 2,
-                                            Objective::Express => r.state.round <= 4,
-                                            Objective::Routine => true,
-                                        }
-                                })
-                            });
-                            assert!(
-                                wins,
-                                "No premium win for {} {} {} {}",
-                                setup_id, worker, placement, package_option
-                            );
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 impl Registry {
     fn finish_company_withdrawal(&mut self, account: AccountId, id: U64, succeeded: bool) {
         let Some(mut company) = self.companies.get(&account) else {
@@ -503,15 +323,22 @@ impl Registry {
         job_id: U64,
     ) -> Employment {
         require!(self.economy_enabled, "Company bookings are not enabled");
+        self.towns = self.projected_towns();
+        require!(booking.commission_id.0 < 9, "Unknown commission");
+        let town_id = (booking.commission_id.0 / 3) as usize;
+        let objective = match booking.commission_id.0 % 3 {
+            0 => Objective::Routine,
+            1 => Objective::Intact,
+            _ => Objective::Express,
+        };
+        let commission = self
+            .commission(&self.towns[town_id], objective, booking.dispatch_id)
+            .expect("Work changed; review current terms");
         require!(
-            booking.commission_id.0 / 9 == self.project.batch.0,
-            "Project changed; review current work"
-        );
-        let slot = (booking.commission_id.0 % 9) as usize;
-        require!(
-            booking.expected_terms == self.project.terms(slot)
-                && Project::setups(slot).iter().any(|s| s == setup_id),
-            "Commission terms changed or setup is unsupported"
+            commission.available
+                && booking.expected_terms == commission.terms_hash
+                && commission.setup_ids.iter().any(|s| s == setup_id),
+            "Work or terms changed; review current work"
         );
         let account = env::predecessor_account_id();
         let mut company = self
@@ -526,19 +353,20 @@ impl Registry {
             booking.dispatch_id.0 == company.next_dispatch(),
             "Dispatch changed; refresh"
         );
-        let objective = Project::objective(slot);
-        require!(
-            Project::company_setups(slot, company.deliveries.0)
-                .iter()
-                .any(|s| s == setup_id),
-            "Earn a charter to open this route variant"
-        );
         require!(
             booking.company_contribution.0 <= fee
                 && booking.company_contribution.0 <= company.funds.0,
             "Insufficient company funds or excessive contribution"
         );
-        self.project.reserve(slot, job_id);
+        let town = &mut self.towns[town_id];
+        let incoming = town
+            .incoming
+            .iter_mut()
+            .find(|id| id.is_none())
+            .expect("Destination is booked");
+        *incoming = Some(job_id);
+        town.unreserved.0 -= commission.payment.0;
+        town.reserved.0 += commission.payment.0;
         if company.dispatch.completed == 3 {
             company.dispatch = Dispatch {
                 dispatch_id: booking.dispatch_id,
@@ -550,11 +378,12 @@ impl Registry {
         company.funds.0 -= booking.company_contribution.0;
         company.active_job = Some(job_id);
         let employment = Employment {
+            town_id: town_id as u8,
             commission_id: booking.commission_id,
             dispatch_id: booking.dispatch_id,
             leg: company.dispatch.completed,
             objective,
-            payment: U128(objective.payment()),
+            payment: commission.payment,
             company_contribution: booking.company_contribution,
             earned: U128(0),
             closed: false,
@@ -578,12 +407,30 @@ impl Registry {
             && job
                 .record
                 .as_ref()
-                .is_some_and(|r| employment.objective.met(r));
-        self.project.close(
-            (employment.commission_id.0 % 9) as usize,
-            job.job_id,
-            fulfilled,
-        );
+                .is_some_and(|r| objective_met(employment.objective, r));
+        self.towns = self.projected_towns();
+        let town = &mut self.towns[usize::from(employment.town_id)];
+        let incoming = town
+            .incoming
+            .iter_mut()
+            .find(|id| **id == Some(job.job_id))
+            .expect("Delivery reservation missing");
+        *incoming = None;
+        town.reserved.0 -= employment.payment.0;
+        if fulfilled {
+            town.paid.0 = town
+                .paid
+                .0
+                .checked_add(employment.payment.0)
+                .expect("Treasury limit");
+            town.stock.deliver();
+        } else {
+            town.unreserved.0 = town
+                .unreserved
+                .0
+                .checked_add(employment.payment.0)
+                .expect("Treasury limit");
+        }
         if cancelled {
             company.funds.0 += employment.company_contribution.0;
         } else {

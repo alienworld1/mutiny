@@ -68,6 +68,36 @@ impl Registry {
             floor_ask,
             discount_step,
             available_since: U64(env::block_height()),
+            automatic: None,
+        });
+    }
+    pub fn set_auto_offer(
+        &mut self,
+        token_id: TokenId,
+        package_option: u8,
+        starting_ask: U128,
+        floor_ask: U128,
+        ceiling_ask: U128,
+        discount_step: U128,
+    ) {
+        require!(
+            starting_ask.0 <= ceiling_ask.0 && ceiling_ask.0 <= MAX_PRICE,
+            "Invalid ceiling"
+        );
+        self.set_offer(
+            Some(token_id.clone()),
+            package_option,
+            starting_ask,
+            floor_ask,
+            discount_step,
+        );
+        self.workers.get_mut(&token_id).unwrap().offers[usize::from(package_option)]
+            .as_mut()
+            .unwrap()
+            .automatic = Some(PricePolicy {
+            ceiling: ceiling_ask,
+            pressure: 0,
+            updated_at: U64(env::block_timestamp() / 1_000_000_000),
         });
     }
     pub fn withdraw_offer(&mut self, token_id: Option<TokenId>, package_option: Option<u8>) {
@@ -200,6 +230,18 @@ impl Registry {
                 history.remove(0);
             }
             history.push(job.job_id.0);
+            if let Some(policy) = self.workers.get_mut(&job.token_id).unwrap().offers
+                [usize::from(job.config.package_option)]
+            .as_mut()
+            .and_then(|offer| offer.automatic.as_mut())
+            {
+                let now = env::block_timestamp() / 1_000_000_000;
+                policy.pressure =
+                    game_core::economy::decayed_pressure(policy.pressure, policy.updated_at.0, now)
+                        .saturating_add(1)
+                        .min(4);
+                policy.updated_at = U64(now);
+            }
         }
         if ["active", "saved", "expired"].contains(&job.status.as_str()) {
             if credit.status == "staged" {
@@ -431,7 +473,22 @@ impl Registry {
             .map_or(offer.available_since.0, |j| {
                 offer.available_since.0.max(j.cooldown_until.0)
             });
-        offer_price(offer, env::block_height(), available)
+        if let Some(policy) = &offer.automatic {
+            game_core::economy::automatic_quote(
+                offer.starting_ask.0,
+                offer.floor_ask.0,
+                policy.ceiling.0,
+                offer.discount_step.0,
+                game_core::economy::decayed_pressure(
+                    policy.pressure,
+                    policy.updated_at.0,
+                    env::block_timestamp() / 1_000_000_000,
+                ),
+                env::block_height().saturating_sub(available) / IDLE_BLOCKS,
+            )
+        } else {
+            offer_price(offer, env::block_height(), available)
+        }
     }
 
     fn worker_share(fee: u128) -> u128 {
@@ -495,6 +552,7 @@ mod tests {
             floor_ask: U128(1000),
             discount_step: U128(1000),
             available_since: U64(50),
+            automatic: None,
         };
         for (elapsed, expected) in [
             (0, 4000),

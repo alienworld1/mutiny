@@ -17,6 +17,8 @@ import {
   workerTokens,
   workerIndices,
   legacyMarket,
+  previousCompany,
+  previousKingdom,
 } from "./jobs";
 import type { ContractJobController } from "./useContractJob";
 
@@ -171,10 +173,26 @@ export default function ContractJobs({
                 : "Previous deployment: jobs and claims"}
             </a>
           </p>
+          {previousKingdom && (
+            <p className="rounded-xl bg-muted p-4 text-sm">
+              Earlier test deployment. New bookings are disabled. Your funds and
+              claims remain here.{" "}
+              <a className="underline" href="/">
+                Open the kingdom
+              </a>
+            </p>
+          )}
           {legacyMarket && (
             <p className="rounded-xl bg-muted p-4 text-sm">
               Previous testnet deployment. These workers and earnings stay here.
               Company progress belongs to the replacement deployment.
+            </p>
+          )}
+          {!legacyMarket && !previousCompany && !previousKingdom && (
+            <p className="text-xs text-secondary">
+              <a className="underline" href="?market=company-v3">
+                Previous company: funds, jobs and claims
+              </a>
             </p>
           )}
           <CompanyHome
@@ -202,7 +220,7 @@ export default function ContractJobs({
               )}
             </div>
           )}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 lg:grid-cols-3">
             {c.market.map((w) => (
               <button
                 key={w.token.token_id}
@@ -282,6 +300,16 @@ export default function ContractJobs({
               <button disabled={c.busy}>Find Cheapest</button>
             </form>
           </details>
+          {c.worker?.status === "expired_pending" && (
+            <button
+              disabled={c.busy}
+              onClick={() =>
+                c.moneyAction("expire", { job_id: c.worker!.job!.job_id })
+              }
+            >
+              Release expired shift
+            </button>
+          )}
           {c.worker && (
             <div className="space-y-3 rounded-xl border border-border bg-muted/40 p-4 text-sm">
               <div className="flex gap-4">
@@ -373,9 +401,12 @@ export default function ContractJobs({
                         }{" "}
                         · Current fee {nearAmount(c.worker!.quotes![i]!)}{" "}
                         testnet NEAR · Starts {nearAmount(o.starting_ask)} ·
-                        Floor {nearAmount(o.floor_ask)} · Drops{" "}
+                        Floor {nearAmount(o.floor_ask)} ·{" "}
+                        {o.automatic
+                          ? `Automatic · Ceiling ${nearAmount(o.automatic.ceiling)} · Demand pressure ${o.automatic.pressure}/4 · Idle step`
+                          : "Drops"}{" "}
                         {nearAmount(o.discount_step)} every 120 idle blocks, at
-                        most 3 times.
+                        most {o.automatic ? 4 : 3} times.
                       </p>
                     ),
                 )}
@@ -556,13 +587,27 @@ export default function ContractJobs({
                   {objectiveTerms[job.employment.objective]} Hire fee paid:{" "}
                   {nearAmount(job.accepted_fee)} NEAR.
                 </p>
+                {c.economy?.version === 4 &&
+                  job.employment.town_id !== undefined && (
+                    <p className="mt-1">
+                      {c.economy.towns[job.employment.town_id]?.name}:{" "}
+                      {job.employment.earned !== "0"
+                        ? "1 supply delivered."
+                        : "Delivery still needed."}{" "}
+                      Supplies{" "}
+                      {c.economy.towns[job.employment.town_id]?.stock.supplies}
+                      /6.
+                    </p>
+                  )}
                 <p className="mt-1">
                   Company funds: {nearAmount(c.economy?.company?.funds ?? "0")}{" "}
                   NEAR · Dispatch leg {job.employment.leg + 1}/3 complete.
                 </p>
                 <p className="mt-1">
                   {BigInt(c.economy?.company?.deliveries ?? "0") >= 2n
-                    ? "Chartered company. More route variants are open."
+                    ? c.economy?.version === 4
+                      ? "Chartered company."
+                      : "Chartered company. More route variants are open."
                     : `${c.economy?.company?.deliveries ?? "0"}/2 deliveries toward your charter.`}
                 </p>
               </div>

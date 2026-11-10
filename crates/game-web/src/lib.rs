@@ -53,3 +53,59 @@ pub fn configure(config_json: &str) -> Result<String, JsValue> {
     let config: game_core::Configuration = serde_json::from_str(config_json).map_err(error)?;
     serialize(&game_core::start_config(&config).map_err(error)?)
 }
+
+#[wasm_bindgen]
+pub fn configure_version(config_json: &str, version: u16) -> Result<String, JsValue> {
+    let config: game_core::Configuration = serde_json::from_str(config_json).map_err(error)?;
+    serialize(&game_core::start_config_version(&config, version).map_err(error)?)
+}
+#[wasm_bindgen]
+pub fn content_version(version: u16) -> Result<String, JsValue> {
+    serialize(&game_core::bundle_version(version).map_err(error)?)
+}
+#[wasm_bindgen]
+pub fn simulate_kingdom(
+    snapshot_json: &str,
+    hours: u8,
+    deliveries: bool,
+) -> Result<String, JsValue> {
+    use game_core::economy::{Objective, Stock};
+    #[derive(serde::Deserialize)]
+    struct Snapshot {
+        stocks: [Stock; 3],
+        treasuries: [String; 3],
+    }
+    if snapshot_json.len() > 4096 || hours > 24 {
+        return Err(error("Preview exceeds one day"));
+    }
+    let snapshot: Snapshot = serde_json::from_str(snapshot_json).map_err(error)?;
+    let mut stocks = snapshot.stocks;
+    if stocks.iter().any(|s| s.supplies > 6) {
+        return Err(error("Invalid stock"));
+    }
+    let mut treasuries = [0u128; 3];
+    for (i, amount) in snapshot.treasuries.iter().enumerate() {
+        treasuries[i] = amount.parse::<u128>().map_err(error)?;
+    }
+    let mut paid = [0u128; 3];
+    let mut frames = vec![];
+    for hour in 0..=hours {
+        if hour > 0 {
+            for (i, stock) in stocks.iter_mut().enumerate() {
+                stock.advance(stock.updated_at.saturating_add(3600));
+                if deliveries {
+                    if let Some(payment) = stock
+                        .payment(Objective::Routine)
+                        .filter(|p| *p <= treasuries[i])
+                    {
+                        treasuries[i] -= payment;
+                        paid[i] += payment;
+                        stock.deliver();
+                    }
+                }
+            }
+        }
+        frames.push(serde_json::json!({"stocks":stocks,"treasuries":treasuries.map(|n|n.to_string()),"paid":paid.map(|n|n.to_string())}));
+    }
+    serialize(&frames)
+}

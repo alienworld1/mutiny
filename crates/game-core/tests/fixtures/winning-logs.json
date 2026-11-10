@@ -40,7 +40,7 @@
         "setup_id": "dock-fire-intro",
         "worker": 0
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -133,7 +133,7 @@
         "setup_id": "dock-fire-intro",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -178,7 +178,7 @@
         "setup_id": "dock-fire-crosswind",
         "worker": 0
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -271,292 +271,357 @@
         "setup_id": "dock-fire-crosswind",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
   {
     "approach": "delivery",
     "log": {
-      "commands": [
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [],
-          "unit": 1
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [31, 30],
-          "unit": 0
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [23],
-          "unit": 0
-        }
-      ],
+      "rules_version": 2,
+      "content_version": 3,
       "config": {
-        "package_option": 0,
-        "placement": "escort",
         "setup_id": "dock-fire-embers",
-        "worker": 0
-      },
-      "content_version": 2,
-      "rules_version": 2
-    }
-  },
-  {
-    "approach": "combat",
-    "log": {
-      "commands": [
-        {
-          "action": {
-            "kind": "attack",
-            "target": 4
-          },
-          "kind": "activate",
-          "path": [25],
-          "unit": 0
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [],
-          "unit": 1
-        },
-        {
-          "action": {
-            "kind": "attack",
-            "target": 4
-          },
-          "kind": "activate",
-          "path": [],
-          "unit": 0
-        },
-        {
-          "action": {
-            "kind": "attack",
-            "target": 5
-          },
-          "kind": "activate",
-          "path": [33],
-          "unit": 2
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [36],
-          "unit": 1
-        },
-        {
-          "action": {
-            "kind": "attack",
-            "target": 3
-          },
-          "kind": "activate",
-          "path": [18],
-          "unit": 0
-        },
-        {
-          "action": {
-            "kind": "attack",
-            "target": 5
-          },
-          "kind": "activate",
-          "path": [],
-          "unit": 2
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [29],
-          "unit": 1
-        }
-      ],
-      "config": {
-        "package_option": 0,
         "placement": "escort",
-        "setup_id": "dock-fire-embers",
-        "worker": 2
+        "worker": 0,
+        "package_option": 0
       },
-      "content_version": 2,
-      "rules_version": 2
-    }
-  },
-  {
-    "approach": "delivery",
-    "log": {
       "commands": [
         {
+          "kind": "activate",
+          "unit": 1,
+          "path": [42, 35],
           "action": {
             "kind": "push"
-          },
+          }
+        },
+        {
           "kind": "activate",
-          "path": [39],
-          "unit": 2
-        },
-        {
-          "action": {
-            "kind": "attack",
-            "target": 4
-          },
-          "kind": "activate",
-          "path": [25, 18],
-          "unit": 0
-        },
-        {
-          "action": {
-            "kind": "guard"
-          },
-          "kind": "activate",
-          "path": [38, 37, 30],
-          "unit": 1
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [25, 32],
-          "unit": 0
-        },
-        {
-          "action": {
-            "kind": "attack",
-            "target": 3
-          },
-          "kind": "activate",
-          "path": [23, 16, 17],
-          "unit": 1
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [16, 23],
-          "unit": 1
-        }
-      ],
-      "config": {
-        "package_option": 0,
-        "placement": "escort",
-        "setup_id": "bridge-audit-toll",
-        "worker": 0
-      },
-      "content_version": 2,
-      "rules_version": 2
-    }
-  },
-  {
-    "approach": "combat",
-    "log": {
-      "commands": [
-        {
-          "action": {
-            "kind": "attack",
-            "target": 4
-          },
-          "kind": "activate",
-          "path": [25, 18],
-          "unit": 0
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [46, 39],
-          "unit": 1
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
+          "unit": 2,
           "path": [33, 32],
-          "unit": 2
+          "action": {
+            "kind": "swap",
+            "target": 0
+          }
         },
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [25],
           "action": {
             "kind": "attack",
-            "target": 3
-          },
-          "kind": "activate",
-          "path": [17, 10],
-          "unit": 0
+            "target": 4
+          }
         },
         {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [],
+          "action": {
+            "kind": "attack",
+            "target": 4
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [36],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [39, 32],
+          "action": {
+            "kind": "shove",
+            "target": 0,
+            "cell": 18
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [29],
+          "action": {
+            "kind": "push"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "approach": "combat",
+    "log": {
+      "rules_version": 2,
+      "content_version": 3,
+      "config": {
+        "setup_id": "dock-fire-embers",
+        "placement": "escort",
+        "worker": 2,
+        "package_option": 0
+      },
+      "commands": [
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [44, 37],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [39, 32],
+          "action": {
+            "kind": "burn",
+            "cell": 34
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [30],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [33],
+          "action": {
+            "kind": "attack",
+            "target": 5
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [25],
+          "action": {
+            "kind": "attack",
+            "target": 4
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [23, 16],
           "action": {
             "kind": "clean_shot",
-            "target": 5
-          },
+            "target": 4
+          }
+        },
+        {
           "kind": "activate",
-          "path": [40, 33],
-          "unit": 1
+          "unit": 0,
+          "path": [18],
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [],
+          "action": {
+            "kind": "attack",
+            "target": 5
+          }
         },
         {
           "kind": "end_phase"
         },
         {
+          "kind": "activate",
+          "unit": 1,
+          "path": [23],
           "action": {
             "kind": "push"
-          },
-          "kind": "activate",
-          "path": [25],
-          "unit": 2
+          }
         }
-      ],
+      ]
+    }
+  },
+  {
+    "approach": "delivery",
+    "log": {
+      "rules_version": 2,
+      "content_version": 3,
       "config": {
-        "package_option": 0,
-        "placement": "escort",
         "setup_id": "bridge-audit-toll",
-        "worker": 2
+        "placement": "escort",
+        "worker": 0,
+        "package_option": 0
       },
-      "content_version": 2,
-      "rules_version": 2
+      "commands": [
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [39, 32],
+          "action": {
+            "kind": "burn",
+            "cell": 18
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [44, 37],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [39, 38],
+          "action": {
+            "kind": "shove",
+            "target": 1,
+            "cell": 30
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [23, 16, 17],
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [37, 30],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [31],
+          "action": {
+            "kind": "guard"
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [16, 23],
+          "action": {
+            "kind": "push"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "approach": "combat",
+    "log": {
+      "rules_version": 2,
+      "content_version": 3,
+      "config": {
+        "setup_id": "bridge-audit-toll",
+        "placement": "escort",
+        "worker": 2,
+        "package_option": 0
+      },
+      "commands": [
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [44, 37],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [33, 32],
+          "action": {
+            "kind": "swap",
+            "target": 0
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [25, 18],
+          "action": {
+            "kind": "attack",
+            "target": 4
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [39, 32],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [17, 10],
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [25, 18],
+          "action": {
+            "kind": "attack",
+            "target": 5
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [30, 23],
+          "action": {
+            "kind": "push"
+          }
+        }
+      ]
     }
   },
   {
@@ -600,7 +665,7 @@
         "setup_id": "bridge-audit-paper",
         "worker": 0
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -675,7 +740,7 @@
         "setup_id": "bridge-audit-paper",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -757,7 +822,7 @@
         "setup_id": "bridge-audit-queue",
         "worker": 0
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -850,7 +915,7 @@
         "setup_id": "bridge-audit-queue",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -895,7 +960,7 @@
         "setup_id": "friday-again-overtime",
         "worker": 0
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -970,128 +1035,167 @@
         "setup_id": "friday-again-overtime",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
   {
     "approach": "delivery",
     "log": {
+      "rules_version": 2,
+      "content_version": 3,
+      "config": {
+        "setup_id": "friday-again-crossed",
+        "placement": "escort",
+        "worker": 0,
+        "package_option": 0
+      },
       "commands": [
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [39, 32],
+          "action": {
+            "kind": "burn",
+            "cell": 24
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [36, 37],
           "action": {
             "kind": "push"
-          },
+          }
+        },
+        {
           "kind": "activate",
-          "path": [32, 39],
-          "unit": 0
+          "unit": 1,
+          "path": [38],
+          "action": {
+            "kind": "smoke",
+            "cell": 31
+          }
         },
         {
           "kind": "end_phase"
         },
         {
-          "action": {
-            "kind": "push"
-          },
           "kind": "activate",
-          "path": [32],
-          "unit": 0
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
+          "unit": 0,
           "path": [25],
-          "unit": 0
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [30, 23],
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [],
+          "action": {
+            "kind": "push"
+          }
         }
-      ],
-      "config": {
-        "package_option": 0,
-        "placement": "escort",
-        "setup_id": "friday-again-crossed",
-        "worker": 0
-      },
-      "content_version": 2,
-      "rules_version": 2
+      ]
     }
   },
   {
     "approach": "combat",
     "log": {
+      "rules_version": 2,
+      "content_version": 3,
+      "config": {
+        "setup_id": "friday-again-crossed",
+        "placement": "escort",
+        "worker": 2,
+        "package_option": 0
+      },
       "commands": [
         {
-          "action": {
-            "kind": "attack",
-            "target": 5
-          },
           "kind": "activate",
-          "path": [26, 19],
-          "unit": 0
+          "unit": 0,
+          "path": [39],
+          "action": {
+            "kind": "push"
+          }
         },
         {
           "kind": "end_phase"
         },
         {
-          "action": {
-            "kind": "push"
-          },
           "kind": "activate",
-          "path": [],
-          "unit": 1
-        },
-        {
+          "unit": 0,
+          "path": [32, 33],
           "action": {
             "kind": "attack",
             "target": 5
-          },
-          "kind": "activate",
-          "path": [26, 27],
-          "unit": 0
+          }
         },
         {
           "kind": "end_phase"
         },
         {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [38],
-          "unit": 1
+          "kind": "end_phase"
         },
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [34, 27],
           "action": {
             "kind": "attack",
             "target": 4
-          },
+          }
+        },
+        {
           "kind": "activate",
-          "path": [26, 25],
-          "unit": 0
+          "unit": 1,
+          "path": [38],
+          "action": {
+            "kind": "push"
+          }
         },
         {
           "kind": "end_phase"
         },
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [26],
+          "action": {
+            "kind": "attack",
+            "target": 5
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [31],
           "action": {
             "kind": "push"
-          },
-          "kind": "activate",
-          "path": [],
-          "unit": 0
+          }
         }
-      ],
-      "config": {
-        "package_option": 0,
-        "placement": "escort",
-        "setup_id": "friday-again-crossed",
-        "worker": 2
-      },
-      "content_version": 2,
-      "rules_version": 2
+      ]
     }
   },
   {
@@ -1183,7 +1287,7 @@
         "setup_id": "friday-again-last",
         "worker": 1
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -1267,7 +1371,7 @@
         "setup_id": "friday-again-last",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -1312,7 +1416,7 @@
         "setup_id": "dock-fire-intro",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -1357,124 +1461,170 @@
         "setup_id": "dock-fire-crosswind",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
   {
     "approach": "infiltration",
     "log": {
-      "commands": [
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [],
-          "unit": 1
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [31, 30],
-          "unit": 0
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
-          "path": [23],
-          "unit": 0
-        }
-      ],
+      "rules_version": 2,
+      "content_version": 3,
       "config": {
-        "package_option": 0,
-        "placement": "infiltration",
         "setup_id": "dock-fire-embers",
-        "worker": 2
+        "placement": "infiltration",
+        "worker": 2,
+        "package_option": 0
       },
-      "content_version": 2,
-      "rules_version": 2
-    }
-  },
-  {
-    "approach": "infiltration",
-    "log": {
       "commands": [
         {
-          "action": {
-            "kind": "push"
-          },
           "kind": "activate",
+          "unit": 2,
           "path": [39],
-          "unit": 2
+          "action": {
+            "kind": "shove",
+            "target": 0,
+            "cell": 45
+          }
         },
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [38, 31],
+          "action": {
+            "kind": "guard"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [36, 35, 28],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [24, 25],
           "action": {
             "kind": "attack",
             "target": 4
-          },
-          "kind": "activate",
-          "path": [25, 18],
-          "unit": 0
+          }
         },
         {
-          "action": {
-            "kind": "guard"
-          },
           "kind": "activate",
-          "path": [38, 37, 30],
-          "unit": 1
+          "unit": 2,
+          "path": [38, 31],
+          "action": {
+            "kind": "attack",
+            "target": 4
+          }
         },
         {
           "kind": "end_phase"
         },
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [24, 23],
           "action": {
             "kind": "push"
-          },
+          }
+        }
+      ]
+    }
+  },
+  {
+    "approach": "infiltration",
+    "log": {
+      "rules_version": 2,
+      "content_version": 3,
+      "config": {
+        "setup_id": "bridge-audit-toll",
+        "placement": "infiltration",
+        "worker": 2,
+        "package_option": 0
+      },
+      "commands": [
+        {
           "kind": "activate",
-          "path": [25, 32],
-          "unit": 0
+          "unit": 0,
+          "path": [39, 32],
+          "action": {
+            "kind": "burn",
+            "cell": 18
+          }
         },
         {
+          "kind": "activate",
+          "unit": 1,
+          "path": [44, 37],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [39, 38],
+          "action": {
+            "kind": "shove",
+            "target": 1,
+            "cell": 30
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [23, 16, 17],
           "action": {
             "kind": "attack",
             "target": 3
-          },
+          }
+        },
+        {
           "kind": "activate",
-          "path": [23, 16, 17],
-          "unit": 1
+          "unit": 2,
+          "path": [37, 30],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [31],
+          "action": {
+            "kind": "guard"
+          }
         },
         {
           "kind": "end_phase"
         },
         {
+          "kind": "activate",
+          "unit": 1,
+          "path": [16, 23],
           "action": {
             "kind": "push"
-          },
-          "kind": "activate",
-          "path": [16, 23],
-          "unit": 1
+          }
         }
-      ],
-      "config": {
-        "package_option": 0,
-        "placement": "infiltration",
-        "setup_id": "bridge-audit-toll",
-        "worker": 2
-      },
-      "content_version": 2,
-      "rules_version": 2
+      ]
     }
   },
   {
@@ -1518,7 +1668,7 @@
         "setup_id": "bridge-audit-paper",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -1600,7 +1750,7 @@
         "setup_id": "bridge-audit-queue",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
@@ -1645,53 +1795,88 @@
         "setup_id": "friday-again-overtime",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   },
   {
     "approach": "infiltration",
     "log": {
+      "rules_version": 2,
+      "content_version": 3,
+      "config": {
+        "setup_id": "friday-again-crossed",
+        "placement": "infiltration",
+        "worker": 2,
+        "package_option": 0
+      },
       "commands": [
         {
+          "kind": "activate",
+          "unit": 0,
+          "path": [39, 32],
+          "action": {
+            "kind": "burn",
+            "cell": 24
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [36, 37],
           "action": {
             "kind": "push"
-          },
+          }
+        },
+        {
           "kind": "activate",
-          "path": [32, 39],
-          "unit": 0
+          "unit": 1,
+          "path": [38],
+          "action": {
+            "kind": "guard"
+          }
         },
         {
           "kind": "end_phase"
         },
         {
-          "action": {
-            "kind": "push"
-          },
           "kind": "activate",
-          "path": [32],
-          "unit": 0
-        },
-        {
-          "kind": "end_phase"
-        },
-        {
-          "action": {
-            "kind": "push"
-          },
-          "kind": "activate",
+          "unit": 0,
           "path": [25],
-          "unit": 0
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 2,
+          "path": [30, 23],
+          "action": {
+            "kind": "attack",
+            "target": 3
+          }
+        },
+        {
+          "kind": "activate",
+          "unit": 1,
+          "path": [37, 30],
+          "action": {
+            "kind": "push"
+          }
+        },
+        {
+          "kind": "end_phase"
+        },
+        {
+          "kind": "activate",
+          "unit": 0,
+          "path": [],
+          "action": {
+            "kind": "push"
+          }
         }
-      ],
-      "config": {
-        "package_option": 0,
-        "placement": "infiltration",
-        "setup_id": "friday-again-crossed",
-        "worker": 2
-      },
-      "content_version": 2,
-      "rules_version": 2
+      ]
     }
   },
   {
@@ -1782,7 +1967,7 @@
         "setup_id": "friday-again-last",
         "worker": 2
       },
-      "content_version": 2,
+      "content_version": 3,
       "rules_version": 2
     }
   }

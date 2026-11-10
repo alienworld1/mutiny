@@ -10,6 +10,7 @@ async function mockChain(
   paid = false,
   six = false,
   company = false,
+  kingdom = false,
 ) {
   await page.route(/\/src\/near\/chain\.ts(?:\?.*)?$/, (route) =>
     route.fulfill({
@@ -17,7 +18,7 @@ async function mockChain(
       body: `
     import * as engine from '/src/game/engine.ts';
     import {digest,supportedContentHash} from '/src/near/jobs.ts';
-    const accountId='owner.testnet',paid=${paid},six=${six},companyMode=${company};
+    const accountId='owner.testnet',paid=${paid},six=${six},companyMode=${company},kingdomMode=${kingdom};
     const ids=['rook','mallow','nix','dot','brisk','peebles'],indices=[0,1,3,4,5,6],names=['Rook','Mallow','Nix','Dot','Brisk','Peebles'],roles=['courier','shieldbearer','mage','courier','shieldbearer','mage'],options=[['fire','shouting'],['shouting','friendly'],['fire','friendly'],['shouting','friendly'],['fire','friendly'],['fire','shouting']];
     const activeAccount=()=>localStorage.getItem('test-account')||(paid?'renter.testnet':accountId);
     const fee=()=>localStorage.getItem('test-price')||'4000000000000000000001';
@@ -32,6 +33,10 @@ async function mockChain(
         const current=stored(),jobs=JSON.parse(localStorage.getItem('test-jobs')||'{}');if(current)jobs[current.job_id]=current;const index=Math.max(0,ids.indexOf(args.token_id||current?.token_id||'rook')),token=ids[index];const job=args.job_id!==undefined?jobs[args.job_id]:Object.values(jobs).filter(j=>j.token_id===token).sort((a,b)=>Number(b.job_id)-Number(a.job_id))[0]||null;
         if(method==='get_economy'){
           if(!companyMode)return null;
+          if(kingdomMode){
+            const initial={version:4,enabled:true,sponsor:'owner.testnet',company:null,timestamp:'1800',towns:[0,1,2].map(i=>({town_id:i,name:['Docks','Crossing','Royal office'][i],stock:{supplies:[1,3,5][i],updated_at:1800,deliveries:0},incoming:[null,null],unreserved:localStorage.getItem('test-empty-treasury')?'0':'1000000000000000000000000',reserved:'0',paid:'0',contributed:localStorage.getItem('test-empty-treasury')?'0':'1000000000000000000000000'})),commissions:[0,1,2].map(i=>({town_id:i,commission_id:String(i*3),dispatch_id:'0',objective:'routine',payment:['50000000000000000000000','40000000000000000000000','30000000000000000000000'][i],setup_ids:[['dock-fire-crosswind','bridge-audit-toll','friday-again-overtime'][i]],terms_hash:'dGVybXM=',available:!localStorage.getItem('test-empty-treasury')}))};
+            return JSON.parse(localStorage.getItem('test-economy')||JSON.stringify(initial));
+          }
           const initial={version:3,enabled:true,sponsor:'owner.testnet',company:null,stage:0,project:{batch:'0',funded:true,restored:false,slots:[0,0,0,0,0,0,0,0,0],reservations:[null,null,null,null,null,null,null,null,null],unreserved:'500000000000000000000000',reserved:'0',paid:'0'},commissions:[0,1,2].map(i=>({commission_id:String(i),dispatch_id:'0',objective:'routine',payment:'50000000000000000000000',setup_ids:engine.content().filter(s=>s.name===['Dock Fire','Bridge Audit','Friday, Again'][i]).map(s=>s.id),terms_hash:'dGVybXM=',available:true,charter_required:false}))};
           return JSON.parse(localStorage.getItem('test-economy')||JSON.stringify(initial));
         }
@@ -59,7 +64,8 @@ async function mockChain(
         } else if(method==='nft_transfer'){if(deposit!==1n)throw Error('Need one yocto');localStorage.setItem('test-owner-'+args.token_id,args.receiver_id);
         } else if(method==='request_claim'){localStorage.setItem('test-claim',JSON.stringify({claim_id:'0',recipient:activeAccount(),amount:args.amount,status:'pending'}));
         } else if(method==='reconcile_claim'){const claim=JSON.parse(localStorage.getItem('test-claim'));claim.status='paid';localStorage.setItem('test-claim',JSON.stringify(claim));localStorage.setItem('test-claimed','1');
-        } else if(method==='set_offer'||method==='withdraw_offer'){} else if(method==='settle'){
+        } else if(method==='fund_town'){const e=await this.view('get_economy',{}),t=e.towns[args.town_id];if(args.expected_contributed!==t.contributed)throw Error('Treasury changed');t.unreserved=String(BigInt(t.unreserved)+deposit);t.contributed=String(BigInt(t.contributed)+deposit);localStorage.setItem('test-economy',JSON.stringify(e));
+        } else if(method==='set_auto_offer'||method==='set_offer'||method==='withdraw_offer'){} else if(method==='settle'){
           if(localStorage.getItem('test-pending'))return {hash:'pending-test-transaction',signer:accountId};
           const job=stored(),log=JSON.parse(args.action_log),state=engine.replay(log).state;
           const setup=Uint8Array.from(atob(job.setup_hash),c=>c.charCodeAt(0)),canonical=engine.canonical(log),combined=new Uint8Array(setup.length+canonical.length);combined.set(setup);combined.set(canonical,setup.length);
@@ -565,7 +571,9 @@ test("switching workers keeps each active job's local moves", async ({
   await page.getByRole("button", { name: /^Captain / }).click();
   await page.getByRole("button", { name: "Guard", exact: true }).click();
   await confirm(page);
-  await expect(page.getByRole("button", { name: /^Captain ✓/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Captain .*acted/ }),
+  ).toBeVisible();
   await page.reload();
   await page
     .getByRole("button", { name: "Run a company", exact: true })
@@ -587,7 +595,9 @@ test("switching workers keeps each active job's local moves", async ({
     page.getByText("Job 0 · escort", { exact: false }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Resume Job", exact: true }).click();
-  await expect(page.getByRole("button", { name: /^Captain ✓/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Captain .*acted/ }),
+  ).toBeVisible();
 });
 
 test("Hiring Hall and owner controls fit a narrow screen with enlarged text", async ({
@@ -804,4 +814,110 @@ test("company remains readable on a narrow screen with enlarged text", async ({
     path: "/tmp/mutiny-company-mobile.png",
     fullPage: true,
   });
+});
+
+test("kingdom connects shortages, selected routes, funding and an isolated forecast", async ({
+  page,
+}) => {
+  await mockChain(page, true, true, true, true);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Run a company", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "The kingdom runs on deliveries." }),
+  ).toBeVisible();
+  const docks = page.getByRole("article", { name: "Docks", exact: true });
+  await expect(docks).toContainText("Supplies 1/6");
+  await docks.getByRole("button", { name: /Routine delivery/ }).click();
+  await expect(
+    page.getByText("Dock Fire · Crosswind", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Hire", exact: true }),
+  ).toBeEnabled();
+  await page.getByText("Watch a day · Simulation", { exact: true }).click();
+  await page.getByLabel("Hours ahead", { exact: true }).fill("24");
+  await expect(page.getByLabel("Your kingdom")).toContainText(
+    "1 → 0/6 supplies",
+  );
+  expect(
+    await page.evaluate(() => localStorage.getItem("test-calls")),
+  ).toBeNull();
+  await page.getByText("Support a town", { exact: true }).click();
+  await page.getByRole("button", { name: "Contribute", exact: true }).click();
+  await expect
+    .poll(
+      async () =>
+        JSON.parse(
+          (await page.evaluate(() => localStorage.getItem("test-economy"))) ||
+            "{}",
+        ).towns?.[0]?.contributed,
+    )
+    .toBe("1100000000000000000000000");
+  await page.screenshot({
+    path: "/tmp/mutiny-kingdom-desktop.png",
+    fullPage: true,
+  });
+});
+test("kingdom handles an empty treasury and mobile enlarged text", async ({
+  page,
+}) => {
+  await mockChain(page, true, true, true, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("test-empty-treasury", "1"));
+  await page.addStyleTag({ content: "html{font-size:200%}" });
+  await page
+    .getByRole("button", { name: "Run a company", exact: true })
+    .click();
+  await expect(
+    page.getByRole("article", { name: "Crossing", exact: true }),
+  ).toContainText("Low supplies");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await expect(
+    page.getByText("No funded work. A contribution can reopen deliveries.", {
+      exact: true,
+    }),
+  ).toHaveCount(3);
+  await expect(
+    page.getByRole("button", { name: "Hire", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("heading", { name: "The kingdom runs on deliveries." })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: "/tmp/mutiny-kingdom-mobile.png",
+    fullPage: false,
+  });
+  await page
+    .getByRole("heading", { name: "Hire your crew", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "/tmp/mutiny-kingdom-workers-mobile.png" });
+});
+
+test("kingdom refreshes shared opportunities without another wallet action", async ({
+  page,
+}) => {
+  await mockChain(page, true, true, true, true);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Run a company", exact: true })
+    .click();
+  await expect(
+    page.getByRole("article", { name: "Docks", exact: true }),
+  ).toContainText("Supplies 1/6");
+  await page.evaluate(() => localStorage.setItem("test-empty-treasury", "1"));
+  await expect(
+    page.getByText("No funded work. A contribution can reopen deliveries.", {
+      exact: true,
+    }),
+  ).toHaveCount(3, { timeout: 20_000 });
+  expect(
+    await page.evaluate(() => localStorage.getItem("test-calls")),
+  ).toBeNull();
 });

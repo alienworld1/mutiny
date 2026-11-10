@@ -63,3 +63,42 @@ describe("company boundaries", () => {
     ).toThrow("company");
   });
 });
+
+const kingdom = {
+  version: 4,
+  company: null,
+  commissions: [],
+  sponsor: "owner.testnet",
+  enabled: true,
+  timestamp: "1800",
+  towns: [0, 1, 2].map((town_id) => ({
+    town_id,
+    name: ["Docks", "Crossing", "Royal office"][town_id],
+    stock: { supplies: 1, updated_at: 1800, deliveries: 0 },
+    incoming: [null, null],
+    unreserved: "100",
+    reserved: "0",
+    paid: "0",
+    contributed: "100",
+  })),
+};
+describe("kingdom boundaries", () => {
+  it("accepts separate backed town budgets", () =>
+    expect(parseEconomy(kingdom)).toEqual(kingdom));
+  it("rejects unbacked money, impossible stocks and duplicate destinations", () => {
+    for (const town of [
+      { ...kingdom.towns[0], paid: "1" },
+      {
+        ...kingdom.towns[0],
+        stock: { supplies: 7, updated_at: 1800, deliveries: 0 },
+      },
+      { ...kingdom.towns[0], incoming: [null, null, null] },
+      { ...kingdom.towns[0], town_id: 2 },
+    ]) {
+      expect(() =>
+        parseEconomy({ ...kingdom, towns: [town, ...kingdom.towns.slice(1)] }),
+      ).toThrow();
+    }
+    expect(() => parseEconomy({ ...kingdom, version: "4" })).toThrow();
+  });
+});

@@ -1,10 +1,10 @@
 {
   "rules_version": 2,
-  "content_version": 2,
+  "content_version": 3,
   "setups": [
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "dock-fire-intro",
       "name": "Dock Fire",
       "route": [37, 30, 23, 16],
@@ -82,7 +82,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "dock-fire-crosswind",
       "name": "Dock Fire",
       "route": [38, 31, 24, 17],
@@ -160,7 +160,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "dock-fire-embers",
       "name": "Dock Fire",
       "route": [36, 29, 22, 15],
@@ -172,7 +172,7 @@
           "name": "Captain",
           "role": "captain",
           "side": "player",
-          "cell": 32,
+          "cell": 46,
           "hp": 3,
           "movement": 2,
           "package": "none"
@@ -238,7 +238,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "bridge-audit-toll",
       "name": "Bridge Audit",
       "route": [38, 31, 24, 17],
@@ -250,7 +250,7 @@
           "name": "Captain",
           "role": "captain",
           "side": "player",
-          "cell": 32,
+          "cell": 46,
           "hp": 3,
           "movement": 2,
           "package": "none"
@@ -316,7 +316,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "bridge-audit-paper",
       "name": "Bridge Audit",
       "route": [37, 30, 23, 16],
@@ -394,7 +394,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "bridge-audit-queue",
       "name": "Bridge Audit",
       "route": [38, 31, 30, 23],
@@ -472,7 +472,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "friday-again-overtime",
       "name": "Friday, Again",
       "route": [37, 30, 23, 16],
@@ -550,7 +550,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "friday-again-crossed",
       "name": "Friday, Again",
       "route": [38, 31, 24, 17],
@@ -562,7 +562,7 @@
           "name": "Captain",
           "role": "captain",
           "side": "player",
-          "cell": 33,
+          "cell": 46,
           "hp": 3,
           "movement": 2,
           "package": "none"
@@ -628,7 +628,7 @@
     },
     {
       "rules_version": 2,
-      "content_version": 2,
+      "content_version": 3,
       "id": "friday-again-last",
       "name": "Friday, Again",
       "route": [36, 29, 30, 23],

@@ -1,6 +1,6 @@
 mod economy;
 mod paid;
-use economy::{Booking, Company, Employment, Project};
+use economy::{Booking, Company, Employment, Town};
 use game_core::{ActionLog, Configuration, Event};
 use near_contract_standards::non_fungible_token::{
     NonFungibleToken, Token, TokenId,
@@ -35,7 +35,16 @@ pub struct Offer {
     pub floor_ask: U128,
     pub discount_step: U128,
     pub available_since: U64,
+    pub automatic: Option<PricePolicy>,
 }
+#[near(serializers = [json, borsh])]
+#[derive(Clone)]
+pub struct PricePolicy {
+    pub ceiling: U128,
+    pub pressure: u8,
+    pub updated_at: U64,
+}
+
 #[near(serializers = [json, borsh])]
 #[derive(Clone)]
 pub struct Claim {
@@ -115,6 +124,7 @@ pub struct WorkerView {
     pub hall_earned: U128,
     pub claim: Option<Claim>,
     pub paid_enabled: bool,
+    pub timestamp: U64,
 }
 
 #[near(serializers = [borsh])]
@@ -141,7 +151,7 @@ pub struct Registry {
     next_claim: u64,
     deployment_owner: AccountId,
     companies: LookupMap<AccountId, Company>,
-    project: Project,
+    towns: [Town; 3],
     economy_enabled: bool,
 }
 
@@ -219,7 +229,20 @@ impl Registry {
             next_claim: 0,
             deployment_owner: owner_id,
             companies: LookupMap::new(b"c"),
-            project: Project::default(),
+            towns: std::array::from_fn(|i| Town {
+                town_id: i as u8,
+                name: ["Docks", "Crossing", "Royal office"][i].into(),
+                stock: game_core::economy::Stock {
+                    supplies: [1, 3, 5][i],
+                    updated_at: env::block_timestamp() / 1_000_000_000,
+                    deliveries: 0,
+                },
+                incoming: [None, None],
+                unreserved: U128(0),
+                reserved: U128(0),
+                paid: U128(0),
+                contributed: U128(0),
+            }),
             economy_enabled: false,
         }
     }
@@ -296,6 +319,17 @@ impl Registry {
         };
         let mut offers = w.offers.clone();
         for o in offers.iter_mut().flatten() {
+            if let Some(policy) = o.automatic.as_mut() {
+                let now = env::block_timestamp() / 1_000_000_000;
+                let ticks = now.saturating_sub(policy.updated_at.0)
+                    / game_core::economy::CONSUMPTION_SECONDS;
+                policy.pressure =
+                    game_core::economy::decayed_pressure(policy.pressure, policy.updated_at.0, now);
+                policy.updated_at.0 = policy
+                    .updated_at
+                    .0
+                    .saturating_add(ticks * game_core::economy::CONSUMPTION_SECONDS);
+            }
             if let Some(j) = &job {
                 o.available_since = U64(o.available_since.0.max(j.cooldown_until.0));
             }
@@ -335,6 +369,7 @@ impl Registry {
             hall_earned: U128(self.hall_earned),
             claim: w.claim.clone(),
             paid_enabled: w.paid_enabled,
+            timestamp: U64(env::block_timestamp() / 1_000_000_000),
         }
     }
     pub fn get_job(&self, job_id: U64) -> Option<Job> {
@@ -489,6 +524,10 @@ impl Registry {
         let log: ActionLog =
             near_sdk::serde_json::from_str(&action_log).expect("Invalid action log");
         require!(log.config == job.config, "Opening configuration mismatch");
+        require!(
+            log.rules_version == job.rules_version && log.content_version == job.content_version,
+            "Replay version does not match the frozen job"
+        );
         Self::opening(&job);
         let canonical = game_core::canonical(&log).expect("Invalid canonical log");
         let replay = game_core::replay(&log).expect("Invalid game action");

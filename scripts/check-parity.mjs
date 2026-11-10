@@ -6,7 +6,7 @@ const goldens = JSON.parse(
   execFileSync(
     "cargo",
     ["run", "--locked", "--quiet", "-p", "game-core", "--example", "goldens"],
-    { encoding: "utf8" },
+    { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
   ),
 );
 await init({

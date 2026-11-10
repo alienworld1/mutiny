@@ -21,20 +21,18 @@ export default function WorkerPortrait({
     return (
       <div
         aria-hidden="true"
-        className={`relative aspect-[3/4] overflow-hidden ${className}`}
+        className={`relative aspect-[3/4] overflow-hidden bg-no-repeat ${className}`}
+        style={{
+          backgroundImage: `url(${characterAtlas})`,
+          backgroundSize: "400% 200%",
+          backgroundPosition: `${((slot % 4) / 3) * 100}% ${Math.floor(slot / 4) * 100}%`,
+        }}
       >
         <img
           src={characterAtlas}
           alt=""
-          loading="lazy"
           onError={() => setFailed(true)}
-          className="pointer-events-none absolute !max-w-none"
-          style={{
-            width: "400%",
-            height: "200%",
-            left: `-${(slot % 4) * 100}%`,
-            top: `-${Math.floor(slot / 4) * 100}%`,
-          }}
+          className="hidden"
         />
       </div>
     );

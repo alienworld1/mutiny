@@ -110,6 +110,8 @@ export function createChainClient(contractId: string): ChainClient {
           "retry_storage_refund",
           "hire_and_open",
           "set_offer",
+          "set_auto_offer",
+          "fund_town",
           "nft_transfer",
           "withdraw_offer",
           "request_claim",
@@ -125,8 +127,9 @@ export function createChainClient(contractId: string): ChainClient {
         depositYocto < 0n ||
         (method === "nft_transfer"
           ? depositYocto !== 1n
-          : !["open_owned_job", "hire_and_open"].includes(method) &&
-            depositYocto !== 0n)
+          : !["open_owned_job", "hire_and_open", "fund_town"].includes(
+              method,
+            ) && depositYocto !== 0n)
       )
         throw new Error("Unexpected deposit");
       if (connector.network !== "testnet") throw new Error("Switch to testnet");

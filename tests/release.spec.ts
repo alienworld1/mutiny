@@ -10,6 +10,9 @@ async function confirm(page: Page) {
   await page.getByRole("button", { name: "Confirm", exact: true }).click();
 }
 async function push(page: Page, cell?: number, actor = "Rook") {
+  await expect(
+    page.getByRole("button", { name: new RegExp(`^${actor} `) }),
+  ).toBeEnabled();
   await page
     .getByRole("button", { name: new RegExp(`^${actor} `) })
     .press("Enter");
@@ -21,8 +24,9 @@ async function push(page: Page, cell?: number, actor = "Rook") {
   await page
     .getByRole("button", { name: "Confirm", exact: true })
     .press("Enter");
+  await expect(page.locator('[data-cell="0"]')).toBeEnabled();
 }
-test("painted Free Play completes by keyboard without RPC or audio", async ({
+test("painted Free Play completes by keyboard without RPC", async ({
   page,
 }) => {
   const errors: string[] = [];

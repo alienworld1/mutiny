@@ -11,6 +11,8 @@ export default function OwnerControls({
   const [start, setStart] = useState("0.004");
   const [floor, setFloor] = useState("0.001");
   const [step, setStep] = useState("0");
+  const [automatic, setAutomatic] = useState(false);
+  const [ceiling, setCeiling] = useState("0.03");
   const [option, setOption] = useState(0);
   const [receiver, setReceiver] = useState("");
   const [error, setError] = useState("");
@@ -58,8 +60,12 @@ export default function OwnerControls({
               throw new Error(
                 "Use a floor from 0.001 NEAR up to the starting fee, and a maximum of 1 NEAR.",
               );
+            const maximum = automatic ? yoctoAmount(ceiling) : starting;
+            if (maximum < starting || maximum > 10n ** 24n)
+              throw Error("Use a ceiling between the starting fee and 1 NEAR.");
             setError("");
-            c.moneyAction("set_offer", {
+            c.moneyAction(automatic ? "set_auto_offer" : "set_offer", {
+              ...(automatic ? { ceiling_ask: maximum.toString() } : {}),
               package_option: option,
               starting_ask: starting.toString(),
               floor_ask: minimum.toString(),
@@ -91,6 +97,29 @@ export default function OwnerControls({
             />
           </label>
         ))}
+        {c.economy?.version === 4 && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={automatic}
+              disabled={locked}
+              onChange={(e) => setAutomatic(e.target.checked)}
+            />
+            Automatic pricing
+          </label>
+        )}
+        {automatic && (
+          <label className="grid gap-1 text-sm">
+            Ceiling (NEAR)
+            <input
+              className="min-h-11 w-32 rounded border border-border bg-paper px-3"
+              inputMode="decimal"
+              value={ceiling}
+              disabled={locked}
+              onChange={(e) => setCeiling(e.target.value)}
+            />
+          </label>
+        )}
         <button disabled={locked}>Post offer</button>
         {w.offers?.[option] && (
           <button
@@ -110,8 +139,9 @@ export default function OwnerControls({
         </p>
       )}
       <p className="text-sm text-secondary">
-        Prices in testnet NEAR. At most 3 discounts. Editing one option resets
-        only its discount clock.
+        Prices in testnet NEAR. Automatic offers rise after paid hires and fall
+        with idle time. Pressure decays every 30 minutes. Your floor and ceiling
+        apply. Manual offers keep their idle discounts.
       </p>
       <form
         className="flex flex-wrap items-end gap-3"
