@@ -541,7 +541,12 @@ function App() {
             }}
             aria-label="Mutiny home"
           >
-            <span className="font-display text-2xl font-bold tracking-tight">
+            <img
+              src="/assets/brand/mutiny-mark.svg"
+              alt=""
+              className="mr-2 inline-block h-9 w-9 align-middle"
+            />
+            <span className="font-display text-2xl font-bold tracking-tight align-middle">
               MUTINY
             </span>
             <span className="ml-3 hidden text-sm font-normal text-secondary sm:inline">
@@ -569,10 +574,17 @@ function App() {
             <p className="mb-5 text-xs font-semibold uppercase tracking-[.24em] text-secondary">
               A small kingdom. A difficult shift.
             </p>
-            <h1 className="font-display text-[clamp(42px,12vw,96px)] leading-[.95] tracking-tight">
-              MUTINY
-              <span className="mt-3 block text-3xl italic tracking-normal sm:text-4xl">
-                The Fine Print
+            <h1 className="flex items-center gap-3 sm:gap-4">
+              <img
+                src="/assets/brand/mutiny-mark.svg"
+                alt=""
+                className="w-16 shrink-0 sm:w-24"
+              />
+              <span className="font-display text-[clamp(42px,9vw,76px)] leading-[.95] tracking-tight">
+                MUTINY
+                <span className="mt-2 block text-2xl italic tracking-normal sm:text-3xl">
+                  The Fine Print
+                </span>
               </span>
             </h1>
             <p className="mt-7 max-w-xs text-lg text-secondary">

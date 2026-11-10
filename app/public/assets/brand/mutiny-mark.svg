@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>Mutiny emblem</title>
+  <path d="M64 5 112 23v37c0 31-20 51-48 63C36 111 16 91 16 60V23Z" fill="#2d3432"/>
+  <path d="M64 11 106 27v33c0 27-17 45-42 56C39 105 22 87 22 60V27Z" fill="#b9a273"/>
+  <path d="M64 17 100 30v30c0 23-14 39-36 49C42 99 28 83 28 60V30Z" fill="#f3f1e9"/>
+  <path d="M31 75c10-5 20-6 33-4 12-2 23-1 33 4-4 14-15 25-33 34-18-9-29-20-33-34Z" fill="#71896c"/>
+  <path d="M37 72V48l8-5 8 5v8h7V37l8-5 8 5v19h7v-8l8-5 7 5v24c-10-3-22-3-30 0-11-3-21-3-31 0Z" fill="#2d3432"/>
+  <path d="M42 69V51l3-2 3 2v10h17V40l3-2 3 2v21h17V51l3-2 2 2v18c-9-2-18-1-25 1-9-2-17-3-26-1Z" fill="#b78b76"/>
+  <path d="M58 72V61a10 10 0 0 1 20 0v11a32 32 0 0 0-20 0Z" fill="#2d3432"/>
+  <path d="M67 33V21" stroke="#2d3432" stroke-width="3" stroke-linecap="round"/>
+  <path d="M68 21h15l-4 5 4 5H68Z" fill="#994d57"/>
+  <path d="M36 82c17-6 39-6 56 0M42 88c14-4 30-4 44 0" fill="none" stroke="#3e604d" stroke-width="2" stroke-linecap="round"/>
+</svg>
