@@ -24,11 +24,13 @@ Booking freezes the route, delivery terms, hire price, and payment, reserving bo
 
 Town treasuries start with explicitly contributed testnet funds. Anyone can make a nonrefundable contribution, with no ownership or promised return. An underfunded town stops booking. Consumption creates demand but does not mint money. The accelerated **Simulation** forecasts supply and finite treasury changes without touching live funds.
 
-The corrected build targets `v4r1.mutiny-company-2026.testnet`. Its replacement deployment is pending testnet funding; see [public configuration](app/.env.example). The previous-company link preserves v3 funds, jobs, and claims; the previous-worker link preserves m5 rights. The disabled first kingdom test deployment remains accessible with `?market=company-v4` for its funds and claims. Replacement NFTs inherit no earlier ownership, earnings, or history. Workers and activity are seeded demonstrations, not evidence of organic demand or sustainable returns.
+The live Registry is `v4r1.mutiny-company-2026.testnet`; see [public configuration](app/.env.example). The previous-company link preserves v3 funds, jobs, and claims; the previous-worker link preserves m5 rights. The disabled first kingdom test deployment remains accessible with `?market=company-v4` for its funds and claims. Replacement NFTs inherit no earlier ownership, earnings, or history. Workers and activity are seeded demonstrations, not evidence of organic demand or sustainable returns.
 
 Each job also reserves **0.03 testnet NEAR for storage**, plus gas. Unused storage returns after closing. Unactivated cancellation restores hire funds to their original company/wallet sources after worker-credit reversal. Interrupted operations have status/recovery controls. Unknown transfer outcomes never authorize a second payment.
 
 Contracts are keyless and immutable. The deployment operator can enable payments and attest finalized native-transfer outcomes when callbacks are lost. **This recovery authority is trusted:** falsely attesting failure can permit duplicate payment. Worker claims use `repair_native_callback`; company withdrawals use `repair_company_withdrawal`. Check final receipts before recovery. There is no general treasury withdrawal.
+
+Verified on testnet: [delivery and commission](https://testnet.nearblocks.io/txns/7KfR8RakH8TxiEy6Kfq4b32ZM3wTFRtE2zMajA2Vry83), [company withdrawal](https://testnet.nearblocks.io/txns/3UkEdTBeVvsFHArvxETRBTXjZnuLfsqBPmzc5peYmnH6).
 
 ## Verify and deploy
 
