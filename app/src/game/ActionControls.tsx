@@ -1,6 +1,6 @@
-import WorkerPortrait from "../near/WorkerPortrait";
 import type { Action, Choices, State, Unit } from "./types";
 import { coordinate, packages } from "./types";
+import GameIcon, { type IconName } from "./GameIcon";
 export type Mode = "move" | Action["kind"];
 const hints: Partial<Record<Mode, string>> = {
   attack: "Choose an enemy in reach. Deal 1 damage.",
@@ -37,7 +37,12 @@ export default function ActionControls({
   propose,
   clearMove,
 }: Props) {
-  function ability(kind: Mode, name: string, detail: string, spent: boolean) {
+  function ability(
+    kind: Mode & IconName,
+    name: string,
+    detail: string,
+    spent: boolean,
+  ) {
     return (
       <button
         aria-label={name}
@@ -45,14 +50,17 @@ export default function ActionControls({
         disabled={spent}
         aria-pressed={mode === kind}
         onClick={() => setMode(kind)}
-        className="!min-h-16 !rounded-xl !border-transparent !bg-muted !px-3 !py-3 text-left aria-pressed:!border-primary aria-pressed:!bg-primary aria-pressed:!text-white"
+        className="flex min-w-0 flex-1 basis-28 items-center gap-2 !rounded-lg !border-brass/40 !bg-muted/50 !px-3 !py-2 text-left aria-pressed:!border-primary aria-pressed:!bg-primary aria-pressed:!text-white"
       >
-        <span className="block text-sm leading-tight">{name}</span>
-        <span
-          id={`ability-${kind}`}
-          className="mt-1 block text-xs font-normal opacity-75"
-        >
-          {spent ? "Spent" : detail}
+        <GameIcon name={kind} className="h-6 w-6 shrink-0" />
+        <span className="min-w-0">
+          <span className="block text-sm leading-tight">{name}</span>
+          <span
+            id={`ability-${kind}`}
+            className="mt-1 block text-xs font-normal"
+          >
+            {spent ? "Spent" : detail}
+          </span>
         </span>
       </button>
     );
@@ -63,74 +71,78 @@ export default function ActionControls({
       : unit.package === "shouting"
         ? "swap"
         : "clean_shot";
+  const pushAvailable = options.actions.some((o) => o.action.kind === "push");
   return (
-    <>
-      <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-border pb-4">
-        <WorkerPortrait
-          token={unit.name.toLowerCase()}
-          className="w-14 shrink-0 rounded-xl bg-muted"
-        />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-2xl">{unit.name}</h2>
-          <span className="text-sm capitalize text-secondary">{unit.role}</span>
-        </div>
-        <span className="text-sm font-semibold tabular-nums">{unit.hp} HP</span>
-      </div>
-      <div className="mb-3 flex items-center justify-between gap-2 text-sm">
-        <button
-          className="!min-h-9 !px-3 !py-1"
-          aria-pressed={mode === "move"}
-          onClick={() => setMode("move")}
-        >
-          Move
-        </button>
-        <span className="text-secondary">
-          {path.length ? coordinate(path.at(-1)!) : `${unit.movement} tiles`}
+    <div>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-xl">
+          {unit.name}{" "}
+          <span className="font-ui text-xs font-normal capitalize text-secondary">
+            {unit.name.toLowerCase() !== unit.role && <>{unit.role} · </>}
+            {unit.hp} HP
+          </span>
+        </h2>
+        <span className="text-xs text-secondary">
+          {path.length
+            ? `Move to ${coordinate(path.at(-1)!)}`
+            : `Move up to ${unit.movement} tiles`}
+          {path.length > 0 && (
+            <button
+              className="ml-2 !min-h-0 !border-0 !bg-transparent !p-0 !shadow-none text-xs underline"
+              onClick={clearMove}
+            >
+              Clear
+            </button>
+          )}
         </span>
-        {path.length > 0 && (
-          <button className="!min-h-9 !px-2 !py-1" onClick={clearMove}>
-            Clear
+      </div>
+      <div className="grid min-w-0 gap-3 xl:grid-cols-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <button
+            aria-pressed={mode === "move"}
+            onClick={() => setMode("move")}
+            className="flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
+          >
+            <GameIcon name="move" />
+            Move
           </button>
-        )}
-      </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,88px),1fr))] gap-2">
-        <button
-          className={`!px-2 ${options.actions.some((o) => o.action.kind === "push") ? "!border-primary !bg-primary !text-white" : ""}`}
-          onClick={() => propose({ kind: "push" })}
-        >
-          Push Cart
-        </button>
-        <button
-          aria-pressed={mode === "attack"}
-          onClick={() => setMode("attack")}
-        >
-          Attack
-        </button>
-        <button onClick={() => propose({ kind: "guard" })}>Guard</button>
-      </div>
-      <div className="mt-5 border-t border-border pt-3">
-        <h3 className="mb-2 !font-ui text-xs font-semibold uppercase tracking-wider text-secondary">
-          {unit.id === 0 ? "Captain tools" : "Abilities"}
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
+          <button
+            aria-pressed={mode === "attack"}
+            onClick={() => setMode("attack")}
+            className="flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
+          >
+            <GameIcon name="attack" />
+            Attack
+          </button>
+          <button
+            onClick={() => propose({ kind: "push" })}
+            className={`flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm ${pushAvailable ? "!border-primary !bg-primary !text-white" : ""}`}
+          >
+            <GameIcon name="push" />
+            Push Cart
+          </button>
+          <button
+            onClick={() => propose({ kind: "guard" })}
+            className="flex flex-col items-center justify-center gap-1 !px-2 !py-2 text-sm"
+          >
+            <GameIcon name="guard" />
+            Guard
+          </button>
+        </div>
+        <div className="flex min-w-0 flex-wrap gap-2">
           {unit.id === 0 ? (
             <>
-              {ability(
-                "burn",
-                "Burn Notice",
-                "Light a tile · 1 use",
-                state.burn_used,
-              )}
+              {ability("burn", "Burn Notice", "1 use", state.burn_used)}
               {ability(
                 "relocate",
                 "Staff Relocation",
-                "Pull a unit · 1 use",
+                "1 use",
                 state.relocate_used,
               )}
               {ability(
                 "certify",
                 "Safety Certificate",
-                "Block a hit · 1 use",
+                "1 use",
                 state.certify_used,
               )}
             </>
@@ -174,14 +186,11 @@ export default function ActionControls({
         </p>
       )}
       {unit.package !== "none" && (
-        <div className="mt-4 rounded-xl border-l-[3px] border-brass bg-muted p-3 text-sm text-secondary">
-          <p>
-            <strong>{packages[unit.package].name}</strong>
-            <br />
-            {packages[unit.package].clause}
-          </p>
-        </div>
+        <p className="mt-3 border-l-2 border-brass pl-3 text-xs text-secondary">
+          <strong>{packages[unit.package].name}</strong> ·{" "}
+          {packages[unit.package].clause}
+        </p>
       )}
-    </>
+    </div>
   );
 }

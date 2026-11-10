@@ -3,9 +3,11 @@ import { Application, Container } from "pixi.js";
 import type { State } from "../game/types";
 import { actionText, coordinate } from "../game/types";
 import { draw } from "./renderer";
-import { loadStageArt, type StageArt } from "./art";
-import { playEvents, type Playback } from "./playback";
+import { loadStageArt, destroyStageArt, type StageArt } from "./art";
+import { playEvents, type Playback, type PlaybackCue } from "./playback";
 import { startIdle } from "./idle";
+import type { BattleSound } from "../game/sound";
+import WorkerPortrait from "../near/WorkerPortrait";
 import {
   cellToScreen,
   WIDTH,
@@ -22,12 +24,20 @@ interface Props {
   focusedOrder: number | null;
   playback: Playback | null;
   onCell: (cell: number) => void;
+  disabled: boolean;
+  sound: BattleSound;
+  onPlaybackDone: () => void;
 }
 export default function PixiStage(props: Props) {
   const host = useRef<HTMLDivElement>(null),
     grid = useRef<HTMLDivElement>(null);
   const renderer = useRef<{ app: Application; scene: Container } | null>(null);
   const latest = useRef(props);
+  const [announcement, setAnnouncement] = useState<{
+    name: string;
+    detail: string;
+    token: string;
+  } | null>(null);
   const [fallback, setFallback] = useState(false);
   const [ready, setReady] = useState(false);
   const [focus, setFocus] = useState(44);
@@ -59,10 +69,7 @@ export default function PixiStage(props: Props) {
     let cancelled = false;
     void loadStageArt(props.state.setup.policy).then((loaded) => {
       if (!cancelled) setArt(loaded);
-      else
-        [...(loaded.characters ?? []), ...(loaded.props ?? [])].forEach(
-          (texture) => texture.destroy(false),
-        );
+      else destroyStageArt(loaded);
     });
     return () => {
       cancelled = true;
@@ -70,9 +77,7 @@ export default function PixiStage(props: Props) {
   }, [props.state.setup.policy]);
   useEffect(
     () => () => {
-      [...(art.characters ?? []), ...(art.props ?? [])].forEach((texture) =>
-        texture.destroy(false),
-      );
+      destroyStageArt(art);
     },
     [art],
   );
@@ -82,6 +87,31 @@ export default function PixiStage(props: Props) {
   useEffect(() => {
     const p = latest.current;
     const r = renderer.current;
+    const playback = p.playback;
+    const fresh = playback && playback !== played.current;
+    function announce(event: PlaybackCue) {
+      if (event.kind === "footstep") p.sound.cue("step");
+      else p.sound.event(event);
+      if (event.kind === "strike" || event.kind === "borrowed") {
+        const actor = p.state.setup.units[event.unit]!;
+        setAnnouncement({
+          name:
+            event.kind === "strike"
+              ? `${actor.name} is ON STRIKE`
+              : `${actor.name} · Borrowed`,
+          detail:
+            event.kind === "strike"
+              ? event.reason.split(": ").at(-1)!
+              : "Your captain's action is spent.",
+          token: actor.name.toLowerCase(),
+        });
+      }
+    }
+    if (!r && fallback && fresh) {
+      played.current = playback;
+      playback.events.forEach(announce);
+      p.onPlaybackDone();
+    }
     if (r) {
       const scene = draw(
         r.scene,
@@ -93,9 +123,8 @@ export default function PixiStage(props: Props) {
         p.focusedOrder,
         art,
       );
-      const playback = p.playback;
-      const fresh = playback && playback !== played.current;
       if (playback) played.current = playback;
+      if (fresh) setAnnouncement(null);
       let playing = false;
       let stopIdle = () => {},
         stopPlayback = () => {};
@@ -115,9 +144,24 @@ export default function PixiStage(props: Props) {
           () => r.app.render(),
           () => {
             playing = false;
+            if (playback.before.round < p.state.round && !p.state.outcome)
+              p.sound.cue("round");
+            p.onPlaybackDone();
           },
+          announce,
         );
-      } else r.app.render();
+      } else {
+        if (fresh) {
+          // Reduced motion keeps concise sound and the same committed feedback.
+          const salient =
+            playback.events.find((e) => e.kind === "ended") ??
+            playback.events.find((e) => e.kind === "strike") ??
+            playback.events.at(-1);
+          if (salient) announce(salient);
+          p.onPlaybackDone();
+        }
+        r.app.render();
+      }
       const visibility = () => {
         stopIdle();
         if (document.hidden) {
@@ -144,6 +188,7 @@ export default function PixiStage(props: Props) {
     reduced,
     highContrast,
     ready,
+    fallback,
   ]);
   useEffect(() => {
     let cancelled = false;
@@ -188,6 +233,7 @@ export default function PixiStage(props: Props) {
     <div
       className="relative w-full"
       data-motion={reduced ? "reduced" : "full"}
+      data-poses={art.poses ? "ready" : "loading"}
       data-art={
         art.environment && art.characters && art.props ? "ready" : "loading"
       }
@@ -255,6 +301,7 @@ export default function PixiStage(props: Props) {
                 >
                   <button
                     type="button"
+                    disabled={props.disabled}
                     data-cell={cell}
                     tabIndex={focus === cell ? 0 : -1}
                     aria-label={description}
@@ -298,6 +345,22 @@ export default function PixiStage(props: Props) {
           </div>
         ))}
       </div>
+      {props.playback && announcement && (
+        <div className="pointer-events-none absolute inset-x-10 top-2 z-20 mx-auto flex max-w-xs items-center gap-2 rounded-lg border-b-4 border-oxblood bg-paper/95 px-3 py-2 shadow-floating motion-safe:animate-[stamp_220ms_ease-out]">
+          <WorkerPortrait
+            token={announcement.token}
+            className="hidden w-9 shrink-0 sm:block"
+          />
+          <div className="min-w-0">
+            <p className="font-display text-sm font-bold sm:text-lg">
+              {announcement.name}
+            </p>
+            <p className="hidden text-xs text-secondary sm:block">
+              {announcement.detail}
+            </p>
+          </div>
+        </div>
+      )}
       {fallback && (
         <p className="absolute bottom-0 text-xs">
           Illustration unavailable. The board controls still work.

@@ -41,5 +41,24 @@
     "order": ["payroll cart", "impassable crate", "low stone cover"],
     "anchor": [0.5, 0.85]
   },
-  "runtime": "PixiJS projects all props, sprites, route steps, hazards, health, orders and event feedback from the Rust engine. Artwork never defines passability or game state. WebGL or image failure keeps semantic board controls available; reduced motion renders final state directly. No external image service is used at runtime."
+  "runtime": "PixiJS projects all props, sprites, route steps, hazards, health, orders and event feedback from the Rust engine. Artwork never defines passability or game state. WebGL or image failure keeps semantic board controls available; reduced motion renders final state directly. No external image service is used at runtime.",
+  "character-poses.webp": {
+    "brief": "Match characters.webp identities and painterly gouache style. Transparent 4-column by 6-row atlas. Two rows of walking poses, two rows of action poses, two rows of indignant refusal poses. Each pair follows Rook, Mallow, Nix, Dot, Brisk, Peebles, Captain, Supervisor. Full body, complete boots and equipment, consistent scale, foot baseline at 94 percent of each cell. Walking: lifted boot and modest lean. Action: courier short-sword thrust, shieldbearer brace, mage staff cast, Captain sword extension, Supervisor baton point. Refusal: planted boots, palm out, weapon lowered, no sign. No scenery, shadows, text or grid.",
+    "size": [1024, 1536],
+    "grid": [4, 6],
+    "pose_order": ["walk", "action", "refuse"],
+    "identity_order": [
+      "Rook",
+      "Mallow",
+      "Nix",
+      "Dot",
+      "Brisk",
+      "Peebles",
+      "Captain",
+      "Supervisor"
+    ],
+    "source": "OpenAI built-in imagegen; identities referenced from characters.webp; WebP quality 88",
+    "anchor": [0.5, 0.96],
+    "generation_prompt": "Use case: identity-preserve. Asset type: production transparent sprite animation atlas for Mutiny: The Fine Print. The input is a reference for EXACT eight character identities, clothing, equipment, painted gouache rendering, palette and adult proportions. Create ONE new atlas on a portrait canvas, STRICT 4 columns by 6 rows, 24 evenly sized cells. Each cell contains ONE full-body figure, complete boots and equipment with generous transparent padding. Match original shallow three-quarter view, soft diffuse light, crisp readable silhouette, ink contour, restrained brush texture. No backgrounds, shadows, glow, labels, letters, borders or grid. Alpha-zero empty space. Columns and rows: Row 1 WALK poses: Rook slate-capped satchel courier, Mallow round-shield green shieldbearer with lunchbox, Nix oxblood tall pointed-hat mage with glasses and round-finial staff, Dot ochre hooded courier with feather and red scarf. Row 2 WALK poses: Brisk grey-green armor rectangular shield, Peebles weary plum mage diamond-finial staff, Captain blue bicorne gold feather/cape/sword, Supervisor red tricorn folio/baton. Walk poses have one lifted boot, bent knee, modest forward lean, gear moving, facing right. Row 3 ACTION poses: Rook quick short-sword thrust, Mallow bracing shield forward, Nix casting with staff held forward, Dot agile short-sword strike. Row 4 ACTION poses: Brisk bracing tall shield, Peebles casting with staff forward, Captain drawing and extending sword, Supervisor pointing baton sharply. Row 5 REFUSAL poses: same first four identities Rook, Mallow, Nix, Dot; boots planted, leaning back, indignant arms or palm out, weapons lowered. Row 6 REFUSAL poses: Brisk, Peebles, Captain, Supervisor; same indignant refusal. Refusal figures do NOT hold signs; signs are added by the game. Keep each identity's consistent apparent height, same foot baseline near 94 percent of its cell and same horizontal center across all 3 pose sets. Retain original costume colors and facial identities. Do not merge cells or crop extremities. Needs to read clearly at 90px tall."
+  }
 }

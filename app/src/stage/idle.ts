@@ -13,6 +13,7 @@ export function startIdle(scene: StageView, render: () => void) {
     ...h,
     x: h.view.x,
     y: h.view.y,
+    rotation: h.view.rotation,
   }));
   let frame = 0,
     last = 0;
@@ -36,6 +37,12 @@ export function startIdle(scene: StageView, render: () => void) {
         } else if (h.kind === "smoke") {
           h.view.x = h.x + Math.sin(time / 1100 + h.phase) * 2;
           h.view.y = h.y + Math.sin(time / 900 + h.phase) * 1.5;
+        } else if (h.kind === "flag") {
+          h.view.scale.y = 1 + Math.sin(time / 600 + h.phase) * 0.08;
+          h.view.rotation = h.rotation + Math.sin(time / 1200) * 0.035;
+        } else if (h.kind === "water") {
+          h.view.x = h.x + Math.sin(time / 1600 + h.phase) * 5;
+          h.view.alpha = 0.5 + Math.sin(time / 1800 + h.phase) * 0.3;
         } else {
           const t = ((time + h.phase * 173) % 1500) / 1500;
           h.view.position.set(
@@ -63,6 +70,7 @@ export function startIdle(scene: StageView, render: () => void) {
       h.view.position.set(h.x, h.y);
       h.view.scale.set(1);
       h.view.alpha = 1;
+      h.view.rotation = h.rotation;
     }
   };
 }

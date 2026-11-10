@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { Container, Sprite, Texture } from "pixi.js";
+import { Container, Sprite, Texture, TextureSource } from "pixi.js";
 import * as engine from "../game/engine";
 import { planPlayback, playEvents } from "./playback";
 
@@ -168,6 +168,81 @@ describe("committed event playback", () => {
       body.destroy();
       labels.destroy();
       figure.destroy();
+    }
+  });
+  it("anchors cart protection feedback to the cart rather than a missing unit", () => {
+    const before = engine.start();
+    const plan = planPlayback({
+      before,
+      events: [{ kind: "protected", unit: -1, source: "certificate" }],
+    });
+    expect(plan.beats[0]?.id).toBe("cart");
+    expect(plan.beats[0]?.cell).toBe(before.cart_cell);
+  });
+  it("normalizes square action frames to the same height and emits each cue once", () => {
+    const before = engine.start();
+    const root = new Container(),
+      body = new Container(),
+      labels = new Container();
+    const idle = new Texture({
+      source: new TextureSource({ width: 384, height: 512 }),
+    });
+    const walk = new Texture({
+      source: new TextureSource({ width: 256, height: 256 }),
+    });
+    const figure = new Sprite(idle);
+    figure.height = 84;
+    figure.scale.x = figure.scale.y;
+    const cues = vi.fn();
+    let frame: FrameRequestCallback | undefined;
+    vi.stubGlobal("requestAnimationFrame", (next: FrameRequestCallback) => {
+      frame = next;
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", vi.fn());
+    vi.stubGlobal("document", { hidden: false });
+    vi.spyOn(performance, "now").mockReturnValue(0);
+    try {
+      const stop = playEvents(
+        root,
+        new Map([[0, { body, labels, figure, poses: { idle, walk } }]]),
+        {
+          before,
+          events: [
+            { kind: "moved", unit: 0, path: [31, 38] },
+            { kind: "pushed", from: 37, to: 30 },
+          ],
+        },
+        vi.fn(),
+        undefined,
+        cues,
+      );
+      frame!(150);
+      expect(figure.texture).toBe(walk);
+      expect(figure.height).toBe(84);
+      expect(figure.width).toBe(84);
+      frame!(150);
+      frame!(310);
+      expect(cues.mock.calls.map(([event]) => event.kind)).toEqual([
+        "footstep",
+        "footstep",
+        "pushed",
+      ]);
+      stop();
+      expect(figure.texture).toBe(idle);
+      expect(figure.height).toBe(84);
+      expect(figure.width).toBe(63);
+      frame!(500);
+      expect(cues).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      root.destroy({ children: true });
+      body.destroy();
+      labels.destroy();
+      figure.destroy();
+      idle.destroy(true);
+      walk.destroy(true);
     }
   });
 });

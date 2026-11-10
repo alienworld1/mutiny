@@ -1,8 +1,9 @@
-import { Container, Graphics, Sprite, Text } from "pixi.js";
+import { Container, Graphics, Sprite, Text, type Texture } from "pixi.js";
 import type { Event, State } from "../game/types";
 import { palette as C } from "./palette";
 import { cellToScreen } from "./projection";
 
+export type PlaybackCue = Event | { kind: "footstep" };
 export type Entity = number | "cart";
 export interface EntityView {
   body: Container;
@@ -12,10 +13,16 @@ export interface EntityView {
   selection?: Container;
   busy?: boolean;
   defeated?: boolean;
+  poses?: {
+    idle?: Texture;
+    walk?: Texture;
+    action?: Texture;
+    refuse?: Texture;
+  };
 }
 export interface HazardView {
   view: Container;
-  kind: "fire" | "smoke" | "ember";
+  kind: "fire" | "smoke" | "ember" | "water" | "flag";
   phase: number;
 }
 export interface StageView {
@@ -86,7 +93,9 @@ export function planPlayback({ before, events }: Playback) {
     if (event.kind === "recovering" || event.kind === "recovered") continue;
     const id: Entity | null =
       "unit" in event
-        ? event.unit
+        ? event.unit < 0
+          ? "cart"
+          : event.unit
         : event.kind === "damaged"
           ? event.target < 0
             ? "cart"
@@ -268,6 +277,7 @@ export function playEvents(
   playback: Playback,
   render: () => void,
   onFinish?: () => void,
+  onEvent?: (event: PlaybackCue) => void,
 ) {
   const plan = planPlayback(playback),
     effects = new Container();
@@ -284,6 +294,8 @@ export function playEvents(
             y: view.figure.y,
             rotation: view.figure.rotation,
             alpha: view.figure.alpha,
+            texture: view.figure.texture,
+            height: view.figure.height,
           }
         : null,
     ]),
@@ -298,6 +310,8 @@ export function playEvents(
         view.figure.position.set(pose.x, pose.y);
         view.figure.rotation = pose.rotation;
         view.figure.alpha = pose.alpha;
+        view.figure.texture = pose.texture;
+        view.figure.scale.set(pose.height / pose.texture.height);
       }
       if (view.picket) {
         view.picket.alpha = 1;
@@ -305,6 +319,16 @@ export function playEvents(
       }
     }
   };
+  const figureHeights = new Map(
+    Array.from(entities, ([id, view]) => [view.figure, poses.get(id)?.height]),
+  );
+  function setPose(view: EntityView, texture: Texture | undefined) {
+    if (!view.figure || !texture) return;
+    const height = figureHeights.get(view.figure);
+    if (height === undefined) return;
+    view.figure.texture = texture;
+    view.figure.scale.set(height / texture.height);
+  }
   for (const view of entities.values()) view.busy = true;
   let frame = 0,
     disposed = false;
@@ -320,11 +344,19 @@ export function playEvents(
     onFinish?.();
     render();
   };
+  const heard = new Set<number>();
+  const footsteps = new Set<string>();
   const tick = (now: number) => {
     if (disposed) return;
     const elapsed = (now - start) * speed;
     reset();
     for (const [id, view] of entities) {
+      if (
+        typeof id === "number" &&
+        playback.before.setup.units[id]?.status === "normal" &&
+        !playback.before.setup.units[id]?.guard
+      )
+        setPose(view, view.poses?.idle);
       const cell =
         id === "cart"
           ? playback.before.cart_cell
@@ -343,7 +375,7 @@ export function playEvents(
         view.figure.rotation = 0;
       }
     }
-    for (const move of plan.moves) {
+    for (const [moveIndex, move] of plan.moves.entries()) {
       if (elapsed < move.at) continue;
       const view = entities.get(move.id);
       if (!view) continue;
@@ -361,6 +393,15 @@ export function playEvents(
       view.labels.position.copyFrom(view.body.position);
       const pose = poses.get(move.id);
       if (view.figure && pose && t < 1) {
+        if (move.id !== "cart" && view.poses?.walk) {
+          setPose(view, view.poses.walk);
+          if (b.x !== a.x) view.figure.scale.x *= Math.sign(b.x - a.x);
+        }
+        const step = `${moveIndex}:${Math.floor(progress)}`;
+        if (move.id !== "cart" && !footsteps.has(step)) {
+          footsteps.add(step);
+          onEvent?.({ kind: "footstep" });
+        }
         view.figure.y = pose.y - Math.abs(Math.sin(progress * Math.PI)) * 3.5;
         view.figure.rotation =
           pose.rotation +
@@ -372,19 +413,39 @@ export function playEvents(
       const t = (elapsed - beat.at) / beat.duration;
       visuals[i]!(t);
       if (t < 0) return;
+      if (!heard.has(i)) {
+        heard.add(i);
+        onEvent?.(beat.event);
+      }
       const view = beat.id === null ? undefined : entities.get(beat.id),
         event = beat.event;
       const weight = Math.sin(Math.min(1, t) * Math.PI),
         pose = beat.id === null ? null : poses.get(beat.id);
+      if (view?.figure && t < 1) {
+        const texture =
+          event.kind === "strike" || event.kind === "refused"
+            ? view.poses?.refuse
+            : event.kind === "attacked" ||
+                (event.kind === "guarded" &&
+                  playback.before.setup.units[event.unit]?.role ===
+                    "shieldbearer")
+              ? view.poses?.action
+              : undefined;
+        setPose(view, texture);
+      }
       if (event.kind === "attacked" && view && t < 1) {
         const a = cellToScreen(beat.origin),
           b = cellToScreen(beat.cell),
           distance = Math.hypot(b.x - a.x, b.y - a.y) || 1;
         view.body.x += ((b.x - a.x) / distance) * weight * 13;
         view.body.y += ((b.y - a.y) / distance) * weight * 13;
-        if (view.figure && pose)
+        if (view.figure && pose) {
+          if (b.x !== a.x)
+            view.figure.scale.x =
+              Math.abs(view.figure.scale.x) * Math.sign(b.x - a.x);
           view.figure.rotation =
             pose.rotation + Math.sign(b.x - a.x || 1) * weight * 0.1;
+        }
       } else if (event.kind === "damaged" && view) {
         if (t < 1) {
           view.body.x += Math.sin(t * Math.PI * 6) * 7 * (1 - t);
@@ -405,7 +466,11 @@ export function playEvents(
     });
     // A new strike sign enters with the objection, never before its scheduled event.
     for (const beat of plan.beats)
-      if (beat.event.kind === "strike" && elapsed < beat.at) {
+      if (beat.event.kind === "strike" && elapsed >= beat.at) {
+        const entity = entities.get(beat.event.unit);
+        if (entity?.figure && entity.poses?.refuse)
+          setPose(entity, entity.poses.refuse);
+      } else if (beat.event.kind === "strike" && elapsed < beat.at) {
         const sign = entities.get(beat.event.unit)?.picket;
         if (sign) sign.alpha = 0;
       }

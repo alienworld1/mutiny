@@ -59,12 +59,18 @@ function describe(event: Event, state: State): [string, string] {
 export default function BattleFeedback({
   events,
   state,
+  compact = false,
 }: {
   events: Event[];
   state: State;
+  compact?: boolean;
 }) {
   return (
-    <ul className="divide-y divide-border/60">
+    <ul
+      className={
+        compact ? "flex flex-wrap gap-x-5 gap-y-1" : "divide-y divide-border/60"
+      }
+    >
       {events
         .filter((e) => e.kind !== "attacked" && e.kind !== "recovering")
         .map((event, i) => {
@@ -72,7 +78,7 @@ export default function BattleFeedback({
           return (
             <li
               key={`${i}-${event.kind}`}
-              className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 py-2 first:pt-0 last:pb-0"
+              className={`flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 ${compact ? "py-1" : "justify-between py-2 first:pt-0 last:pb-0"}`}
             >
               <span
                 className={`text-sm font-semibold ${event.kind === "strike" || event.kind === "refused" ? "text-danger" : ""}`}

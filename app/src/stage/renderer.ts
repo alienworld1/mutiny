@@ -201,18 +201,25 @@ export function draw(
       b.y - dy * 27 - dx * 5,
     ]).fill(C.dark);
   }
+  if (state.setup.policy === "dock" || state.setup.policy === "bridge") {
+    for (let i = 0; i < 8; i++) {
+      const ripple = new Graphics()
+        .moveTo(-12, 0)
+        .quadraticCurveTo(0, -3, 12, 0)
+        .stroke({ color: C.chalk, width: 1.4, alpha: 0.4 });
+      ripple.position.set(48 + i * 76, HEIGHT - 13 - (i % 3) * 5);
+      root.addChild(ripple);
+      hazards.push({ view: ripple, kind: "water", phase: i });
+    }
+  }
   const exit = cellToScreen(state.setup.route[3]!);
   g.moveTo(exit.x + 23, exit.y - 17)
     .lineTo(exit.x + 23, exit.y + 17)
     .stroke({ color: C.ink, width: 3 });
-  g.poly([
-    exit.x + 24,
-    exit.y - 17,
-    exit.x + 42,
-    exit.y - 13,
-    exit.x + 24,
-    exit.y - 5,
-  ]).fill(C.dark);
+  const flag = new Graphics().poly([0, 0, 19, 4, 0, 12]).fill(C.dark);
+  flag.position.set(exit.x + 24, exit.y - 17);
+  root.addChild(flag);
+  hazards.push({ view: flag, kind: "flag", phase: 1 });
   label(root, "EXIT", exit.x - 4, exit.y + 19, 11);
   // Posted paths and targets are projected directly from engine orders.
   for (const order of state.orders) {
@@ -227,7 +234,11 @@ export function draw(
             a.x + ((b.x - a.x) * (n + 1)) / 6,
             a.y + ((b.y - a.y) * (n + 1)) / 6,
           )
-          .stroke({ color: C.enemy, width: 3, alpha: 0.85 });
+          .stroke({
+            color: C.enemy,
+            width: focusedOrder === order.unit ? 3 : 2,
+            alpha: focusedOrder === order.unit ? 0.95 : 0.55,
+          });
     }
     const end = cellToScreen(order.endpoint);
     g.circle(end.x, end.y, 7).stroke({ color: C.enemy, width: 2 });
@@ -237,7 +248,7 @@ export function draw(
       g.rect(p.x - 34, p.y - 26, 68, 52).stroke({
         color: C.enemy,
         width: 2,
-        alpha: 0.6,
+        alpha: focusedOrder === order.unit ? 0.8 : 0.32,
       });
       for (let offset = -24; offset <= 24; offset += 12)
         g.moveTo(p.x + offset - 4, p.y - 21)
@@ -361,11 +372,23 @@ export function draw(
       entity.addChild(selection);
       view.selection = selection;
     }
+    const slot =
+      characterSlots[u.name] ??
+      (u.role === "mage" ? 2 : u.role === "shieldbearer" ? 1 : 0);
+    view.poses = art.poses
+      ? {
+          idle: art.characters?.[slot],
+          walk: art.poses.walk[slot],
+          action: art.poses.action[slot],
+          refuse: art.poses.refuse[slot],
+        }
+      : undefined;
     const texture =
-      art.characters?.[
-        characterSlots[u.name] ??
-          (u.role === "mage" ? 2 : u.role === "shieldbearer" ? 1 : 0)
-      ];
+      (u.status === "striking"
+        ? view.poses?.refuse
+        : u.guard && u.role === "shieldbearer"
+          ? view.poses?.action
+          : undefined) ?? art.characters?.[slot];
     if (texture) {
       const sprite = new Sprite(texture);
       sprite.anchor.set(0.5, 0.96);
