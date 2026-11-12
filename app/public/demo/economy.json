@@ -1,0 +1,3380 @@
+{
+  "version": 1,
+  "network": "sandbox",
+  "generatedAt": "2026-11-11T17:51:11.647Z",
+  "registryHash": "HCw17EyT2Dh3c1HmHWBUKRuAqv5xrpQDMv4Qjd3aapq3",
+  "workerHash": "2Ha989KrCG3V3ncXxqsqdcM7KZThZMCv5CMd6SoMY1bS",
+  "checks": [
+    "Rust/WASM stock projection",
+    "Rust/WASM worker quotes",
+    "Exact town conservation",
+    "Reserved and paid commissions",
+    "Verified delivery replay"
+  ],
+  "frames": [
+    {
+      "label": "The docks need supplies",
+      "economy": {
+        "version": 4,
+        "company": null,
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 1,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "130000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "MIaPwJswUhQlEslGqehFTa7cuvQ1AcMizF9q0pg3elw=",
+            "available": true
+          },
+          {
+            "town_id": 0,
+            "commission_id": "2",
+            "dispatch_id": "0",
+            "objective": "express",
+            "payment": "75000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "/WIGm3fg6r6xj8d8Z4Ib96BupW+OtiV7Imz5cmq2lW8=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419422"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "idle",
+        "job": null,
+        "block_height": "45",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "45",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 0,
+              "updated_at": "1794419422"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "30",
+            "automatic": null
+          }
+        ],
+        "quotes": ["10000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "45",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 0,
+            "updated_at": "1794419422"
+          }
+        },
+        "quote": "10000000000000000000000",
+        "hall_earned": "0",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419422"
+      },
+      "earnings": "0"
+    },
+    {
+      "label": "A paid crew takes the job",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "0",
+          "funds": "0",
+          "active_job": "0",
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 0,
+            "fulfilled": 0,
+            "jobs": [null, null, null]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 1,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": ["0", null],
+            "unreserved": "80000000000000000000000",
+            "reserved": "50000000000000000000000",
+            "paid": "0",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "MIaPwJswUhQlEslGqehFTa7cuvQ1AcMizF9q0pg3elw=",
+            "available": true
+          },
+          {
+            "town_id": 0,
+            "commission_id": "2",
+            "dispatch_id": "0",
+            "objective": "express",
+            "payment": "75000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "/WIGm3fg6r6xj8d8Z4Ib96BupW+OtiV7Imz5cmq2lW8=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419426"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "active",
+        "job": {
+          "job_id": "0",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-crosswind",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+          "accepted_fee": "10000000000000000000000",
+          "created_at_block": "48",
+          "expires_at_block": "2450",
+          "status": "active",
+          "cooldown_until": "0",
+          "record": null,
+          "bond": "30000000000000000000000",
+          "storage_bytes": 548,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 0,
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "company_contribution": "0",
+            "earned": "0",
+            "closed": false
+          }
+        },
+        "block_height": "52",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "45",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 1,
+              "updated_at": "1794419425"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "30",
+            "automatic": null
+          }
+        ],
+        "quotes": ["12000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "active",
+            "cooldown_until": "0",
+            "record": null,
+            "bond": "30000000000000000000000",
+            "storage_bytes": 548,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "0",
+              "closed": false
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "45",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 1,
+            "updated_at": "1794419425"
+          }
+        },
+        "quote": "12000000000000000000000",
+        "hall_earned": "500000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419426"
+      },
+      "earnings": "9500000000000000000000"
+    },
+    {
+      "label": "Delivery changes the next offer",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "1",
+          "funds": "50000000000000000000000",
+          "active_job": null,
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 1,
+            "fulfilled": 1,
+            "jobs": ["0", null, null]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 2,
+              "updated_at": 1794419403,
+              "deliveries": 1
+            },
+            "incoming": [null, null],
+            "unreserved": "80000000000000000000000",
+            "reserved": "0",
+            "paid": "50000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "rTV+yBpLAYDXuQtXxS5fjNwkb6Zx5vHrrQ6s1ggDEdg=",
+            "available": true
+          },
+          {
+            "town_id": 0,
+            "commission_id": "1",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "7JRBLScTpHkIEqFp/n3asXA79oTHyN0Hwe2EVmFLKG4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419429"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "cooldown",
+        "job": {
+          "job_id": "0",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-crosswind",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+          "accepted_fee": "10000000000000000000000",
+          "created_at_block": "48",
+          "expires_at_block": "2450",
+          "status": "saved",
+          "cooldown_until": "75",
+          "record": {
+            "outcome": "delivered",
+            "round": 3,
+            "cart_hp": 1,
+            "strikes": 0,
+            "borrows": 0,
+            "clauses": [],
+            "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+            "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+            "confirmed_block": "55"
+          },
+          "bond": "30000000000000000000000",
+          "storage_bytes": 648,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 0,
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "company_contribution": "0",
+            "earned": "50000000000000000000000",
+            "closed": true
+          }
+        },
+        "block_height": "57",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "75",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 1,
+              "updated_at": "1794419425"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "75",
+            "automatic": null
+          }
+        ],
+        "quotes": ["12000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "45",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 1,
+            "updated_at": "1794419425"
+          }
+        },
+        "quote": "12000000000000000000000",
+        "hall_earned": "500000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419429"
+      },
+      "earnings": "9500000000000000000000"
+    },
+    {
+      "label": "A paid crew takes the job",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "1",
+          "funds": "50000000000000000000000",
+          "active_job": "1",
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 1,
+            "fulfilled": 1,
+            "jobs": ["0", null, null]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 2,
+              "updated_at": 1794419403,
+              "deliveries": 1
+            },
+            "incoming": ["1", null],
+            "unreserved": "40000000000000000000000",
+            "reserved": "40000000000000000000000",
+            "paid": "50000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "rTV+yBpLAYDXuQtXxS5fjNwkb6Zx5vHrrQ6s1ggDEdg=",
+            "available": true
+          },
+          {
+            "town_id": 0,
+            "commission_id": "1",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "7JRBLScTpHkIEqFp/n3asXA79oTHyN0Hwe2EVmFLKG4=",
+            "available": false
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419467"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "active",
+        "job": {
+          "job_id": "1",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "12000000000000000000000",
+          "created_at_block": "87",
+          "expires_at_block": "2489",
+          "status": "active",
+          "cooldown_until": "0",
+          "record": null,
+          "bond": "30000000000000000000000",
+          "storage_bytes": 399,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 1,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "0",
+            "closed": false
+          }
+        },
+        "block_height": "91",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "75",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 2,
+              "updated_at": "1794419466"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "75",
+            "automatic": null
+          }
+        ],
+        "quotes": ["14000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "active",
+            "cooldown_until": "0",
+            "record": null,
+            "bond": "30000000000000000000000",
+            "storage_bytes": 399,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "0",
+              "closed": false
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "75",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 2,
+            "updated_at": "1794419466"
+          }
+        },
+        "quote": "14000000000000000000000",
+        "hall_earned": "1100000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419467"
+      },
+      "earnings": "20900000000000000000000"
+    },
+    {
+      "label": "Delivery changes the next offer",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "2",
+          "funds": "90000000000000000000000",
+          "active_job": null,
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 2,
+            "fulfilled": 2,
+            "jobs": ["0", "1", null]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 2
+            },
+            "incoming": [null, null],
+            "unreserved": "40000000000000000000000",
+            "reserved": "0",
+            "paid": "90000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "rTV+yBpLAYDXuQtXxS5fjNwkb6Zx5vHrrQ6s1ggDEdg=",
+            "available": true
+          },
+          {
+            "town_id": 0,
+            "commission_id": "1",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "7JRBLScTpHkIEqFp/n3asXA79oTHyN0Hwe2EVmFLKG4=",
+            "available": false
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419470"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "cooldown",
+        "job": {
+          "job_id": "1",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "12000000000000000000000",
+          "created_at_block": "87",
+          "expires_at_block": "2489",
+          "status": "saved",
+          "cooldown_until": "114",
+          "record": {
+            "outcome": "delivered",
+            "round": 3,
+            "cart_hp": 2,
+            "strikes": 0,
+            "borrows": 0,
+            "clauses": [],
+            "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+            "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+            "confirmed_block": "94"
+          },
+          "bond": "30000000000000000000000",
+          "storage_bytes": 499,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 1,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "40000000000000000000000",
+            "closed": true
+          }
+        },
+        "block_height": "96",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "114",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 2,
+              "updated_at": "1794419466"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "114",
+            "automatic": null
+          }
+        ],
+        "quotes": ["14000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "saved",
+            "cooldown_until": "114",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "94"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "75",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 2,
+            "updated_at": "1794419466"
+          }
+        },
+        "quote": "14000000000000000000000",
+        "hall_earned": "1100000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419470"
+      },
+      "earnings": "20900000000000000000000"
+    },
+    {
+      "label": "A paid crew takes the job",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "2",
+          "funds": "90000000000000000000000",
+          "active_job": "2",
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 2,
+            "fulfilled": 2,
+            "jobs": ["0", "1", null]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 2
+            },
+            "incoming": ["2", null],
+            "unreserved": "0",
+            "reserved": "40000000000000000000000",
+            "paid": "90000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "rTV+yBpLAYDXuQtXxS5fjNwkb6Zx5vHrrQ6s1ggDEdg=",
+            "available": false
+          },
+          {
+            "town_id": 0,
+            "commission_id": "1",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["dock-fire-embers"],
+            "terms_hash": "7JRBLScTpHkIEqFp/n3asXA79oTHyN0Hwe2EVmFLKG4=",
+            "available": false
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "0",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "0",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419508"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "active",
+        "job": {
+          "job_id": "2",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "14000000000000000000000",
+          "created_at_block": "126",
+          "expires_at_block": "2528",
+          "status": "active",
+          "cooldown_until": "0",
+          "record": null,
+          "bond": "30000000000000000000000",
+          "storage_bytes": 399,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 2,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "0",
+            "closed": false
+          }
+        },
+        "block_height": "130",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "114",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 3,
+              "updated_at": "1794419507"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "114",
+            "automatic": null
+          }
+        ],
+        "quotes": ["16000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "2",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "14000000000000000000000",
+            "created_at_block": "126",
+            "expires_at_block": "2528",
+            "status": "active",
+            "cooldown_until": "0",
+            "record": null,
+            "bond": "30000000000000000000000",
+            "storage_bytes": 399,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 2,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "0",
+              "closed": false
+            }
+          },
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "saved",
+            "cooldown_until": "114",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "94"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "114",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 3,
+            "updated_at": "1794419507"
+          }
+        },
+        "quote": "16000000000000000000000",
+        "hall_earned": "1800000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419508"
+      },
+      "earnings": "34200000000000000000000"
+    },
+    {
+      "label": "The docks are restored. Their treasury is spent.",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "3",
+          "funds": "130000000000000000000000",
+          "active_job": null,
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 3,
+            "fulfilled": 3,
+            "jobs": ["0", "1", "2"]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 4,
+              "updated_at": 1794419403,
+              "deliveries": 3
+            },
+            "incoming": [null, null],
+            "unreserved": "0",
+            "reserved": "0",
+            "paid": "130000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["dock-fire-intro"],
+            "terms_hash": "hvG4swWysoOzBPtQYaLMKJ5Z/lcbjbxlhumWxp5ma5g=",
+            "available": false
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "1",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419511"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "cooldown",
+        "job": {
+          "job_id": "2",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "14000000000000000000000",
+          "created_at_block": "126",
+          "expires_at_block": "2528",
+          "status": "saved",
+          "cooldown_until": "153",
+          "record": {
+            "outcome": "delivered",
+            "round": 3,
+            "cart_hp": 2,
+            "strikes": 0,
+            "borrows": 0,
+            "clauses": [],
+            "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+            "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+            "confirmed_block": "133"
+          },
+          "bond": "30000000000000000000000",
+          "storage_bytes": 499,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 2,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "40000000000000000000000",
+            "closed": true
+          }
+        },
+        "block_height": "135",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "153",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 3,
+              "updated_at": "1794419507"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "153",
+            "automatic": null
+          }
+        ],
+        "quotes": ["16000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "2",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "14000000000000000000000",
+            "created_at_block": "126",
+            "expires_at_block": "2528",
+            "status": "saved",
+            "cooldown_until": "153",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "133"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 2,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "saved",
+            "cooldown_until": "114",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "94"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "114",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 3,
+            "updated_at": "1794419507"
+          }
+        },
+        "quote": "16000000000000000000000",
+        "hall_earned": "1800000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419511"
+      },
+      "earnings": "34200000000000000000000"
+    },
+    {
+      "label": "An idle crew lowers its ask",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "3",
+          "funds": "130000000000000000000000",
+          "active_job": null,
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 3,
+            "fulfilled": 3,
+            "jobs": ["0", "1", "2"]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 4,
+              "updated_at": 1794419403,
+              "deliveries": 3
+            },
+            "incoming": [null, null],
+            "unreserved": "0",
+            "reserved": "0",
+            "paid": "130000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 3,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 5,
+              "updated_at": 1794419403,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["dock-fire-intro"],
+            "terms_hash": "hvG4swWysoOzBPtQYaLMKJ5Z/lcbjbxlhumWxp5ma5g=",
+            "available": false
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "ZyjHBR6MV76CJ8ZStExUjv1ixs+ygLatsJuMI5ro/E4=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "4",
+            "dispatch_id": "1",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["bridge-audit-toll"],
+            "terms_hash": "MzghyqVGe7oPzApayP0yy/eOrEMukLVQuMq3A6V8N8s=",
+            "available": true
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "30000000000000000000000",
+            "setup_ids": ["friday-again-overtime"],
+            "terms_hash": "3/05BPi95LGFrHR0dheH4ay7hJgsKM5ybneocZHjG9k=",
+            "available": true
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794419707"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "idle",
+        "job": {
+          "job_id": "2",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "14000000000000000000000",
+          "created_at_block": "126",
+          "expires_at_block": "2528",
+          "status": "saved",
+          "cooldown_until": "153",
+          "record": {
+            "outcome": "delivered",
+            "round": 3,
+            "cart_hp": 2,
+            "strikes": 0,
+            "borrows": 0,
+            "clauses": [],
+            "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+            "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+            "confirmed_block": "133"
+          },
+          "bond": "30000000000000000000000",
+          "storage_bytes": 499,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 2,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "40000000000000000000000",
+            "closed": true
+          }
+        },
+        "block_height": "287",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "153",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 3,
+              "updated_at": "1794419507"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "153",
+            "automatic": null
+          }
+        ],
+        "quotes": ["14000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "2",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "14000000000000000000000",
+            "created_at_block": "126",
+            "expires_at_block": "2528",
+            "status": "saved",
+            "cooldown_until": "153",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "133"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 2,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "saved",
+            "cooldown_until": "114",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "94"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "114",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 3,
+            "updated_at": "1794419507"
+          }
+        },
+        "quote": "14000000000000000000000",
+        "hall_earned": "1800000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794419707"
+      },
+      "earnings": "34200000000000000000000"
+    },
+    {
+      "label": "Time consumes supplies. Restoration remains.",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "3",
+          "funds": "130000000000000000000000",
+          "active_job": null,
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 3,
+            "fulfilled": 3,
+            "jobs": ["0", "1", "2"]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 1,
+              "updated_at": 1794424803,
+              "deliveries": 3
+            },
+            "incoming": [null, null],
+            "unreserved": "0",
+            "reserved": "0",
+            "paid": "130000000000000000000000",
+            "contributed": "130000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 0,
+              "updated_at": 1794424803,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 2,
+              "updated_at": 1794424803,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "MIaPwJswUhQlEslGqehFTa7cuvQ1AcMizF9q0pg3elw=",
+            "available": false
+          },
+          {
+            "town_id": 0,
+            "commission_id": "2",
+            "dispatch_id": "1",
+            "objective": "express",
+            "payment": "75000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "/WIGm3fg6r6xj8d8Z4Ib96BupW+OtiV7Imz5cmq2lW8=",
+            "available": false
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "setup_ids": ["bridge-audit-queue"],
+            "terms_hash": "OAEc5NupTFkSGspqbFmasSw3hg75OeDijyvUJfaAjZI=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "5",
+            "dispatch_id": "1",
+            "objective": "express",
+            "payment": "75000000000000000000000",
+            "setup_ids": ["bridge-audit-queue"],
+            "terms_hash": "/6qioPae3j4ddIwPFS19YViDCZn52u55FOU81BJfIes=",
+            "available": false
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["friday-again-crossed"],
+            "terms_hash": "Kyzmfnd+qLSGyTQMh1W/Hij9IfPCqQ1OrD7U4VT/k1M=",
+            "available": false
+          },
+          {
+            "town_id": 2,
+            "commission_id": "7",
+            "dispatch_id": "1",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["friday-again-crossed"],
+            "terms_hash": "QuuuLmnEMLNTadXNBge+3h9Ez19j4T03q/ZMa/hWbBw=",
+            "available": false
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794424886"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "idle",
+        "job": {
+          "job_id": "2",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "14000000000000000000000",
+          "created_at_block": "126",
+          "expires_at_block": "2528",
+          "status": "saved",
+          "cooldown_until": "153",
+          "record": {
+            "outcome": "delivered",
+            "round": 3,
+            "cart_hp": 2,
+            "strikes": 0,
+            "borrows": 0,
+            "clauses": [],
+            "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+            "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+            "confirmed_block": "133"
+          },
+          "bond": "30000000000000000000000",
+          "storage_bytes": 499,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 2,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "40000000000000000000000",
+            "closed": true
+          }
+        },
+        "block_height": "4289",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "153",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 1,
+              "updated_at": "1794423107"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "153",
+            "automatic": null
+          }
+        ],
+        "quotes": ["4000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "2",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "14000000000000000000000",
+            "created_at_block": "126",
+            "expires_at_block": "2528",
+            "status": "saved",
+            "cooldown_until": "153",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "133"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 2,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "saved",
+            "cooldown_until": "114",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "94"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "114",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 3,
+            "updated_at": "1794419507"
+          }
+        },
+        "quote": "4000000000000000000000",
+        "hall_earned": "1800000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794424886"
+      },
+      "earnings": "34200000000000000000000"
+    },
+    {
+      "label": "A contribution funds new work",
+      "economy": {
+        "version": 4,
+        "company": {
+          "account_id": "bob.test.near",
+          "deliveries": "3",
+          "funds": "130000000000000000000000",
+          "active_job": null,
+          "dispatch": {
+            "dispatch_id": "0",
+            "completed": 3,
+            "fulfilled": 3,
+            "jobs": ["0", "1", "2"]
+          },
+          "withdrawal": {
+            "withdrawal_id": "0",
+            "amount": "0",
+            "status": "none"
+          }
+        },
+        "towns": [
+          {
+            "town_id": 0,
+            "name": "Docks",
+            "stock": {
+              "supplies": 1,
+              "updated_at": 1794424803,
+              "deliveries": 3
+            },
+            "incoming": [null, null],
+            "unreserved": "100000000000000000000000",
+            "reserved": "0",
+            "paid": "130000000000000000000000",
+            "contributed": "230000000000000000000000"
+          },
+          {
+            "town_id": 1,
+            "name": "Crossing",
+            "stock": {
+              "supplies": 0,
+              "updated_at": 1794424803,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "65000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "65000000000000000000000"
+          },
+          {
+            "town_id": 2,
+            "name": "Royal office",
+            "stock": {
+              "supplies": 2,
+              "updated_at": 1794424803,
+              "deliveries": 0
+            },
+            "incoming": [null, null],
+            "unreserved": "30000000000000000000000",
+            "reserved": "0",
+            "paid": "0",
+            "contributed": "30000000000000000000000"
+          }
+        ],
+        "commissions": [
+          {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "MIaPwJswUhQlEslGqehFTa7cuvQ1AcMizF9q0pg3elw=",
+            "available": true
+          },
+          {
+            "town_id": 0,
+            "commission_id": "2",
+            "dispatch_id": "1",
+            "objective": "express",
+            "payment": "75000000000000000000000",
+            "setup_ids": ["dock-fire-crosswind"],
+            "terms_hash": "/WIGm3fg6r6xj8d8Z4Ib96BupW+OtiV7Imz5cmq2lW8=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "3",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "50000000000000000000000",
+            "setup_ids": ["bridge-audit-queue"],
+            "terms_hash": "OAEc5NupTFkSGspqbFmasSw3hg75OeDijyvUJfaAjZI=",
+            "available": true
+          },
+          {
+            "town_id": 1,
+            "commission_id": "5",
+            "dispatch_id": "1",
+            "objective": "express",
+            "payment": "75000000000000000000000",
+            "setup_ids": ["bridge-audit-queue"],
+            "terms_hash": "/6qioPae3j4ddIwPFS19YViDCZn52u55FOU81BJfIes=",
+            "available": false
+          },
+          {
+            "town_id": 2,
+            "commission_id": "6",
+            "dispatch_id": "1",
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "setup_ids": ["friday-again-crossed"],
+            "terms_hash": "Kyzmfnd+qLSGyTQMh1W/Hij9IfPCqQ1OrD7U4VT/k1M=",
+            "available": false
+          },
+          {
+            "town_id": 2,
+            "commission_id": "7",
+            "dispatch_id": "1",
+            "objective": "intact",
+            "payment": "65000000000000000000000",
+            "setup_ids": ["friday-again-crossed"],
+            "terms_hash": "QuuuLmnEMLNTadXNBge+3h9Ez19j4T03q/ZMa/hWbBw=",
+            "available": false
+          }
+        ],
+        "sponsor": "test.near",
+        "enabled": true,
+        "timestamp": "1794424889"
+      },
+      "worker": {
+        "token": {
+          "token_id": "rook",
+          "owner_id": "test.near",
+          "metadata": {
+            "title": "Rook",
+            "description": null,
+            "media": null,
+            "media_hash": null,
+            "copies": 1,
+            "issued_at": null,
+            "expires_at": null,
+            "starts_at": null,
+            "updated_at": null,
+            "extra": "{\"worker_account\":\"rook.company.test.near\",\"visual_identity\":\"rook\",\"role\":\"courier\",\"packages\":[\"fire\",\"shouting\"]}",
+            "reference": null,
+            "reference_hash": null
+          },
+          "approved_account_ids": {}
+        },
+        "worker_account": "rook.company.test.near",
+        "character": "Rook",
+        "role": "courier",
+        "packages": ["fire", "shouting"],
+        "visual_identity": "rook",
+        "status": "idle",
+        "job": {
+          "job_id": "2",
+          "renter_id": "bob.test.near",
+          "token_id": "rook",
+          "worker_account": "rook.company.test.near",
+          "config": {
+            "setup_id": "dock-fire-embers",
+            "placement": "escort",
+            "worker": 0,
+            "package_option": 0
+          },
+          "unit_slot": 1,
+          "rules_version": 2,
+          "content_version": 3,
+          "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+          "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+          "accepted_fee": "14000000000000000000000",
+          "created_at_block": "126",
+          "expires_at_block": "2528",
+          "status": "saved",
+          "cooldown_until": "153",
+          "record": {
+            "outcome": "delivered",
+            "round": 3,
+            "cart_hp": 2,
+            "strikes": 0,
+            "borrows": 0,
+            "clauses": [],
+            "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+            "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+            "confirmed_block": "133"
+          },
+          "bond": "30000000000000000000000",
+          "storage_bytes": 499,
+          "refund_owed": "0",
+          "refund_in_flight": false,
+          "credit_status": "finalized",
+          "employment": {
+            "town_id": 0,
+            "commission_id": "0",
+            "dispatch_id": "0",
+            "leg": 2,
+            "objective": "routine",
+            "payment": "40000000000000000000000",
+            "company_contribution": "0",
+            "earned": "40000000000000000000000",
+            "closed": true
+          }
+        },
+        "block_height": "4293",
+        "job_storage_deposit": "30000000000000000000000",
+        "lease_blocks": "2400",
+        "cooldown_blocks": "20",
+        "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+        "offers": [
+          {
+            "package_option": 0,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "4000000000000000000000",
+            "discount_step": "2000000000000000000000",
+            "available_since": "153",
+            "automatic": {
+              "ceiling": "30000000000000000000000",
+              "pressure": 1,
+              "updated_at": "1794423107"
+            }
+          },
+          {
+            "package_option": 1,
+            "starting_ask": "10000000000000000000000",
+            "floor_ask": "10000000000000000000000",
+            "discount_step": "0",
+            "available_since": "153",
+            "automatic": null
+          }
+        ],
+        "quotes": ["4000000000000000000000", "10000000000000000000000"],
+        "recent_paid_hires": [
+          {
+            "job_id": "2",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "14000000000000000000000",
+            "created_at_block": "126",
+            "expires_at_block": "2528",
+            "status": "saved",
+            "cooldown_until": "153",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "133"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 2,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "1",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-embers",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "MrmyVo47Rn0+ojesOwxaN2WS1JWzgo095dl/7iMnbTw=",
+            "accepted_fee": "12000000000000000000000",
+            "created_at_block": "87",
+            "expires_at_block": "2489",
+            "status": "saved",
+            "cooldown_until": "114",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 2,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "jTpBvV3jB/EoK7Hg+7Hk3T2i4ohYb9cGAO9FrBDf8pI=",
+              "final_hash": "nTTCutZ2u8Pb36zAcg9Xs+5W2F9HAyi8LPYxUEB0jqQ=",
+              "confirmed_block": "94"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 499,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 1,
+              "objective": "routine",
+              "payment": "40000000000000000000000",
+              "company_contribution": "0",
+              "earned": "40000000000000000000000",
+              "closed": true
+            }
+          },
+          {
+            "job_id": "0",
+            "renter_id": "bob.test.near",
+            "token_id": "rook",
+            "worker_account": "rook.company.test.near",
+            "config": {
+              "setup_id": "dock-fire-crosswind",
+              "placement": "escort",
+              "worker": 0,
+              "package_option": 0
+            },
+            "unit_slot": 1,
+            "rules_version": 2,
+            "content_version": 3,
+            "content_hash": "Lj9j3wQ/Bw/XEtEA+TrLMoAX5GTqrI4DW1/F+//7I3M=",
+            "setup_hash": "clWPjp/t+/VviNk4pLnR1B1i2+yY2mVqYN7DpgKNVmk=",
+            "accepted_fee": "10000000000000000000000",
+            "created_at_block": "48",
+            "expires_at_block": "2450",
+            "status": "saved",
+            "cooldown_until": "75",
+            "record": {
+              "outcome": "delivered",
+              "round": 3,
+              "cart_hp": 1,
+              "strikes": 0,
+              "borrows": 0,
+              "clauses": [],
+              "commitment": "o77TmaHOI8XtnHDfP1Q29u0Qhodppmjp6wWAYP9Xauc=",
+              "final_hash": "O5D5c4Ph4QOCHh+jv2IBNZfzRSIZq7aWlATRZWyOqP0=",
+              "confirmed_block": "55"
+            },
+            "bond": "30000000000000000000000",
+            "storage_bytes": 648,
+            "refund_owed": "0",
+            "refund_in_flight": false,
+            "credit_status": "finalized",
+            "employment": {
+              "town_id": 0,
+              "commission_id": "0",
+              "dispatch_id": "0",
+              "leg": 0,
+              "objective": "routine",
+              "payment": "50000000000000000000000",
+              "company_contribution": "0",
+              "earned": "50000000000000000000000",
+              "closed": true
+            }
+          }
+        ],
+        "offer": {
+          "package_option": 0,
+          "starting_ask": "10000000000000000000000",
+          "floor_ask": "4000000000000000000000",
+          "discount_step": "2000000000000000000000",
+          "available_since": "114",
+          "automatic": {
+            "ceiling": "30000000000000000000000",
+            "pressure": 3,
+            "updated_at": "1794419507"
+          }
+        },
+        "quote": "4000000000000000000000",
+        "hall_earned": "1800000000000000000000",
+        "claim": null,
+        "paid_enabled": true,
+        "timestamp": "1794424889"
+      },
+      "earnings": "34200000000000000000000"
+    }
+  ]
+}

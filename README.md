@@ -64,3 +64,14 @@ MUTINY_TESTNET_OWNER=your-owner.testnet MUTINY_TESTNET_RENTER=your-bob.testnet \
 Run sandbox gas/storage and recovery checks before enabling bookings. The browser budgets 200 Tgas and caps replay at 32 commands / 4 KiB. Leases last 2,400 blocks after activation; workers rest for 20 blocks. Advertised hire fees remain within 0.001–1 testnet NEAR.
 
 Built with React, Vite, Tailwind CSS, PixiJS, wasm-bindgen, near-sdk, and HOT Connect. Bundled fonts use SIL Open Font Licenses; Phosphor icons use MIT. Painted assets were generated with OpenAI imagegen; their manifest is in `app/public/assets/art/manifest.json`.
+
+## Record the economy demo
+
+Run the checked scenario with the official NEAR Sandbox 2.14.0 binary:
+
+```sh
+NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm demo:record
+pnpm dev
+```
+
+Open `/?demo=economy` for a wallet-free replay with Play, Pause, and a timeline. The runner writes `app/public/demo/economy.json` only after real local hires, verified deliveries, Rust/WASM stock and quote comparisons, and funding checks pass. It shows restoration, changing offers, idle pricing, consumption, exhausted funding, and a contribution reopening work. Accounts are controlled demonstrations. The download includes contract code hashes; it does not attest that those hashes match a public deployment. Use `pnpm demo:verify-code <registry.testnet> <worker.testnet>` to compare both recording hashes with finalized public testnet accounts. A mismatch fails the command. Record a separate confirmed testnet delivery for public-chain evidence.

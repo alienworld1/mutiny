@@ -109,3 +109,58 @@ pub fn simulate_kingdom(
     }
     serialize(&frames)
 }
+
+/// Recording parity uses chain timestamps, never an assumed block duration.
+#[wasm_bindgen]
+pub fn project_stock(stock_json: &str, now: u64, delivery: bool) -> Result<String, JsValue> {
+    let mut stock: game_core::economy::Stock = serde_json::from_str(stock_json).map_err(error)?;
+    if stock.supplies > game_core::economy::CAPACITY {
+        return Err(error("Invalid stock"));
+    }
+    stock.advance(now);
+    if delivery {
+        stock.deliver();
+    }
+    serialize(&stock)
+}
+
+#[wasm_bindgen]
+pub fn project_quote(
+    base: &str,
+    floor: &str,
+    ceiling: &str,
+    step: &str,
+    pressure: u8,
+    updated_at: u64,
+    now: u64,
+    idle_steps: u64,
+) -> Result<String, JsValue> {
+    let parse = |s: &str| s.parse::<u128>().map_err(error);
+    let (base, floor, ceiling, step) = (parse(base)?, parse(floor)?, parse(ceiling)?, parse(step)?);
+    if floor > ceiling {
+        return Err(error("Invalid quote bounds"));
+    }
+    Ok(game_core::economy::automatic_quote(
+        base,
+        floor,
+        ceiling,
+        step,
+        game_core::economy::decayed_pressure(pressure, updated_at, now),
+        idle_steps,
+    )
+    .to_string())
+}
+
+#[wasm_bindgen]
+pub fn stock_terms(stock_json: &str, town: usize) -> Result<String, JsValue> {
+    use game_core::economy::{CAPACITY, Objective, Stock};
+    let stock: Stock = serde_json::from_str(stock_json).map_err(error)?;
+    if town >= 3 || stock.supplies > CAPACITY {
+        return Err(error("Invalid town stock"));
+    }
+    let terms: Vec<_> = [Objective::Routine, Objective::Intact, Objective::Express].into_iter()
+        .filter_map(|objective| stock.payment(objective).map(|payment| serde_json::json!({
+            "objective": objective, "payment": payment.to_string(), "setup_ids": [stock.setup_id(town)]
+        }))).collect();
+    serialize(&terms)
+}

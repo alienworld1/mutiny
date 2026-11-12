@@ -6,6 +6,8 @@
     "node": ">=24.22.1 <25"
   },
   "scripts": {
+    "demo:verify-code": "node scripts/verify-demo-code.mjs",
+    "demo:record": "pnpm wasm:build && pnpm contract:build && node scripts/record-economy.mjs",
     "dev": "pnpm --filter @mutiny/app dev",
     "build": "pnpm wasm:build && pnpm --filter @mutiny/app build && node scripts/build-offline.mjs",
     "lint": "pnpm --filter @mutiny/app lint",
