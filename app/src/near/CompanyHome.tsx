@@ -134,7 +134,7 @@ function Kingdom({
               />
               <p className="border-b border-brass/40 bg-muted px-4 py-2 text-xs font-semibold">
                 {town.stock.deliveries >= 3
-                  ? "Restored"
+                  ? "Restored for good"
                   : `${town.stock.deliveries}/3 toward restoration`}
               </p>
               <div className="space-y-3 p-4">

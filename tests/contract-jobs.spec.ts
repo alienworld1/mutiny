@@ -534,7 +534,7 @@ test("owner transfer refreshes current title and keeps active renter rights", as
   );
   await page.getByRole("button", { name: "Check status", exact: true }).click();
   await page.getByText("Owner tools", { exact: true }).click();
-  await page.getByText("Identity & hire details", { exact: true }).click();
+  await page.getByText("Hire details", { exact: true }).click();
   await page.getByLabel("New owner", { exact: true }).fill("carol.testnet");
   await page.getByRole("button", { name: "Transfer NFT", exact: true }).click();
   await expect(
@@ -947,6 +947,9 @@ test("first delivery explains the goal before connecting and guides a confirmed 
     "Hire a mercenary. Deliver a cart. Save Job",
   );
   await expect(
+    page.getByRole("button", { name: "Learn Strike & Borrow", exact: true }),
+  ).toBeVisible();
+  await expect(
     page.getByRole("button", { name: "Connect Wallet", exact: true }),
   ).toBeVisible();
   await expect(
@@ -962,6 +965,12 @@ test("first delivery explains the goal before connecting and guides a confirmed 
   await page.getByRole("button", { name: "Choose crew", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Hire your crew", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Owner: owner.testnet", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "rook.registry.testnet", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("article", { name: "Docks", exact: true }),
@@ -1012,6 +1021,9 @@ test("first delivery explains the goal before connecting and guides a confirmed 
     page.getByRole("heading", { name: "Job Done", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Confirmed company result")).toHaveCount(0);
+  await expect(
+    page.getByText("The wages arrived.", { exact: false }),
+  ).toHaveCount(0);
   await page.evaluate(() => localStorage.setItem("test-pending", "1"));
   await page.getByRole("button", { name: "Save Job", exact: true }).click();
   await expect(page.getByLabel("Confirmed company result")).toHaveCount(0);
@@ -1028,6 +1040,20 @@ test("first delivery explains the goal before connecting and guides a confirmed 
   await expect(receipt).toContainText("+1 supply");
   await expect(receipt).toContainText("0.05 testnet NEAR");
   await expect(receipt).toContainText("Current supplies 2/6");
+  await expect(receipt.getByLabel("Worker receipt")).toContainText("NFT: rook");
+  await expect(receipt.getByLabel("Delivery costs")).toContainText(
+    "Gas and withdrawal costs",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/mutiny-delivery-receipt-mobile.png",
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "View company", exact: true }).click();
   await expect(guide).toHaveCount(0);
   await page

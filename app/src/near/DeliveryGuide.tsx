@@ -55,7 +55,7 @@ export default function DeliveryGuide({
                 className="mt-2 !border-0 !bg-transparent !px-0 !shadow-none text-sm underline underline-offset-4"
                 onClick={onLearn}
               >
-                Learn to play
+                Learn Strike & Borrow
               </button>
             )}
           </div>

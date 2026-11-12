@@ -7,6 +7,7 @@ import DeliveryGuide, {
   type DeliveryStep,
 } from "./DeliveryGuide";
 import DeliveryReceipt from "./DeliveryReceipt";
+import OfferPrice from "./OfferPrice";
 import { readGuidePreference, saveGuidePreference } from "../game/firstShift";
 import {
   bookingAmounts,
@@ -152,6 +153,9 @@ export default function ContractJobs({
           Your delivery is booked. Resume Job to play, then Save Job to send the
           result for checking.
         </p>
+      )}
+      {!inBattle && !hasOpenJob && !intro && onLearn && (
+        <button onClick={onLearn}>Learn Strike & Borrow</button>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {!guided && (
@@ -440,6 +444,27 @@ export default function ContractJobs({
                       </p>
                     </div>
                   </div>
+                  <div className="space-y-1 break-all border-t border-border pt-3 text-xs">
+                    <p>NFT: {c.worker.token.token_id}</p>
+                    <p>Owner: {c.worker.token.owner_id}</p>
+                    <p>
+                      Worker account:{" "}
+                      <a
+                        className="underline"
+                        href={`https://testnet.nearblocks.io/address/${c.worker.worker_account}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {c.worker.worker_account}
+                      </a>
+                    </p>
+                    {c.earnings && (
+                      <p>
+                        Available earnings: {nearAmount(c.earnings.claimable)}{" "}
+                        testnet NEAR
+                      </p>
+                    )}
+                  </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {c.worker.packages.map((p, i) => {
                       const fine = packages[p as keyof typeof packages];
@@ -471,24 +496,19 @@ export default function ContractJobs({
                       );
                     })}
                   </div>
+                  {offer && (
+                    <OfferPrice offer={offer} block={c.worker.block_height} />
+                  )}
+                  {c.worker.job && c.worker.job.accepted_fee !== "0" && (
+                    <p className="text-xs text-secondary">
+                      Last booked fee: {nearAmount(c.worker.job.accepted_fee)}{" "}
+                      NEAR. The current quote is for the next hire.
+                    </p>
+                  )}
                   <details className="border-t border-border pt-1">
                     <summary className="min-h-11 cursor-pointer py-3 font-semibold">
-                      Identity & hire details
+                      Hire details
                     </summary>
-                    <p className="break-all font-mono text-xs">
-                      Owner: {c.worker.token.owner_id}
-                    </p>
-                    <p className="break-all">
-                      Worker:{" "}
-                      <a
-                        className="underline"
-                        href={`https://testnet.nearblocks.io/address/${c.worker.worker_account}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {c.worker.worker_account}
-                      </a>
-                    </p>
                     {c.worker.offers?.map(
                       (o, i) =>
                         o && (
@@ -602,7 +622,7 @@ export default function ContractJobs({
           )}
         </>
       )}
-      {!guided && !inBattle && c.worker?.token.owner_id === c.account && (
+      {!inBattle && c.worker?.token.owner_id === c.account && (
         <details className="rounded-xl border border-border bg-muted/40 px-4">
           <summary className="min-h-11 cursor-pointer py-3 font-semibold">
             Owner tools
@@ -732,14 +752,25 @@ export default function ContractJobs({
               <DeliveryReceipt
                 job={job}
                 economy={c.economy}
+                owner={
+                  c.worker?.token.token_id === job.token_id
+                    ? c.worker.token.owner_id
+                    : undefined
+                }
                 onCompany={onCompany}
               />
             )}
           {["saved", "expired"].includes(job.status) && (
             <p className="text-sm text-secondary">
-              Storage used:{" "}
-              {nearAmount((BigInt(job.storage_bytes) * 10n ** 19n).toString())}{" "}
-              testnet NEAR.{" "}
+              {(!job.employment || s?.activity !== "Confirmed") && (
+                <>
+                  Storage used:{" "}
+                  {nearAmount(
+                    (BigInt(job.storage_bytes) * 10n ** 19n).toString(),
+                  )}{" "}
+                  testnet NEAR.{" "}
+                </>
+              )}
               {job.refund_owed === "0"
                 ? "Unused deposit returned."
                 : job.refund_in_flight

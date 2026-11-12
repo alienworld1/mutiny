@@ -2,20 +2,26 @@ import TownScene from "./TownScene";
 import type { Job } from "./jobs";
 import { nearAmount } from "./jobs";
 import type { Economy } from "./economy";
+import { commissionDifference } from "./economy";
 
 // The caller only mounts this after the controller confirms the saved job.
 export default function DeliveryReceipt({
   job,
   economy,
+  owner,
   onCompany,
 }: {
   job: Job;
   economy: Economy | null;
+  owner?: string;
   onCompany?: () => void;
 }) {
   const employment = job.employment;
   if (!employment) return null;
   const accepted = employment.earned !== "0";
+  const fee = BigInt(job.accepted_fee);
+  const hallShare = fee / 20n;
+  const storage = BigInt(job.storage_bytes) * 10n ** 19n;
   const town =
     economy?.version === 4 && employment.town_id !== undefined
       ? economy.towns[employment.town_id]
@@ -75,9 +81,74 @@ export default function DeliveryReceipt({
                   ? "Restored"
                   : `${town.stock.deliveries}/3 deliveries`}
               </dd>
+              {town.stock.deliveries >= 3 && (
+                <p className="mt-1 text-xs text-secondary">
+                  Restoration lasts. Supplies are used every 30 minutes.
+                </p>
+              )}
             </div>
           </>
         )}
+      </dl>
+      <section
+        aria-label="Worker receipt"
+        className="mt-4 space-y-2 border-t border-border pt-3 text-sm"
+      >
+        <h4 className="font-semibold">Worker receipt</h4>
+        <p className="break-all">
+          NFT: {job.token_id}
+          {owner && ` · Current owner: ${owner}`}
+        </p>
+        <a
+          className="block break-all underline"
+          href={`https://testnet.nearblocks.io/address/${job.worker_account}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {job.worker_account}
+        </a>
+        {fee === 0n ? (
+          <p>Owner self-use · No hire fee.</p>
+        ) : (
+          <>
+            <p>
+              {job.credit_status === "finalized"
+                ? "Credited to worker"
+                : "Worker credit pending"}
+              : {nearAmount((fee - hallShare).toString())} testnet NEAR
+            </p>
+            <p className="text-xs text-secondary">
+              Hall fee: {nearAmount(hallShare.toString())} NEAR.
+            </p>
+          </>
+        )}
+      </section>
+      <dl
+        aria-label="Delivery costs"
+        className="mt-4 space-y-2 border-t border-border pt-3 text-sm tabular-nums"
+      >
+        <div className="flex flex-wrap justify-between gap-2">
+          <dt>Hire fee paid</dt>
+          <dd>{nearAmount(job.accepted_fee)} NEAR</dd>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2">
+          <dt>Storage retained</dt>
+          <dd>{nearAmount(storage.toString())} NEAR</dd>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2 font-semibold">
+          <dt>Payment less hire and storage</dt>
+          <dd>
+            {commissionDifference(
+              employment.earned,
+              (fee + storage).toString(),
+            )}{" "}
+            NEAR
+          </dd>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2 text-secondary">
+          <dt>Gas and withdrawal costs</dt>
+          <dd>Extra · Check your wallet</dd>
+        </div>
       </dl>
       <p className="mt-4 border-t border-border pt-3 text-sm">
         {accepted
@@ -85,7 +156,7 @@ export default function DeliveryReceipt({
           : "No delivery payment. The activated hire fee remains spent."}
       </p>
       <p className="mt-2 text-xs text-secondary">
-        Hire fee paid: {nearAmount(job.accepted_fee)} NEAR · Company funds:{" "}
+        Company funds:{" "}
         {economy?.company
           ? `${nearAmount(economy.company.funds)} NEAR`
           : "Unavailable"}

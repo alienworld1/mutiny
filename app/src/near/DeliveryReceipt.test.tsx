@@ -105,4 +105,57 @@ describe("confirmed delivery receipt", () => {
     expect(html).toContain("Job expired");
     expect(html).not.toContain("Delivery accepted");
   });
+
+  it("shows the paid worker receipt and costs without calling the subtotal profit", () => {
+    const html = renderToStaticMarkup(
+      <DeliveryReceipt
+        job={{
+          ...job,
+          accepted_fee: "6000000000000000000000",
+          credit_status: "finalized",
+          storage_bytes: 535,
+          employment: { ...job.employment!, earned: "50000000000000000000000" },
+        }}
+        owner="owner.testnet"
+        economy={{
+          ...economy,
+          towns: [
+            {
+              ...economy.towns[0]!,
+              stock: { supplies: 1, deliveries: 3, updated_at: 100 },
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain("Current owner: owner.testnet");
+    expect(html).toContain("rook.registry.testnet");
+    expect(html).toContain("Credited to worker: 0.0057");
+    expect(html).toContain("Hall fee: 0.0003");
+    expect(html).toContain("0.00535 NEAR");
+    expect(html).toContain("0.03865 NEAR");
+    expect(html).toContain("Gas and withdrawal costs");
+    expect(html).toContain("Restoration lasts.");
+    expect(html).toContain("Current supplies 1/6");
+  });
+
+  it.each([undefined, "staged", "unknown"])(
+    "does not confirm %s worker credit after settlement",
+    (credit_status) => {
+      const html = renderToStaticMarkup(
+        <DeliveryReceipt job={{ ...job, credit_status }} economy={economy} />,
+      );
+      expect(html).toContain("Worker credit pending");
+      expect(html).not.toContain("Credited to worker");
+    },
+  );
+
+  it("shows self-use and negative costs for unpaid delivery", () => {
+    const html = renderToStaticMarkup(
+      <DeliveryReceipt job={{ ...job, accepted_fee: "0" }} economy={economy} />,
+    );
+    expect(html).toContain("Owner self-use");
+    expect(html).toContain("−0.001 NEAR");
+    expect(html).not.toContain("Credited to worker");
+  });
 });

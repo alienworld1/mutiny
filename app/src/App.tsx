@@ -863,7 +863,7 @@ function App() {
                   </div>
                   <p className="text-secondary">
                     {state.outcome === "delivered"
-                      ? "The wages arrived. Morale remains under review."
+                      ? "The cart arrived. Morale remains under review."
                       : "The paperwork survived. Try another plan."}
                   </p>
                   <p className="my-5">
