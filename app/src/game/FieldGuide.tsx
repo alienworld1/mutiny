@@ -75,11 +75,11 @@ export default function FieldGuide({ onReplay }: { onReplay: () => void }) {
               </button>
             ))}
           </div>
-          <div className="grid items-center gap-4 sm:grid-cols-[240px_1fr]">
+          <div className="flex flex-wrap items-center gap-4">
             <div
               role="img"
               aria-label={`Example battlefield. Cart at ${coordinate(example.cart_cell)}. Dot at ${coordinate(dot.cell)}, ${dot.status}. ${example.fire.includes(25) ? "Fire at E4." : ""}`}
-              className="grid grid-cols-7 gap-0.5 rounded-lg border border-border bg-stone p-2"
+              className="grid w-full max-w-[240px] grid-cols-7 gap-0.5 rounded-lg border border-border bg-stone p-2"
             >
               {Array.from({ length: 49 }, (_, cell) => {
                 const unit = example.setup.units.find(
@@ -117,7 +117,7 @@ export default function FieldGuide({ onReplay }: { onReplay: () => void }) {
                 );
               })}
             </div>
-            <div>
+            <div className="min-w-0 flex-[1_1_180px]">
               <p className="text-xs font-semibold uppercase tracking-wider text-secondary">
                 Example · {frame + 1} / {lesson.frames.length}
               </p>
