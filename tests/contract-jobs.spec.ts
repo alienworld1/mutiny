@@ -944,7 +944,7 @@ test("first delivery explains the goal before connecting and guides a confirmed 
     .click();
   const guide = page.getByRole("region", { name: "First delivery guide" });
   await expect(guide).toContainText(
-    "Hire a mercenary. Deliver a cart. Save Job",
+    "Choose a delivery and hire a mercenary. Meet its terms, then Save Job",
   );
   await expect(
     page.getByRole("button", { name: "Learn Strike & Borrow", exact: true }),

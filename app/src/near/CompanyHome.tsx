@@ -101,8 +101,8 @@ function Kingdom({
       </div>
       {suggestion && (
         <p className="border-l-2 border-primary pl-3 text-sm">
-          Try ordinary work at {e.towns[suggestion.town_id ?? -1]?.name}. It has
-          standard delivery terms.
+          Start with ordinary work at {e.towns[suggestion.town_id ?? -1]?.name}.
+          Deliver the cart within five rounds.
         </p>
       )}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -201,7 +201,7 @@ function Kingdom({
                   <p className="text-sm">Bookings are not enabled.</p>
                 ) : stock === 6 ? (
                   <p className="text-sm">
-                    The stores are full. Consumption will create new work.
+                    The stores are full. More work opens as supplies run low.
                   </p>
                 ) : incoming === 2 ? (
                   <p className="text-sm">Two crews are on their way.</p>

@@ -4,6 +4,10 @@ const preview = process.env.MUTINY_PREVIEW === "1";
 const url = preview ? "http://127.0.0.1:4180" : "http://127.0.0.1:4173";
 export default defineConfig({
   testDir: "./tests",
+  // Each painted battlefield uses a renderer. Avoid competing for the GPU.
+  workers: 2,
+  // Complete jobs include several rounds of input and committed playback.
+  timeout: 60_000,
   use: { baseURL: url },
   projects: [
     { name: "chromium", use: { browserName: "chromium" } },

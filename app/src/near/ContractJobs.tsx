@@ -150,8 +150,8 @@ export default function ContractJobs({
       )}
       {guidedJob && (
         <p className="border-l-2 border-primary pl-3 text-sm">
-          Your delivery is booked. Resume Job to play, then Save Job to send the
-          result for checking.
+          Your delivery is booked. Choose Resume Job to play, then Save Job when
+          you finish.
         </p>
       )}
       {!inBattle && !hasOpenJob && !intro && onLearn && (
@@ -310,9 +310,9 @@ export default function ContractJobs({
               )}
               {guided && (
                 <p className="text-sm">
-                  Hire one player-owned mercenary for this job. Each worker can
-                  take one job at a time. Their fine print gives them an action
-                  and a reason to refuse orders.
+                  Choose one mercenary for this job. Compare their special
+                  action, fine print, and fee. Each worker takes one job at a
+                  time.
                 </p>
               )}
               <div className="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2 lg:grid-cols-3">
@@ -932,9 +932,9 @@ export default function ContractJobs({
                     </p>
                   )}
                   <p className="text-secondary">
-                    Save Job must confirm that you met these terms before
-                    payment. The activated hire fee stays spent if you lose or
-                    miss the terms.
+                    Save Job checks your delivery before payment. Once the hire
+                    activates, its fee stays spent if you lose or miss the
+                    terms.
                   </p>
                 </div>
               )}

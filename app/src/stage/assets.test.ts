@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { characterSlots } from "./assets";
-import manifest from "../../public/assets/art/manifest.json";
+import manifest from "./art-manifest.json";
 import { HEIGHT, ORIGIN_Y, TILE_HEIGHT, WIDTH } from "./projection";
 
 function dimensions(file: string) {

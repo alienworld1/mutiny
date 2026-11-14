@@ -47,8 +47,8 @@ export default function DeliveryGuide({
             </p>
             <h2 className="mt-2 text-3xl">Your first delivery</h2>
             <p className="mt-2 max-w-xl text-sm">
-              Hire a mercenary. Deliver a cart. Save Job to supply a town and
-              collect its payment.
+              Choose a delivery and hire a mercenary. Meet its terms, then Save
+              Job to supply the town and collect payment.
             </p>
             {onLearn && (
               <button

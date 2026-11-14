@@ -606,10 +606,7 @@ function App() {
                   Deliver supplies
                 </button>
                 <p className="mt-2 text-center text-xs text-secondary">
-                  Hire a crew. Restore the towns.
-                </p>
-                <p className="mt-1 text-center text-xs text-secondary">
-                  NEAR testnet
+                  Restore three towns · NEAR testnet
                 </p>
               </div>
             </div>

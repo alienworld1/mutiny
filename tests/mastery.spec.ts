@@ -83,6 +83,8 @@ for (const reference of refs.filter((r) => r.approach === "delivery")) {
   test(`${setup.name}: ${setup.variant} complete free journey and Ledger`, async ({
     page,
   }) => {
+    // Motion has its own tests; route and Ledger checks should not wait on it.
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.route(/https?:\/\/(?!127\.0\.0\.1)/, (route) => route.abort());
     await page.goto("/");
     await page.getByRole("button", { name: "Job Board", exact: true }).click();

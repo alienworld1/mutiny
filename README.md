@@ -1,77 +1,67 @@
 # Mutiny: The Fine Print
 
-A small tactics game about a kingdom's payroll and its workers' terms. Deliver a cart across nine encounters, read posted enemy orders, and turn fine print into strikes and borrowed help. **Play Free** needs no wallet or RPC and saves progress in this browser.
+A small tactics game about a kingdom’s payroll and the workers hired to guard it. Escort a cart through a painted miniature battlefield. Read the enemy’s posted orders, use their fine print to cause a strike, and borrow a worker for one turn.
 
-Company play supplies a shared kingdom on NEAR testnet. Deliveries replenish towns and permanently restore destinations. Towns consume supplies every 30 minutes; shortages change encounter variants, delivery terms, and payments. Choose ordinary work or a premium intact-cart/express delivery, then hire a crew for the plan.
+**[Play Mutiny](https://mutiny-the-fine-print.vercel.app/)** · [Economy replay](https://mutiny-the-fine-print.vercel.app/?demo=economy) · [Testnet Registry](https://testnet.nearblocks.io/address/v4r1.mutiny-company-2026.testnet)
 
-## Run
+## Try it
 
-Use Node.js 24.22.1, pnpm 12.16.1, and the pinned Rust toolchain.
+1. Choose **Play Free**. First Shift guides you through a delivery, a strike, and Borrow. No wallet is needed.
+2. Push the cart three times within five rounds. Keep the cart and captain alive. Preview each order, then **Confirm**.
+3. Open the **Job Board** to try all nine encounters and change your crew, fine print, or placement. Your Captain’s Ledger saves progress in this browser.
+4. Choose **Deliver supplies** from the title screen and connect a NEAR testnet wallet. Select a delivery, hire a mercenary, play, then **Save Job**. An accepted delivery adds supplies, advances town restoration, and pays your company.
+
+The [economy replay](https://mutiny-the-fine-print.vercel.app/?demo=economy) needs no wallet. Scrub its timeline to see recorded local contract hires, deliveries, changing prices, exhausted town funding, and a contribution reopening work. It is a labeled Sandbox recording, separate from the live testnet kingdom.
+
+## Run locally
+
+Install [Node.js](https://nodejs.org/) **24.22.1**, pnpm **12.16.1**, and [Rust via rustup](https://rustup.rs/). The repository pins the Rust toolchain and Wasm target.
 
 ```sh
+corepack enable
+corepack prepare pnpm@12.16.1 --activate
 cargo install wasm-bindgen-cli --version 0.2.105 --locked
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-`pnpm build` creates `app/dist`. Once its offline assets finish installing, Free Play supports offline refresh and resume. Clearing browser data loses local progress. Company records stay onchain.
-
-For Vercel, set **Root Directory** to `app` and enable **Include source files outside of the Root Directory in the Build Step**. The checked-in build configuration installs the pinned Rust/WASM tools, builds the shared game engine, and generates the offline assets. The first build needs extra time to compile the tools.
-
-## The economy
-
-Six NFT workers each hold paid-hire earnings in a separate keyless NEAR account. Two package offers share one worker's availability. Owners may post automatic price policies: confirmed paid hires raise bounded demand pressure, while time and idle availability reduce the ask. Owners retain offer, claim, self-use, and transfer rights. Hiring sends 95% to the worker and 5% to the Hall.
-
-Booking freezes the route, delivery terms, hire price, and payment, reserving both town capacity and the full commission. Battles run locally; **Save Job** replays the same Rust rules onchain. Accepted delivery pays withdrawable company funds and adds one supply. Defeat, unmet terms, and expiry pay nothing; the activated hire fee stays spent. Rehearsal and retries are possible: replay proves a valid solution, not human effort or a binding first attempt.
-
-Town treasuries start with explicitly contributed testnet funds. Anyone can make a nonrefundable contribution, with no ownership or promised return. An underfunded town stops booking. Consumption creates demand but does not mint money. The accelerated **Simulation** forecasts supply and finite treasury changes without touching live funds.
-
-The live Registry is `v4r1.mutiny-company-2026.testnet`; see [public configuration](app/.env.example). The previous-company link preserves v3 funds, jobs, and claims; the previous-worker link preserves m5 rights. The disabled first kingdom test deployment remains accessible with `?market=company-v4` for its funds and claims. Replacement NFTs inherit no earlier ownership, earnings, or history. Workers and activity are seeded demonstrations, not evidence of organic demand or sustainable returns.
-
-Each job also reserves **0.03 testnet NEAR for storage**, plus gas. Unused storage returns after closing. Unactivated cancellation restores hire funds to their original company/wallet sources after worker-credit reversal. Interrupted operations have status/recovery controls. Unknown transfer outcomes never authorize a second payment.
-
-Contracts are keyless and immutable. The deployment operator can enable payments and attest finalized native-transfer outcomes when callbacks are lost. **This recovery authority is trusted:** falsely attesting failure can permit duplicate payment. Worker claims use `repair_native_callback`; company withdrawals use `repair_company_withdrawal`. Check final receipts before recovery. There is no general treasury withdrawal.
-
-Verified on testnet: [delivery and commission](https://testnet.nearblocks.io/txns/7KfR8RakH8TxiEy6Kfq4b32ZM3wTFRtE2zMajA2Vry83), [company withdrawal](https://testnet.nearblocks.io/txns/3UkEdTBeVvsFHArvxETRBTXjZnuLfsqBPmzc5peYmnH6).
-
-## Verify and deploy
+Open the URL printed by Vite. No environment file or signing keys are needed. The default public contract is in [app/.env.example](app/.env.example).
 
 ```sh
-pnpm contract:build
-cargo test --workspace --locked
-pnpm test
+pnpm build                         # Production site in app/dist, including offline assets
+pnpm --filter @mutiny/app preview  # Preview the build
+```
+
+Free Play supports offline refresh and resume after its assets finish installing. Clearing browser data removes local progress. Company records stay on NEAR.
+
+## What NEAR does
+
+Six mercenary NFTs each have a separate keyless NEAR account. Hiring pays 95% of the fee to the worker and 5% to the Hall. Owners choose package offers and can claim earnings or transfer the NFT. A transfer during a shift preserves the renter’s booked rights and changes who can claim earnings.
+
+The Registry reserves a worker, delivery terms, and a funded town payment when a job is booked. Battles run locally in Rust/Wasm. **Save Job** replays the action log with the same Rust rules on NEAR before accepting a delivery. Town supplies fall over time; shortages change work and payments. Owner-approved automatic offers adjust prices within fixed bounds as workers are hired or sit idle.
+
+This is a small **testnet** economy with six seeded workers and finite, contributed town funds. Availability and funding can run out. Each booking also reserves **0.03 testnet NEAR for storage**, plus gas; unused storage returns after closing. Once a hire activates, its fee stays spent even if the delivery fails. Rehearsal and retries are possible: replay checks a valid solution, not human effort or a binding first attempt. The seeded activity does not demonstrate organic demand or sustainable returns.
+
+Contracts are keyless and immutable. A trusted operator can enable bookings and repair lost payment callbacks; a false failure attestation can allow duplicate payment. See [testnet operations](docs/testnet.md) for accounts, recovery, deployment, and reproducible multi-account checks.
+
+Public transaction evidence: [accepted delivery and commission](https://testnet.nearblocks.io/txns/7KfR8RakH8TxiEy6Kfq4b32ZM3wTFRtE2zMajA2Vry83), [company withdrawal](https://testnet.nearblocks.io/txns/3UkEdTBeVvsFHArvxETRBTXjZnuLfsqBPmzc5peYmnH6).
+
+## Verify
+
+```sh
 pnpm lint
+pnpm test
+cargo test --workspace --locked
+pnpm build
 pnpm test:parity
 pnpm test:kingdom
-pnpm build
+pnpm exec playwright install --with-deps
 pnpm test:e2e
 MUTINY_PREVIEW=1 pnpm test:e2e --project=chromium --grep "production offline"
 ```
 
-Use the official [NEAR sandbox 2.14.0](https://github.com/near/nearcore/releases/tag/2.14.0) binary for `test:sandbox`, `test:paid`, `test:market`, and `test:company`:
+Rust tests cover game rules, legal transitions, authored wins, and invalid actions. Browser tests cover the playable path, keyboard/touch input, narrow screens, transaction recovery with mocked RPC, and offline Free Play. [Sandbox and signed testnet checks](docs/testnet.md#verify-the-contracts) exercise real contracts separately.
 
-```sh
-NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm test:company
-# Creates a fresh immutable Registry and six workers; contributes 1 NEAR per town.
-# Needs 39 testnet NEAR plus gas. Paid bookings start disabled.
-bash scripts/deploy-testnet.sh your-owner.testnet
-# Seeds automatic offers and signs a two-company demonstration.
-MUTINY_TESTNET_OWNER=your-owner.testnet MUTINY_TESTNET_RENTER=your-bob.testnet \
-  MUTINY_TESTNET_CAROL=your-carol.testnet MUTINY_ENABLE_KINGDOM=1 \
-  node scripts/testnet-kingdom.mjs
-```
+## Built with
 
-Run sandbox gas/storage and recovery checks before enabling bookings. The browser budgets 200 Tgas and caps replay at 32 commands / 4 KiB. Leases last 2,400 blocks after activation; workers rest for 20 blocks. Advertised hire fees remain within 0.001–1 testnet NEAR.
-
-Built with React, Vite, Tailwind CSS, PixiJS, wasm-bindgen, near-sdk, and HOT Connect. Bundled fonts use SIL Open Font Licenses; Phosphor icons use MIT. Painted assets were generated with OpenAI imagegen; their manifest is in `app/public/assets/art/manifest.json`.
-
-## Record the economy demo
-
-Run the checked scenario with the official NEAR Sandbox 2.14.0 binary:
-
-```sh
-NEAR_SANDBOX_BIN_PATH=/absolute/path/to/near-sandbox pnpm demo:record
-pnpm dev
-```
-
-Open `/?demo=economy` for a wallet-free replay with Play, Pause, and a timeline. The runner writes `app/public/demo/economy.json` only after real local hires, verified deliveries, Rust/WASM stock and quote comparisons, and funding checks pass. It shows restoration, changing offers, idle pricing, consumption, exhausted funding, and a contribution reopening work. Accounts are controlled demonstrations. The download includes contract code hashes; it does not attest that those hashes match a public deployment. Use `pnpm demo:verify-code <registry.testnet> <worker.testnet>` to compare both recording hashes with finalized public testnet accounts. A mismatch fails the command. Record a separate confirmed testnet delivery for public-chain evidence.
+React, Vite, Tailwind CSS, PixiJS, wasm-bindgen, near-sdk, and HOT Connect. [MIT licensed](LICENSE). Bundled fonts use the SIL Open Font License; Phosphor icons use MIT. Codex assisted development and editing. Painted assets were generated with OpenAI imagegen; see their [manifest](app/src/stage/art-manifest.json).

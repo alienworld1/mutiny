@@ -219,7 +219,7 @@ try {
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
   commands.push(
-    `cp ${quote(join(work, "manifest.json"))} ${quote(join(output, "manifest.json"))}`,
+    `cp ${quote(join(work, "manifest.json"))} ${quote(resolve("app/src/stage/art-manifest.json"))}`,
   );
   commands.push(`rm -rf ${quote(work)}`);
   process.stdout.write(commands.join("\n") + "\n");

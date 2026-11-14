@@ -18,7 +18,7 @@ export default function EconomyReplay() {
     })
       .then(async (r) => {
         if (!r.ok)
-          throw Error("Recording unavailable. Run pnpm demo:record first.");
+          throw Error("Recording unavailable. Retry to load it again.");
         return parseRecording(await r.json());
       })
       .then(setRecording)
@@ -175,9 +175,8 @@ export default function EconomyReplay() {
           <details className="break-all text-sm">
             <summary>Recording evidence</summary>
             <p>
-              Stock and worker quotes checked against shared Rust/WASM policies.
-              Town funding conserved; delivery payments checked against verified
-              settlement. This checks this scenario.
+              This recording checks stock, prices, funding, and payments against
+              the shared Rust rules and local contracts.
             </p>
             <p>Registry code: {recording.registryHash}</p>
             <p>Worker code: {recording.workerHash}</p>

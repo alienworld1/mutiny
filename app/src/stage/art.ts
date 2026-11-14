@@ -1,6 +1,6 @@
 import { Assets, Rectangle, Texture } from "pixi.js";
 import { scenery, characterAtlas } from "./assets";
-import manifest from "../../public/assets/art/manifest.json";
+import manifest from "./art-manifest.json";
 
 export interface StageArt {
   environment?: Texture;
